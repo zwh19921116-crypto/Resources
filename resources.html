@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>All Resources | Edgeducate</title>
+<meta name="description" content="Browse the full Edgeducate library of practice questions, exams, knowledge sheets, checklists, interactive apps and videos." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="library">
+
+<script src="icons.js"></script>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header is-solid">
+  <div class="container">
+    <div class="navbar">
+      <a class="brand" href="index.html" aria-label="Edgeducate home">
+        <img class="brand-logo" src="assets/logo/logo.png" alt="Edgeducate" onerror="this.remove()" />
+        <span class="brand-fallback">
+          <span class="brand-name"><strong>Edge</strong>ducate</span>
+          <span class="brand-tag">Leading Edge in Education</span>
+        </span>
+      </a>
+
+      <button class="nav-toggle" aria-expanded="false" aria-controls="primary-nav" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav id="primary-nav" class="primary-nav" aria-label="Primary">
+        <a href="#">Pricing</a>
+        <a href="#">VCE Preparation</a>
+        <a href="resources.html" class="is-active" aria-current="page">Resources</a>
+        <a href="#">Contact Us</a>
+      </nav>
+
+      <a class="btn btn-cta" href="#">Book Free Consultation</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="page-hero">
+    <div class="container">
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <a href="index.html">Resources</a>
+        <span aria-hidden="true">/</span>
+        <span>All resources</span>
+      </nav>
+      <h1>The full library</h1>
+      <p class="lede">Every practice question set, exam, knowledge sheet, checklist, app and video in one place.</p>
+
+      <form class="search" role="search" id="resource-search">
+        <label class="sr-only" for="q">Search resources</label>
+        <input id="q" name="q" type="search" placeholder="Search resources…" autocomplete="off" />
+        <button class="search-btn" type="submit" aria-label="Search resources">
+          <svg class="ico" aria-hidden="true"><use href="#i-search"/></svg>
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <section class="section library">
+    <div class="container">
+
+      <div class="library-toolbar">
+        <div class="filter-group" id="filter-type" role="group" aria-label="Filter by type"></div>
+        <div class="filter-controls">
+          <label class="sr-only" for="filter-subject">Subject</label>
+          <select id="filter-subject"><option value="">All subjects</option></select>
+          <label class="sr-only" for="filter-year">Year level</label>
+          <select id="filter-year"><option value="">All year levels</option></select>
+          <label class="sr-only" for="sort-by">Sort</label>
+          <select id="sort-by">
+            <option value="newest">Newest first</option>
+            <option value="az">A – Z</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="library-head">
+        <h2 class="section-title" id="latest-title">All resources</h2>
+        <p class="result-count" id="result-count"></p>
+      </div>
+
+      <div class="active-filters" id="active-filters" hidden></div>
+
+      <div class="resource-grid" id="resource-grid"></div>
+
+      <p class="no-results" id="no-results" hidden>
+        No resources match your search. <button class="linkish" type="button" id="no-results-reset">Clear filters</button>
+      </p>
+
+      <div class="load-more-wrap">
+        <button class="btn btn-ghost" type="button" id="load-more" hidden>Load more</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="modal" id="detail-modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel detail-panel" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+    <button class="modal-close detail-close" type="button" id="detail-close" data-close aria-label="Close">
+      <svg class="ico" aria-hidden="true"><use href="#i-close"/></svg>
+    </button>
+    <div class="detail-cols">
+      <div class="detail-preview" id="detail-preview"></div>
+      <aside class="detail-info">
+        <div class="detail-scroll">
+          <span class="badge" id="detail-badge"></span>
+          <h3 id="detail-title"></h3>
+          <p class="detail-desc" id="detail-desc"></p>
+          <dl class="detail-meta" id="detail-meta"></dl>
+          <div class="detail-tags" id="detail-tags" hidden></div>
+        </div>
+        <div class="detail-actions">
+          <a class="btn btn-primary btn-block" id="detail-download" target="_blank" rel="noopener noreferrer">Download / Open</a>
+          <button class="btn btn-ghost btn-block" type="button" data-close>Close</button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div>
+      <span class="brand-name light"><strong>Edge</strong>ducate</span>
+      <p>Leading Edge in Education</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="#">Pricing</a>
+      <a href="#">VCE Preparation</a>
+      <a href="resources.html">Resources</a>
+      <a href="#">Contact Us</a>
+    </nav>
+    <p class="copyright">&copy; <span id="year"></span> Edgeducate. All rights reserved.</p>
+  </div>
+</footer>
+
+<script src="data/config.js"></script>
+<script src="data/resources.js"></script>
+<script src="art.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,16 +1,14 @@
 const CONFIG = window.EDG_CONFIG;
 const ALL = (window.EDG_RESOURCES || []).filter((r) => r.status !== 'draft');
+const PAGE = document.body.dataset.page;
 
 const el = (id) => document.getElementById(id);
 const grid = el('resource-grid');
-const countEl = el('result-count');
-const noResults = el('no-results');
-const loadMoreBtn = el('load-more');
 const searchInput = el('q');
 
 const state = { q: '', type: '', subject: '', year: '', sort: 'newest', shown: CONFIG.pageSize };
 
-document.getElementById('year').textContent = new Date().getFullYear();
+el('year').textContent = new Date().getFullYear();
 
 /* ---------- header ---------- */
 const toggle = document.querySelector('.nav-toggle');
@@ -26,55 +24,210 @@ setHeaderState();
 window.addEventListener('scroll', setHeaderState, { passive: true });
 
 /* ---------- helpers ---------- */
-const levelTone = (level) => {
-  const map = { Easy: 'easy', Medium: 'medium', Hard: 'hard', Fun: 'fun' };
-  return map[level] || 'info';
-};
+const levelTone = (level) => ({ Easy: 'easy', Medium: 'medium', Hard: 'hard', Fun: 'fun' }[level] || 'info');
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 function youtubeId(url) {
   const m = String(url).match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/);
   return m ? m[1] : null;
 }
+function driveId(url) {
+  const m = String(url).match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+  return m ? m[1] : null;
+}
+const isPdf = (url) => /\.pdf(\?|#|$)/i.test(String(url));
 
-/* ---------- categories ---------- */
-function renderCategories() {
+/* ---------- cards ---------- */
+function buildCard(r) {
+  const type = CONFIG.types[r.type] || { label: r.type, colour: 'blue', action: 'link' };
+  const card = document.createElement('article');
+  card.className = 'resource-card';
+  card.dataset.id = r.id;
+
+  const tone = levelTone(r.level);
+  card.innerHTML = `
+    <div class="thumb">
+      ${window.edgThumb(r.art, r.image)}
+      <span class="badge badge-${type.colour}">${esc(type.label)}</span>
+      ${type.action === 'embed' ? '<span class="play-overlay"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg></span>' : ''}
+    </div>
+    <button class="card-link" type="button">
+      <h3>${esc(r.title)}</h3>
+      <p class="meta">${[r.year, r.details].filter(Boolean).map(esc).join(' &nbsp;•&nbsp; ')}</p>
+    </button>
+    <p class="foot">
+      <span class="level ${tone}">${esc(r.level || '')}</span>
+      <svg class="ico bars ${tone}" aria-hidden="true"><use href="#i-bars"/></svg>
+    </p>`;
+
+  card.querySelector('.thumb').addEventListener('click', () => openDetail(r));
+  card.querySelector('.card-link').addEventListener('click', () => openDetail(r));
+  return card;
+}
+
+/* ---------- detail popup ---------- */
+const modal = el('detail-modal');
+
+function previewMarkup(r) {
+  const yt = youtubeId(r.url);
+  if (yt) {
+    return `<iframe src="https://www.youtube-nocookie.com/embed/${yt}?rel=0" title="${esc(r.title)}"
+      allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen
+      referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+  }
+  const drive = driveId(r.url);
+  if (drive) {
+    return `<iframe src="https://drive.google.com/file/d/${drive}/preview" title="${esc(r.title)}" allow="autoplay"></iframe>`;
+  }
+  if (isPdf(r.url)) {
+    return `<iframe src="${esc(r.url)}#view=FitH" title="${esc(r.title)}"></iframe>
+      <p class="preview-hint">Preview not loading? Some sites block embedding — use <b>Download / Open</b>.</p>`;
+  }
+  return `
+    <div class="preview-fallback">
+      ${window.edgThumb(r.art, r.image)}
+      <div class="preview-note">
+        <p>No preview available for this resource.</p>
+        <p class="small">Use the button below to open it.</p>
+      </div>
+    </div>`;
+}
+
+function openDetail(r) {
+  const type = CONFIG.types[r.type] || { label: r.type, colour: 'blue', action: 'link' };
+  const tone = levelTone(r.level);
+
+  el('detail-preview').innerHTML = previewMarkup(r);
+  el('detail-badge').className = `badge badge-${type.colour}`;
+  el('detail-badge').textContent = type.label;
+  el('detail-title').textContent = r.title;
+  el('detail-desc').textContent = r.desc || '';
+  el('detail-desc').hidden = !r.desc;
+
+  const rows = [
+    ['Subject', r.subject],
+    ['Year level', r.year],
+    ['Difficulty', r.level],
+    ['Details', r.details],
+    ['Added', r.added]
+  ].filter(([, v]) => v);
+  el('detail-meta').innerHTML = rows
+    .map(([k, v]) => `<div><dt>${esc(k)}</dt><dd${k === 'Difficulty' ? ` class="level ${tone}"` : ''}>${esc(v)}</dd></div>`)
+    .join('');
+
+  const tags = el('detail-tags');
+  tags.innerHTML = (r.tags || []).map((t) => `<span class="tag-chip">${esc(t)}</span>`).join('');
+  tags.hidden = !(r.tags || []).length;
+
+  const action = el('detail-download');
+  action.href = r.url || '#';
+  action.textContent = youtubeId(r.url) ? 'Watch on YouTube' : 'Download / Open';
+
+  modal.hidden = false;
+  document.body.classList.add('modal-open');
+  el('detail-close').focus();
+}
+
+function closeDetail() {
+  modal.hidden = true;
+  el('detail-preview').innerHTML = '';
+  document.body.classList.remove('modal-open');
+}
+
+modal.addEventListener('click', (e) => {
+  if (e.target.closest('[data-close]')) closeDetail();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !modal.hidden) closeDetail();
+});
+
+/* ---------- home page ---------- */
+function renderHome() {
   const wrap = el('category-grid');
-  wrap.innerHTML = '';
   Object.entries(CONFIG.types).forEach(([key, t]) => {
     const total = ALL.filter((r) => r.type === key).length;
-    const card = document.createElement('button');
-    card.type = 'button';
-    card.className = 'category-card';
-    card.dataset.type = key;
-    card.setAttribute('aria-pressed', 'false');
-    card.innerHTML = `
+    const a = document.createElement('a');
+    a.className = 'category-card';
+    a.href = `resources.html?type=${encodeURIComponent(key)}`;
+    a.innerHTML = `
       <span class="cat-icon ${t.colour}"><svg class="ico"><use href="#i-${t.icon}"/></svg></span>
       <span class="cat-body">
-        <span class="cat-title">${t.label}</span>
-        <span class="cat-blurb">${t.blurb}</span>
+        <span class="cat-title">${esc(t.label)}</span>
+        <span class="cat-blurb">${esc(t.blurb)}</span>
       </span>
       <span class="cat-foot">
         <span class="cat-count">${total} ${total === 1 ? 'resource' : 'resources'}</span>
         <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
       </span>`;
-    card.addEventListener('click', () => {
-      setFilter('type', state.type === key ? '' : key);
-      el('latest').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    wrap.appendChild(a);
+  });
+
+  const latest = [...ALL]
+    .sort((a, b) => String(b.added || '').localeCompare(String(a.added || '')))
+    .slice(0, 8);
+  latest.forEach((r) => grid.appendChild(buildCard(r)));
+
+  el('resource-search').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = searchInput.value.trim();
+    location.href = q ? `resources.html?q=${encodeURIComponent(q)}` : 'resources.html';
+  });
+  document.querySelectorAll('.chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      location.href = `resources.html?q=${encodeURIComponent(chip.textContent)}`;
     });
-    wrap.appendChild(card);
   });
 }
 
-/* ---------- filters ---------- */
-function renderFilterControls() {
-  const fill = (select, values) => {
-    values.forEach((v) => {
-      const o = document.createElement('option');
-      o.value = v;
-      o.textContent = v;
-      select.appendChild(o);
-    });
+/* ---------- library page ---------- */
+function matches(r) {
+  if (state.type && r.type !== state.type) return false;
+  if (state.subject && r.subject !== state.subject) return false;
+  if (state.year && r.year !== state.year) return false;
+  if (!state.q) return true;
+  const type = CONFIG.types[r.type];
+  const haystack = [r.title, r.desc, r.subject, r.year, r.level, r.details, type && type.label, (r.tags || []).join(' ')]
+    .join(' ')
+    .toLowerCase();
+  return state.q.toLowerCase().split(/\s+/).filter(Boolean).every((w) => haystack.includes(w));
+}
+
+function setFilter(key, value) {
+  state[key] = value;
+  state.shown = CONFIG.pageSize;
+  renderLibrary();
+}
+
+function resetFilters() {
+  Object.assign(state, { q: '', type: '', subject: '', year: '', shown: CONFIG.pageSize });
+  searchInput.value = '';
+  el('filter-subject').value = '';
+  el('filter-year').value = '';
+  renderLibrary();
+}
+
+function renderLibraryControls() {
+  const typeWrap = el('filter-type');
+  const mk = (key, label, count) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'filter-chip';
+    b.dataset.type = key;
+    b.innerHTML = `${esc(label)} <span class="chip-count">${count}</span>`;
+    b.addEventListener('click', () => setFilter('type', key));
+    return b;
   };
+  typeWrap.appendChild(mk('', 'All', ALL.length));
+  Object.entries(CONFIG.types).forEach(([key, t]) =>
+    typeWrap.appendChild(mk(key, t.label, ALL.filter((r) => r.type === key).length))
+  );
+
+  const fill = (select, values) => values.forEach((v) => {
+    const o = document.createElement('option');
+    o.value = v;
+    o.textContent = v;
+    select.appendChild(o);
+  });
   fill(el('filter-subject'), CONFIG.subjects);
   fill(el('filter-year'), CONFIG.years);
 
@@ -82,27 +235,18 @@ function renderFilterControls() {
   el('filter-year').addEventListener('change', (e) => setFilter('year', e.target.value));
   el('sort-by').addEventListener('change', (e) => setFilter('sort', e.target.value));
   el('no-results-reset').addEventListener('click', resetFilters);
+  el('load-more').addEventListener('click', () => {
+    state.shown += CONFIG.pageSize;
+    renderLibrary();
+  });
+
+  searchInput.addEventListener('input', () => setFilter('q', searchInput.value.trim()));
+  el('resource-search').addEventListener('submit', (e) => {
+    e.preventDefault();
+    setFilter('q', searchInput.value.trim());
+  });
 }
 
-function setFilter(key, value) {
-  state[key] = value;
-  state.shown = CONFIG.pageSize;
-  render();
-}
-
-function resetFilters() {
-  state.q = '';
-  state.type = '';
-  state.subject = '';
-  state.year = '';
-  state.shown = CONFIG.pageSize;
-  searchInput.value = '';
-  el('filter-subject').value = '';
-  el('filter-year').value = '';
-  render();
-}
-
-/* ---------- active filter pills ---------- */
 function renderActiveFilters() {
   const wrap = el('active-filters');
   const pills = [];
@@ -117,7 +261,7 @@ function renderActiveFilters() {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'active-pill';
-    b.innerHTML = `${p.label}<svg class="ico" aria-hidden="true"><use href="#i-close"/></svg>`;
+    b.innerHTML = `${esc(p.label)}<svg class="ico" aria-hidden="true"><use href="#i-close"/></svg>`;
     b.setAttribute('aria-label', `Remove filter ${p.label}`);
     b.addEventListener('click', () => {
       if (p.key === 'q') searchInput.value = '';
@@ -127,7 +271,6 @@ function renderActiveFilters() {
     });
     wrap.appendChild(b);
   });
-
   if (pills.length > 1) {
     const clear = document.createElement('button');
     clear.type = 'button';
@@ -138,163 +281,44 @@ function renderActiveFilters() {
   }
 }
 
-/* ---------- matching ---------- */
-function matches(r) {
-  if (state.type && r.type !== state.type) return false;
-  if (state.subject && r.subject !== state.subject) return false;
-  if (state.year && r.year !== state.year) return false;
-  if (!state.q) return true;
-  const type = CONFIG.types[r.type];
-  const haystack = [r.title, r.desc, r.subject, r.year, r.level, r.details, type && type.label, (r.tags || []).join(' ')]
-    .join(' ')
-    .toLowerCase();
-  return state.q
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((word) => haystack.includes(word));
-}
-
-/* ---------- cards ---------- */
-function buildCard(r) {
-  const type = CONFIG.types[r.type] || { label: r.type, colour: 'blue', action: 'link' };
-  const card = document.createElement('article');
-  card.className = 'resource-card';
-  card.dataset.id = r.id;
-
-  const thumb = document.createElement('div');
-  thumb.className = 'thumb';
-  thumb.innerHTML = window.edgThumb(r.art, r.image);
-
-  const badge = document.createElement('span');
-  badge.className = `badge badge-${type.colour}`;
-  badge.textContent = type.label;
-  thumb.appendChild(badge);
-
-  if (type.action === 'embed') {
-    const play = document.createElement('span');
-    play.className = 'play-overlay';
-    play.innerHTML = '<svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>';
-    thumb.appendChild(play);
-  }
-
-  const link = document.createElement('a');
-  link.className = 'card-link';
-  link.href = r.url || '#';
-  link.innerHTML = `
-    <h3>${r.title}</h3>
-    <p class="meta">${[r.year, r.details].filter(Boolean).join(' &nbsp;•&nbsp; ')}</p>`;
-
-  if (type.action === 'embed') {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      openVideo(r);
-    });
-    thumb.addEventListener('click', () => openVideo(r));
-  } else {
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    thumb.addEventListener('click', () => link.click());
-  }
-
-  const foot = document.createElement('p');
-  foot.className = 'foot';
-  const tone = levelTone(r.level);
-  foot.innerHTML = `
-    <span class="level ${tone}">${r.level || ''}</span>
-    <svg class="ico bars ${tone}" aria-hidden="true"><use href="#i-bars"/></svg>`;
-
-  card.append(thumb, link, foot);
-  return card;
-}
-
-/* ---------- video popup ---------- */
-const modal = el('video-modal');
-const videoFrame = el('video-frame');
-
-function openVideo(r) {
-  const id = youtubeId(r.url);
-  el('video-title').textContent = r.title;
-  videoFrame.innerHTML = id
-    ? `<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0" title="${r.title}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`
-    : `<p class="modal-fallback">This video can't be embedded. <a href="${r.url}" target="_blank" rel="noopener noreferrer">Open it in a new tab</a>.</p>`;
-  modal.hidden = false;
-  document.body.classList.add('modal-open');
-}
-
-function closeVideo() {
-  modal.hidden = true;
-  videoFrame.innerHTML = '';
-  document.body.classList.remove('modal-open');
-}
-
-modal.addEventListener('click', (e) => {
-  if (e.target.closest('[data-close]')) closeVideo();
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !modal.hidden) closeVideo();
-});
-
-/* ---------- render ---------- */
-function render() {
-  const results = ALL.filter(matches).sort((a, b) => {
-    if (state.sort === 'az') return a.title.localeCompare(b.title);
-    return String(b.added || '').localeCompare(String(a.added || ''));
-  });
+function renderLibrary() {
+  const results = ALL.filter(matches).sort((a, b) =>
+    state.sort === 'az'
+      ? a.title.localeCompare(b.title)
+      : String(b.added || '').localeCompare(String(a.added || ''))
+  );
   const page = results.slice(0, state.shown);
 
   grid.innerHTML = '';
   page.forEach((r) => grid.appendChild(buildCard(r)));
 
   const type = CONFIG.types[state.type];
-  el('latest-title').textContent = type ? type.label : 'Latest resources';
-  countEl.textContent = `${results.length} ${results.length === 1 ? 'resource' : 'resources'}`;
-  noResults.hidden = results.length > 0;
-  loadMoreBtn.hidden = results.length <= state.shown;
-  loadMoreBtn.textContent = `Load more (${results.length - state.shown} remaining)`;
+  el('latest-title').textContent = type ? type.label : 'All resources';
+  el('result-count').textContent = `${results.length} ${results.length === 1 ? 'resource' : 'resources'}`;
+  el('no-results').hidden = results.length > 0;
+
+  const more = results.length - state.shown;
+  el('load-more').hidden = more <= 0;
+  el('load-more').textContent = `Load more (${more} remaining)`;
 
   renderActiveFilters();
-
-  document.querySelectorAll('.category-card').forEach((c) => {
-    const on = c.dataset.type === state.type;
-    c.classList.toggle('is-on', on);
-    c.setAttribute('aria-pressed', String(on));
+  document.querySelectorAll('#filter-type .filter-chip').forEach((chip) => {
+    chip.classList.toggle('is-on', chip.dataset.type === state.type);
   });
 }
-
-loadMoreBtn.addEventListener('click', () => {
-  state.shown += CONFIG.pageSize;
-  render();
-});
-
-/* ---------- search ---------- */
-searchInput.addEventListener('input', () => setFilter('q', searchInput.value.trim()));
-
-el('resource-search').addEventListener('submit', (e) => {
-  e.preventDefault();
-  setFilter('q', searchInput.value.trim());
-  el('latest').scrollIntoView({ behavior: 'smooth' });
-});
-
-document.querySelectorAll('.chip').forEach((chip) => {
-  chip.addEventListener('click', () => {
-    searchInput.value = chip.textContent;
-    setFilter('q', chip.textContent);
-    el('latest').scrollIntoView({ behavior: 'smooth' });
-  });
-});
 
 /* ---------- start ---------- */
-renderCategories();
-renderFilterControls();
-
-const deepLink = new URLSearchParams(location.search).get('r');
-if (deepLink) {
-  const found = ALL.find((r) => r.id === deepLink);
-  if (found) {
-    searchInput.value = found.title;
-    state.q = found.title;
+if (PAGE === 'library') {
+  renderLibraryControls();
+  const params = new URLSearchParams(location.search);
+  const q = params.get('q');
+  const type = params.get('type');
+  if (q) {
+    state.q = q;
+    searchInput.value = q;
   }
+  if (type && CONFIG.types[type]) state.type = type;
+  renderLibrary();
+} else {
+  renderHome();
 }
-
-render();
