@@ -7,6 +7,11 @@ toggle.addEventListener('click', () => {
   toggle.setAttribute('aria-expanded', String(open));
 });
 
+const header = document.querySelector('.site-header');
+const setHeaderState = () => header.classList.toggle('is-scrolled', window.scrollY > 24);
+setHeaderState();
+window.addEventListener('scroll', setHeaderState, { passive: true });
+
 document.querySelectorAll('.save').forEach((btn) => {
   btn.addEventListener('click', () => {
     const saved = btn.getAttribute('aria-pressed') === 'true';
