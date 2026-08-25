@@ -295,10 +295,19 @@ function renderLibraryControls() {
     renderLibrary();
   });
 
-  searchInput.addEventListener('input', () => setFilter('q', searchInput.value.trim()));
+  // A new search starts fresh - it replaces any category or dropdown filters.
+  const runSearch = () => {
+    state.type = '';
+    state.subject = '';
+    state.year = '';
+    el('filter-subject').value = '';
+    el('filter-year').value = '';
+    setFilter('q', searchInput.value.trim());
+  };
+  searchInput.addEventListener('input', runSearch);
   el('resource-search').addEventListener('submit', (e) => {
     e.preventDefault();
-    setFilter('q', searchInput.value.trim());
+    runSearch();
   });
 }
 
