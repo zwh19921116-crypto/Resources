@@ -45,34 +45,26 @@
 
 <main id="main">
 
-  <section class="page-hero">
+  <section class="section library">
     <div class="container">
       <nav class="crumbs" aria-label="Breadcrumb">
         <a href="index.html">Resources</a>
         <span aria-hidden="true">/</span>
         <span>All resources</span>
       </nav>
-      <div class="page-hero-grid">
-        <div>
-          <h1>The full library</h1>
-          <p class="lede">Every practice question set, exam, knowledge sheet, checklist, app and video in one place.</p>
-          <form class="search" role="search" id="resource-search">
-            <label class="sr-only" for="q">Search resources</label>
-            <input id="q" name="q" type="search" placeholder="Search by title, topic or tag…" autocomplete="off" />
-            <button class="search-btn" type="submit" aria-label="Search resources">
-              <svg class="ico" aria-hidden="true"><use href="#i-search"/></svg>
-            </button>
-          </form>
-        </div>
-        <dl class="hero-stats" id="hero-stats"></dl>
-      </div>
     </div>
-  </section>
 
-  <section class="section library">
     <div class="container library-layout">
 
-      <aside class="filters-panel" aria-label="Filters">
+      <aside class="filters-panel" aria-label="Search and filters">
+        <form class="filter-search" role="search" id="resource-search">
+          <label class="sr-only" for="q">Search resources</label>
+          <input id="q" name="q" type="search" placeholder="Search resources…" autocomplete="off" />
+          <button type="submit" aria-label="Search resources">
+            <svg class="ico" aria-hidden="true"><use href="#i-search"/></svg>
+          </button>
+        </form>
+
         <div class="filters-head">
           <h2>Filters</h2>
           <button class="clear-all" type="button" id="filter-reset" hidden>Reset</button>

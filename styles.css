@@ -300,13 +300,32 @@ button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
 .hero-stats dt{font-size:.7rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
 .hero-stats dd{margin:.25rem 0 0;font-size:1.5rem;font-weight:800;color:var(--navy);letter-spacing:-.02em}
 
-.library{padding:2.5rem 0 4rem}
+.library{
+  padding:1.5rem 0 4rem;
+  background:linear-gradient(180deg,var(--hero-a) 0%,#eef2fb 320px,#f6f8fd 100%);
+  min-height:70vh;
+}
+.library .crumbs{margin-bottom:1.25rem}
 .library-layout{display:grid;grid-template-columns:264px minmax(0,1fr);gap:2.25rem;align-items:start}
+
+.filter-search{display:flex;gap:.4rem;margin-bottom:1.25rem}
+.filter-search input{
+  flex:1;min-width:0;padding:.6rem .8rem;border:1px solid var(--line);border-radius:10px;
+  background:#fbfcfe;font-size:.86rem;color:var(--ink);
+}
+.filter-search input::placeholder{color:#9aa5b8}
+.filter-search input:focus{outline:none;border-color:#a5c0ff;background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.filter-search button{
+  width:38px;flex:none;border-radius:10px;background:var(--blue);color:#fff;
+  display:grid;place-items:center;
+}
+.filter-search button:hover{background:#1d4ed8}
+.filter-search .ico{width:17px;height:17px}
 
 .filters-panel{
   position:sticky;top:96px;
   background:#fff;border:1px solid var(--line);border-radius:16px;
-  padding:1.25rem;box-shadow:var(--shadow-sm);
+  padding:1.25rem;box-shadow:0 8px 26px rgba(15,23,42,.07);
 }
 .filters-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.1rem}
 .filters-head h2{font-size:.95rem;font-weight:700}
@@ -566,22 +585,45 @@ body.modal-open{overflow:hidden}
 
 /* ---------- Study panel ---------- */
 .study-panel{
-  background:#fff;border:1px solid var(--line);border-radius:16px;
-  padding:1.5rem;box-shadow:0 8px 24px rgba(15,23,42,.06);
+  background:#fff;border:1px solid var(--line);border-radius:18px;
+  padding:1.6rem 1.5rem 1.5rem;box-shadow:0 10px 30px rgba(15,23,42,.07);
+  display:flex;flex-direction:column;
 }
-.study-panel h3{font-size:1.05rem;margin-bottom:1rem}
-.study-panel ul{list-style:none;margin:0;padding:0;display:grid;gap:.4rem}
-.study-panel li{
-  display:flex;align-items:center;gap:.75rem;padding:.6rem .5rem;border-radius:10px;
-  transition:background .15s ease;
+.sp-head{padding-bottom:1.15rem;border-bottom:1px solid #f0f3fb}
+.sp-eyebrow{
+  font-size:.68rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:.4rem;
 }
-.study-panel li:hover{background:#f1f5ff}
-.sp-text{flex:1;min-width:0}
-.study-panel b{display:block;font-size:.85rem;color:var(--ink)}
-.study-panel em{font-style:normal;font-size:.76rem;color:var(--muted)}
-.study-panel .mini-icon{width:30px;height:30px;flex-basis:30px;border-radius:8px}
-.study-panel .mini-icon .ico{width:16px;height:16px}
-.study-panel .btn{margin-top:1.25rem;padding:.9rem;flex:none}
+.study-panel h3{font-size:1.12rem;line-height:1.3}
+
+.sp-list{list-style:none;margin:0;padding:.35rem 0 0;counter-reset:step;flex:1}
+.sp-list li{
+  display:flex;align-items:flex-start;gap:.9rem;
+  padding:1rem 0;border-bottom:1px solid #f4f6fc;
+}
+.sp-list li:last-child{border-bottom:0}
+.sp-icon{
+  position:relative;width:38px;height:38px;flex:none;border-radius:11px;
+  background:var(--blue-soft);color:var(--blue);display:grid;place-items:center;
+}
+.sp-icon .ico{width:18px;height:18px}
+.sp-icon::after{
+  counter-increment:step;content:counter(step);
+  position:absolute;top:-5px;right:-5px;width:17px;height:17px;border-radius:50%;
+  background:var(--navy);color:#fff;font-size:.6rem;font-weight:700;
+  display:grid;place-items:center;
+}
+.sp-text{flex:1;min-width:0;padding-top:.15rem}
+.sp-text b{display:block;font-size:.9rem;color:var(--ink);letter-spacing:-.01em}
+.sp-text em{font-style:normal;display:block;font-size:.8rem;color:var(--muted);margin-top:.2rem;line-height:1.45}
+
+.sp-cta{
+  margin-top:1.35rem;background:linear-gradient(160deg,#f4f7ff,#e9eefc);
+  border:1px solid #dde5fa;border-radius:14px;padding:1.15rem;text-align:center;
+}
+.sp-cta-title{font-size:.92rem;font-weight:700;color:var(--ink)}
+.sp-cta-note{font-size:.79rem;color:var(--muted);margin-top:.25rem;line-height:1.45}
+.sp-cta .btn{margin-top:.9rem;padding:.8rem;border-radius:10px}
 
 /* ---------- Footer ---------- */
 .site-footer{background:var(--navy);color:#c7d0ee;padding:3rem 0;margin-top:2rem}
