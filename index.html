@@ -60,13 +60,8 @@
           </button>
         </form>
 
-        <div class="popular">
+        <div class="popular" id="popular" hidden>
           <span>Popular:</span>
-          <button class="chip" type="button">Year 7 Maths</button>
-          <button class="chip" type="button">Algebra</button>
-          <button class="chip" type="button">NAPLAN</button>
-          <button class="chip" type="button">VCE Biology</button>
-          <button class="chip" type="button">Fractions</button>
         </div>
       </div>
 
@@ -203,7 +198,11 @@
           </a>
         </div>
 
+        <div class="filter-group" id="filter-type" role="group" aria-label="Filter by type"></div>
+
         <div class="resource-grid" id="resource-grid"></div>
+
+        <p class="no-results" id="no-results" hidden>Nothing here yet in this category.</p>
 
         <div class="load-more-wrap">
           <a class="btn btn-primary btn-pill" href="resources.html" id="browse-all">

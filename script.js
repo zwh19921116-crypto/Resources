@@ -162,21 +162,76 @@ function renderHome() {
     wrap.appendChild(a);
   });
 
-  const latest = [...ALL]
-    .sort((a, b) => String(b.added || '').localeCompare(String(a.added || '')))
-    .slice(0, 8);
-  latest.forEach((r) => grid.appendChild(buildCard(r)));
+  const typeWrap = el('filter-type');
+  const chip = (key, label, count) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'filter-chip';
+    b.dataset.type = key;
+    b.innerHTML = `${esc(label)} <span class="chip-count">${count}</span>`;
+    b.addEventListener('click', () => {
+      state.type = state.type === key ? '' : key;
+      renderLatest();
+    });
+    return b;
+  };
+  typeWrap.appendChild(chip('', 'All', ALL.length));
+  Object.entries(CONFIG.types).forEach(([key, t]) =>
+    typeWrap.appendChild(chip(key, t.label, ALL.filter((r) => r.type === key).length))
+  );
+
+  function renderLatest() {
+    const latest = ALL.filter((r) => !state.type || r.type === state.type)
+      .sort((a, b) => String(b.added || '').localeCompare(String(a.added || '')))
+      .slice(0, 8);
+
+    grid.innerHTML = '';
+    latest.forEach((r) => grid.appendChild(buildCard(r)));
+    el('no-results').hidden = latest.length > 0;
+
+    typeWrap.querySelectorAll('.filter-chip').forEach((c) => {
+      c.classList.toggle('is-on', c.dataset.type === state.type);
+    });
+  }
+  renderLatest();
 
   el('resource-search').addEventListener('submit', (e) => {
     e.preventDefault();
     const q = searchInput.value.trim();
     location.href = q ? `resources.html?q=${encodeURIComponent(q)}` : 'resources.html';
   });
-  document.querySelectorAll('.chip').forEach((chip) => {
-    chip.addEventListener('click', () => {
-      location.href = `resources.html?q=${encodeURIComponent(chip.textContent)}`;
+
+  renderPopular();
+}
+
+/** Popular searches come from the tags and subjects actually in the library. */
+function renderPopular() {
+  const wrap = el('popular');
+  const counts = new Map();
+  ALL.forEach((r) => {
+    [...(r.tags || []), r.subject].filter(Boolean).forEach((term) => {
+      const key = String(term).trim();
+      if (key) counts.set(key, (counts.get(key) || 0) + 1);
     });
   });
+
+  const top = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 5)
+    .map(([term]) => term);
+
+  if (!top.length) return;
+  top.forEach((term) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.textContent = term;
+    b.addEventListener('click', () => {
+      location.href = `resources.html?q=${encodeURIComponent(term)}`;
+    });
+    wrap.appendChild(b);
+  });
+  wrap.hidden = false;
 }
 
 /* ---------- library page ---------- */
