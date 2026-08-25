@@ -12,6 +12,49 @@
 </head>
 <body>
 
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-question" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="9"/>
+    <path d="M9.4 9.6a2.6 2.6 0 1 1 3.3 2.5c-.6.2-1 .8-1 1.4v.4"/>
+    <circle cx="11.7" cy="17" r=".95" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24">
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/>
+    <path d="M14 3v5h5M9 13h6M9 17h4"/>
+  </symbol>
+  <symbol id="i-checklist" viewBox="0 0 24 24">
+    <rect x="4" y="5" width="16" height="16" rx="2.5"/>
+    <path d="M9 3h6v3.2H9z"/>
+    <path d="M8.4 13.4l2 2 4-4.2"/>
+  </symbol>
+  <symbol id="i-book" viewBox="0 0 24 24">
+    <path d="M3 5.6A2.6 2.6 0 0 1 5.6 3H10a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H3z"/>
+    <path d="M21 5.6A2.6 2.6 0 0 0 18.4 3H14a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h7z"/>
+  </symbol>
+  <symbol id="i-tap" viewBox="0 0 24 24">
+    <path d="M7.5 3.4l10.4 6.4-4.4 1.3 2.4 4.6-2.5 1.3-2.4-4.6-3.5 3z" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24">
+    <rect x="3" y="4.5" width="18" height="12" rx="2"/>
+    <path d="M8.5 20.5h7M12 16.5v4"/>
+  </symbol>
+  <symbol id="i-bookmark" viewBox="0 0 24 24">
+    <path d="M7 3.5h10a1 1 0 0 1 1 1v16l-6-4.2-6 4.2v-16a1 1 0 0 1 1-1z"/>
+  </symbol>
+  <symbol id="i-search" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/>
+  </symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9.5 5.5l6.5 6.5-6.5 6.5"/></symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24">
+    <g fill="currentColor" stroke="none">
+      <rect x="3.5" y="14" width="4" height="7" rx="1.3"/>
+      <rect x="10" y="9.5" width="4" height="11.5" rx="1.3"/>
+      <rect x="16.5" y="5" width="4" height="16" rx="1.3"/>
+    </g>
+  </symbol>
+</svg>
+
 <a class="skip-link" href="#main">Skip to content</a>
 
 <header class="site-header">
@@ -36,7 +79,7 @@
 
     <div class="header-actions">
       <button class="icon-btn" aria-label="Search">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <svg class="ico" aria-hidden="true"><use href="#i-search"/></svg>
       </button>
       <a class="btn btn-ghost" href="#">Log in</a>
       <a class="btn btn-primary" href="#">Sign up</a>
@@ -57,7 +100,7 @@
           <label class="sr-only" for="q">Search resources</label>
           <input id="q" name="q" type="search" placeholder="Search resources…" autocomplete="off" />
           <button class="search-btn" type="submit" aria-label="Search resources">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            <svg class="ico" aria-hidden="true"><use href="#i-search"/></svg>
           </button>
         </form>
 
@@ -72,50 +115,82 @@
       </div>
 
       <div class="hero-visual" aria-hidden="true">
-        <div class="float-card float-a">
-          <span class="mini-icon purple">?</span>
-          <strong>Practice Questions</strong>
-          <small>1,245 questions</small>
+        <span class="blob blob-1"></span>
+        <span class="blob blob-2"></span>
+        <span class="dots"></span>
+
+        <div class="float-card float-a icon-right">
+          <div class="fc-text"><strong>Practice<br />Questions</strong><small>1,245 questions</small></div>
+          <span class="mini-icon purple"><svg class="ico" aria-hidden="true"><use href="#i-question"/></svg></span>
         </div>
-        <div class="float-card float-b">
-          <span class="mini-icon blue">▤</span>
-          <strong>Practice Exams</strong>
-          <small>55 exams</small>
+        <div class="float-card float-b icon-right">
+          <div class="fc-text"><strong>Practice<br />Exams</strong><small>56 exams</small></div>
+          <span class="mini-icon blue"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></span>
         </div>
         <div class="float-card float-c">
-          <span class="mini-icon amber">▮</span>
-          <strong>Knowledge Sheets</strong>
-          <small>132 sheets</small>
+          <span class="mini-icon blue"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg></span>
+          <div class="fc-text"><strong>Knowledge<br />Sheets</strong><small>132 sheets</small></div>
         </div>
         <div class="float-card float-d">
-          <span class="mini-icon pink">✦</span>
-          <strong>Interactive Apps</strong>
-          <small>18 apps</small>
+          <span class="mini-icon purple"><svg class="ico" aria-hidden="true"><use href="#i-tap"/></svg></span>
+          <div class="fc-text"><strong>Interactive<br />Apps</strong><small>18 apps</small></div>
         </div>
         <div class="float-card float-e">
-          <span class="mini-icon green">✓</span>
-          <strong>Subject Checklists</strong>
-          <small>32 checklists</small>
+          <span class="mini-icon green"><svg class="ico" aria-hidden="true"><use href="#i-checklist"/></svg></span>
+          <div class="fc-text"><strong>Subject<br />Checklists</strong><small>32 checklists</small></div>
         </div>
 
-        <div class="dashboard">
-          <h3>Keep learning, achieve more</h3>
-          <p>Pick up where you left off or explore something new.</p>
-          <span class="pill">Continue learning →</span>
+        <div class="laptop">
+          <div class="laptop-screen">
+            <div class="dashboard">
+              <h3>Keep learning, achieve more</h3>
+              <p>Pick up where you left off or explore something new.</p>
+              <span class="pill">Continue learning →</span>
 
-          <p class="dash-label">Your progress</p>
-          <div class="progress-row">
-            <span>Practice Exam – Algebra</span>
-            <div class="bar"><i style="width:65%"></i></div>
-            <b>65%</b>
-          </div>
+              <p class="dash-label">Your progress</p>
+              <div class="progress-row">
+                <span>Practice Exam – Algebra</span>
+                <div class="bar"><i style="width:65%"></i></div>
+                <b>65%</b>
+              </div>
 
-          <p class="dash-label">Recent activity</p>
-          <div class="activity">
-            <div class="act"><span class="mini-icon blue sm">▤</span><span><b>Fractions Practice</b><em>Completed</em></span></div>
-            <div class="act"><span class="mini-icon blue sm">▤</span><span><b>Knowledge Sheet – Photosynthesis</b><em>Viewed</em></span></div>
+              <p class="dash-label">Recent activity</p>
+              <div class="activity">
+                <div class="act">
+                  <span class="mini-icon blue sm"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></span>
+                  <span class="act-text"><b>Fractions Practice</b><em>Completed</em></span>
+                  <svg class="ico chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+                </div>
+                <div class="act">
+                  <span class="mini-icon blue sm"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg></span>
+                  <span class="act-text"><b>Knowledge Sheet – Photosynthesis</b><em>Viewed</em></span>
+                  <svg class="ico chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+                </div>
+              </div>
+            </div>
           </div>
+          <div class="laptop-base"></div>
         </div>
+
+        <svg class="plant" viewBox="0 0 90 120" aria-hidden="true">
+          <path d="M45 78c-2-16-12-26-26-30 2 17 10 27 26 30z" fill="#8fd18a"/>
+          <path d="M45 78c1-19 11-30 27-34-3 19-11 30-27 34z" fill="#6fc06c"/>
+          <path d="M45 78c-6-14-4-27 4-38 6 13 5 27-4 38z" fill="#a7dfa0"/>
+          <path d="M27 82h36l-4 30a5 5 0 0 1-5 4H36a5 5 0 0 1-5-4z" fill="#e6ebf7"/>
+          <rect x="24" y="76" width="42" height="10" rx="3" fill="#f2f5fc"/>
+        </svg>
+
+        <svg class="pencils" viewBox="0 0 70 90" aria-hidden="true">
+          <g>
+            <rect x="16" y="14" width="7" height="44" rx="3" fill="#ffca6b"/><path d="M16 14l3.5-8 3.5 8z" fill="#f2a33c"/>
+            <rect x="28" y="6" width="7" height="52" rx="3" fill="#7fb2ff"/><path d="M28 6l3.5-8 3.5 8z" fill="#4d86e6"/>
+            <rect x="40" y="18" width="7" height="40" rx="3" fill="#ff9db8"/><path d="M40 18l3.5-8 3.5 8z" fill="#e8688d"/>
+          </g>
+          <path d="M14 48h38l-3 34a6 6 0 0 1-6 5H23a6 6 0 0 1-6-5z" fill="#dfe6f7"/>
+          <rect x="11" y="43" width="44" height="9" rx="3" fill="#eef2fb"/>
+        </svg>
+
+        <span class="desk"></span>
       </div>
     </div>
   </section>
@@ -125,34 +200,44 @@
       <h2 class="section-title">Explore our resource categories</h2>
       <div class="category-grid">
         <a class="category-card" href="#latest">
-          <span class="cat-icon purple">?</span>
-          <h3>Practice Questions</h3>
-          <p>Topic based questions to build skills and confidence.</p>
-          <span class="arrow" aria-hidden="true">→</span>
+          <span class="cat-icon purple"><svg class="ico" aria-hidden="true"><use href="#i-question"/></svg></span>
+          <div class="cat-body">
+            <h3>Practice Questions</h3>
+            <p>Topic based questions to build skills and confidence.</p>
+          </div>
+          <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
         </a>
         <a class="category-card" href="#latest">
-          <span class="cat-icon blue">▤</span>
-          <h3>Practice Exams</h3>
-          <p>Realistic exams to test your knowledge.</p>
-          <span class="arrow" aria-hidden="true">→</span>
+          <span class="cat-icon blue"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></span>
+          <div class="cat-body">
+            <h3>Practice Exams</h3>
+            <p>Realistic exams to test your knowledge.</p>
+          </div>
+          <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
         </a>
         <a class="category-card" href="#latest">
-          <span class="cat-icon green">✓</span>
-          <h3>Subject Checklists</h3>
-          <p>Track your learning and stay on top of key topics.</p>
-          <span class="arrow" aria-hidden="true">→</span>
+          <span class="cat-icon green"><svg class="ico" aria-hidden="true"><use href="#i-checklist"/></svg></span>
+          <div class="cat-body">
+            <h3>Subject Checklists</h3>
+            <p>Track your learning and stay on top of key topics.</p>
+          </div>
+          <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
         </a>
         <a class="category-card" href="#latest">
-          <span class="cat-icon amber">▮</span>
-          <h3>Knowledge Sheets</h3>
-          <p>Concise notes and summary sheets for quick revision.</p>
-          <span class="arrow" aria-hidden="true">→</span>
+          <span class="cat-icon amber"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg></span>
+          <div class="cat-body">
+            <h3>Knowledge Sheets</h3>
+            <p>Concise notes and summary sheets for quick revision.</p>
+          </div>
+          <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
         </a>
         <a class="category-card" href="#latest">
-          <span class="cat-icon pink">✦</span>
-          <h3>Interactive Apps</h3>
-          <p>Engaging tools and games that make learning fun.</p>
-          <span class="arrow" aria-hidden="true">→</span>
+          <span class="cat-icon pink"><svg class="ico" aria-hidden="true"><use href="#i-tap"/></svg></span>
+          <div class="cat-body">
+            <h3>Interactive Apps</h3>
+            <p>Engaging tools and games that make learning fun.</p>
+          </div>
+          <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
         </a>
       </div>
     </div>
@@ -168,43 +253,134 @@
 
         <div class="resource-grid" id="resource-grid">
           <article class="resource-card" data-title="Algebra – Linear Equations" data-tags="year 7 maths algebra practice questions">
-            <div class="thumb thumb-maths">
+            <div class="thumb">
+              <svg class="art" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                <rect width="300" height="180" fill="#eef0fb"/>
+                <g stroke="#c3cbe8" stroke-width="1.4" fill="none" opacity=".85">
+                  <path d="M22 46h34M39 29v34"/>
+                  <path d="M96 40l26 26M122 40l-26 26"/>
+                  <path d="M168 36c14 0 14 30 28 30"/>
+                  <path d="M228 32v34M222 66h48M258 30l-16 40"/>
+                  <path d="M28 104h56M28 118h34"/>
+                  <path d="M118 96l22 34M140 96l-22 34"/>
+                  <path d="M186 100h48M186 116h30"/>
+                  <path d="M256 96v36M248 132h30"/>
+                  <path d="M40 150h70M150 150h40M214 150h52"/>
+                </g>
+                <g fill="#aeb9de" opacity=".9">
+                  <circle cx="170" cy="78" r="3"/><circle cx="92" cy="152" r="3"/><circle cx="274" cy="64" r="3"/>
+                </g>
+              </svg>
               <span class="badge badge-purple">Practice Questions</span>
-              <button class="save" type="button" aria-label="Save Algebra – Linear Equations" aria-pressed="false">♡</button>
+              <button class="save" type="button" aria-label="Save Algebra – Linear Equations" aria-pressed="false">
+                <svg class="ico" aria-hidden="true"><use href="#i-bookmark"/></svg>
+              </button>
             </div>
             <h3>Algebra – Linear Equations</h3>
-            <p class="meta">Year 7 • 20 questions</p>
-            <p class="foot"><span class="level easy">Easy</span><span class="bars" aria-hidden="true">▁▃▅</span></p>
+            <p class="meta">Year 7 &nbsp;•&nbsp; 20 questions</p>
+            <p class="foot">
+              <span class="level easy">Easy</span>
+              <svg class="ico bars easy" aria-hidden="true"><use href="#i-bars"/></svg>
+            </p>
           </article>
 
           <article class="resource-card" data-title="Year 9 Mathematics Practice Exam 1" data-tags="year 9 maths exam">
-            <div class="thumb thumb-exam">
+            <div class="thumb">
+              <svg class="art" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                <rect width="300" height="180" fill="#e8e2d8"/>
+                <rect x="22" y="14" width="196" height="170" rx="6" fill="#fbf9f5" transform="rotate(-4 120 99)"/>
+                <g stroke="#d5cec2" stroke-width="3" stroke-linecap="round" transform="rotate(-4 120 99)">
+                  <path d="M40 46h150M40 66h150M40 86h120M40 106h150M40 126h100M40 146h140"/>
+                </g>
+                <g transform="rotate(28 232 96)">
+                  <rect x="222" y="36" width="18" height="120" rx="4" fill="#f0c46a"/>
+                  <path d="M222 36l9-22 9 22z" fill="#e8b45a"/>
+                  <path d="M226 20l5-6 5 6z" fill="#3f3a33"/>
+                  <rect x="222" y="150" width="18" height="14" rx="3" fill="#e07a6a"/>
+                </g>
+              </svg>
               <span class="badge badge-blue">Practice Exam</span>
-              <button class="save" type="button" aria-label="Save Year 9 Mathematics Practice Exam 1" aria-pressed="false">♡</button>
+              <button class="save" type="button" aria-label="Save Year 9 Mathematics Practice Exam 1" aria-pressed="false">
+                <svg class="ico" aria-hidden="true"><use href="#i-bookmark"/></svg>
+              </button>
             </div>
-            <h3>Year 9 Mathematics Practice Exam 1</h3>
-            <p class="meta">Year 9 • 45 questions</p>
-            <p class="foot"><span class="level medium">Medium</span><span class="bars" aria-hidden="true">▁▃▅</span></p>
+            <h3>Year 9 Mathematics<br />Practice Exam 1</h3>
+            <p class="meta">Year 9 &nbsp;•&nbsp; 45 questions</p>
+            <p class="foot">
+              <span class="level medium">Medium</span>
+              <svg class="ico bars medium" aria-hidden="true"><use href="#i-bars"/></svg>
+            </p>
           </article>
 
-          <article class="resource-card" data-title="Photosynthesis" data-tags="biology knowledge sheet science">
-            <div class="thumb thumb-bio">
+          <article class="resource-card" data-title="Photosynthesis" data-tags="biology knowledge sheet science leaf">
+            <div class="thumb">
+              <svg class="art" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                <defs>
+                  <linearGradient id="leafBg" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0" stop-color="#bfe89a"/><stop offset="1" stop-color="#3f8f37"/>
+                  </linearGradient>
+                </defs>
+                <rect width="300" height="180" fill="url(#leafBg)"/>
+                <g opacity=".35" fill="#ffffff">
+                  <path d="M0 0h70L0 92z"/><circle cx="250" cy="32" r="26"/>
+                </g>
+                <path d="M64 156c-6-72 44-116 118-124 12 74-38 122-118 124z" fill="#6fbb4e"/>
+                <path d="M64 156C104 96 146 60 182 32" stroke="#2f7a2c" stroke-width="5" fill="none" stroke-linecap="round"/>
+                <g stroke="#3f8f37" stroke-width="3" fill="none" stroke-linecap="round" opacity=".8">
+                  <path d="M96 120c8-22 26-30 44-30M84 142c4-30 30-44 54-48M124 88c4-18 22-28 38-32"/>
+                </g>
+                <path d="M196 128c-4-42 26-68 68-74 8 44-22 72-68 74z" fill="#57a83e" opacity=".9"/>
+              </svg>
               <span class="badge badge-green">Knowledge Sheet</span>
-              <button class="save" type="button" aria-label="Save Photosynthesis" aria-pressed="false">♡</button>
+              <button class="save" type="button" aria-label="Save Photosynthesis" aria-pressed="false">
+                <svg class="ico" aria-hidden="true"><use href="#i-bookmark"/></svg>
+              </button>
             </div>
             <h3>Photosynthesis</h3>
-            <p class="meta">Biology • 2 pages</p>
-            <p class="foot"><span class="level info">Reference</span><span class="bars" aria-hidden="true">▁▃▅</span></p>
+            <p class="meta">Biology &nbsp;•&nbsp; 2 pages</p>
+            <p class="foot">
+              <span class="level info">Reference</span>
+              <svg class="ico bars info" aria-hidden="true"><use href="#i-bars"/></svg>
+            </p>
           </article>
 
-          <article class="resource-card" data-title="Solar System Explorer" data-tags="science interactive app space">
-            <div class="thumb thumb-space">
+          <article class="resource-card" data-title="Solar System Explorer" data-tags="science interactive app space planets">
+            <div class="thumb">
+              <svg class="art" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                <defs>
+                  <radialGradient id="spaceBg" cx="35%" cy="40%">
+                    <stop offset="0" stop-color="#243a7d"/><stop offset="1" stop-color="#0a1030"/>
+                  </radialGradient>
+                </defs>
+                <rect width="300" height="180" fill="url(#spaceBg)"/>
+                <g fill="#ffffff" opacity=".85">
+                  <circle cx="26" cy="28" r="1.6"/><circle cx="88" cy="18" r="1.2"/><circle cx="150" cy="40" r="1.6"/>
+                  <circle cx="212" cy="22" r="1.2"/><circle cx="272" cy="52" r="1.6"/><circle cx="46" cy="92" r="1.2"/>
+                  <circle cx="116" cy="128" r="1.6"/><circle cx="196" cy="148" r="1.2"/><circle cx="262" cy="120" r="1.6"/>
+                  <circle cx="64" cy="158" r="1.2"/><circle cx="238" cy="86" r="1.2"/>
+                </g>
+                <ellipse cx="150" cy="98" rx="116" ry="44" fill="none" stroke="#5f79c8" stroke-width="1.4" opacity=".5"/>
+                <ellipse cx="150" cy="98" rx="72" ry="27" fill="none" stroke="#5f79c8" stroke-width="1.4" opacity=".4"/>
+                <circle cx="150" cy="98" r="20" fill="#ffb545"/>
+                <circle cx="150" cy="98" r="28" fill="#ffb545" opacity=".22"/>
+                <circle cx="78" cy="110" r="9" fill="#4f9ce8"/>
+                <circle cx="222" cy="84" r="7" fill="#e8705f"/>
+                <g transform="rotate(-18 254 132)">
+                  <circle cx="254" cy="132" r="12" fill="#c9a06a"/>
+                  <ellipse cx="254" cy="132" rx="21" ry="5" fill="none" stroke="#e2c79b" stroke-width="2.5"/>
+                </g>
+              </svg>
               <span class="badge badge-pink">Interactive App</span>
-              <button class="save" type="button" aria-label="Save Solar System Explorer" aria-pressed="false">♡</button>
+              <button class="save" type="button" aria-label="Save Solar System Explorer" aria-pressed="false">
+                <svg class="ico" aria-hidden="true"><use href="#i-bookmark"/></svg>
+              </button>
             </div>
             <h3>Solar System Explorer</h3>
-            <p class="meta">Science • Interactive</p>
-            <p class="foot"><span class="level fun">Fun</span><span class="bars" aria-hidden="true">▁▃▅</span></p>
+            <p class="meta">Science &nbsp;•&nbsp; Interactive</p>
+            <p class="foot">
+              <span class="level fun">Fun</span>
+              <svg class="ico bars info" aria-hidden="true"><use href="#i-bars"/></svg>
+            </p>
           </article>
         </div>
         <p class="no-results" id="no-results" hidden>No resources match your search.</p>
@@ -213,12 +389,28 @@
       <aside class="study-panel" aria-label="Study smarter">
         <h3>Study smarter</h3>
         <ul>
-          <li><span class="mini-icon blue">▤</span><span><b>Organise your learning</b><em>Use checklists to track progress</em></span><i aria-hidden="true">›</i></li>
-          <li><span class="mini-icon blue">▤</span><span><b>Revise efficiently</b><em>Access concise knowledge sheets</em></span><i aria-hidden="true">›</i></li>
-          <li><span class="mini-icon purple">?</span><span><b>Practice consistently</b><em>Questions and exams for every topic</em></span><i aria-hidden="true">›</i></li>
-          <li><span class="mini-icon blue">▤</span><span><b>Learn anywhere</b><em>Use interactive apps on any device</em></span><i aria-hidden="true">›</i></li>
+          <li>
+            <span class="mini-icon blue"><svg class="ico" aria-hidden="true"><use href="#i-checklist"/></svg></span>
+            <span class="sp-text"><b>Organise your learning</b><em>Use checklists to track progress</em></span>
+            <svg class="ico chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+          </li>
+          <li>
+            <span class="mini-icon blue"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></span>
+            <span class="sp-text"><b>Revise efficiently</b><em>Access concise knowledge sheets</em></span>
+            <svg class="ico chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+          </li>
+          <li>
+            <span class="mini-icon blue"><svg class="ico" aria-hidden="true"><use href="#i-question"/></svg></span>
+            <span class="sp-text"><b>Practice consistently</b><em>Questions and exams for every topic</em></span>
+            <svg class="ico chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+          </li>
+          <li>
+            <span class="mini-icon blue"><svg class="ico" aria-hidden="true"><use href="#i-monitor"/></svg></span>
+            <span class="sp-text"><b>Learn anywhere</b><em>Use interactive apps on any device</em></span>
+            <svg class="ico chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+          </li>
         </ul>
-        <a class="btn btn-primary btn-block" href="#">Create a free account</a>
+        <a class="btn btn-primary btn-block" href="#">Subscribe</a>
       </aside>
     </div>
   </section>

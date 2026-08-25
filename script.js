@@ -11,7 +11,6 @@ document.querySelectorAll('.save').forEach((btn) => {
   btn.addEventListener('click', () => {
     const saved = btn.getAttribute('aria-pressed') === 'true';
     btn.setAttribute('aria-pressed', String(!saved));
-    btn.textContent = saved ? '\u2661' : '\u2665';
   });
 });
 
