@@ -26,11 +26,6 @@ setHeaderState();
 window.addEventListener('scroll', setHeaderState, { passive: true });
 
 /* ---------- helpers ---------- */
-const artTemplates = {};
-document.querySelectorAll('.art-templates template').forEach((t) => {
-  artTemplates[t.dataset.art] = t;
-});
-
 const levelTone = (level) => {
   const map = { Easy: 'easy', Medium: 'medium', Hard: 'hard', Fun: 'fun' };
   return map[level] || 'info';
@@ -137,8 +132,7 @@ function buildCard(r) {
 
   const thumb = document.createElement('div');
   thumb.className = 'thumb';
-  const tpl = artTemplates[r.art] || artTemplates.maths;
-  if (tpl) thumb.appendChild(tpl.content.cloneNode(true));
+  thumb.innerHTML = window.edgThumb(r.art, r.image);
 
   const badge = document.createElement('span');
   badge.className = `badge badge-${type.colour}`;
