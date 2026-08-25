@@ -24,6 +24,11 @@ async function mountPdfReader(reader) {
     status.textContent = '';
   };
 
+  if (new URL(url, location.href).origin !== location.origin) {
+    showFallback();
+    return;
+  }
+
   const render = async () => {
     if (rendering || !documentProxy) return;
     rendering = true;
@@ -40,7 +45,8 @@ async function mountPdfReader(reader) {
       canvas.style.width = `${Math.floor(viewport.width)}px`;
       canvas.style.height = `${Math.floor(viewport.height)}px`;
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
-      await page.render({ canvasContext: context, viewport }).promise;
+      const renderTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('PDF render timed out')), 5000));
+      await Promise.race([page.render({ canvasContext: context, viewport }).promise, renderTimeout]);
       pageLabel.textContent = `${pageNumber} / ${documentProxy.numPages}`;
       previous.disabled = pageNumber === 1;
       next.disabled = pageNumber === documentProxy.numPages;
