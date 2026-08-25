@@ -226,7 +226,13 @@
 
   <section class="section" id="categories">
     <div class="container">
-      <h2 class="section-title">Explore our resource categories</h2>
+      <div class="section-head">
+        <div>
+          <p class="section-eyebrow">Browse the library</p>
+          <h2 class="section-title">Explore our resource categories</h2>
+        </div>
+        <p class="section-note">Select a category to filter the list below</p>
+      </div>
       <div class="category-grid" id="category-grid"></div>
     </div>
   </section>
@@ -235,20 +241,24 @@
     <div class="container latest-grid">
       <div>
         <div class="latest-head">
-          <h2 class="section-title">Latest resources</h2>
-          <p class="result-count" id="result-count"></p>
-        </div>
-
-        <div class="filter-bar">
-          <div class="filter-group" id="filter-type" role="group" aria-label="Filter by type"></div>
-          <div class="filter-selects">
+          <div>
+            <h2 class="section-title" id="latest-title">Latest resources</h2>
+            <p class="result-count" id="result-count"></p>
+          </div>
+          <div class="filter-controls">
             <label class="sr-only" for="filter-subject">Subject</label>
             <select id="filter-subject"><option value="">All subjects</option></select>
             <label class="sr-only" for="filter-year">Year level</label>
             <select id="filter-year"><option value="">All year levels</option></select>
-            <button class="btn-reset" type="button" id="filter-reset" hidden>Clear all</button>
+            <label class="sr-only" for="sort-by">Sort</label>
+            <select id="sort-by">
+              <option value="newest">Newest first</option>
+              <option value="az">A – Z</option>
+            </select>
           </div>
         </div>
+
+        <div class="active-filters" id="active-filters" hidden></div>
 
         <div class="resource-grid" id="resource-grid"></div>
 

@@ -5,6 +5,22 @@
  */
 window.EDG_RESOURCES = [
   {
+    id: 'youtube-video',
+    title: 'youtube video',
+    type: 'video',
+    subject: 'Maths',
+    year: 'Year 7',
+    level: 'Easy',
+    desc: '',
+    details: '',
+    art: 'maths',
+    image: '',
+    tags: [],
+    url: 'https://www.youtube.com/watch?v=P6FORpg0KVo',
+    added: '2026-08-25',
+    status: 'published'
+  },
+  {
     id: 'safety-at-construction-site',
     title: 'Safety at Construction Site',
     type: 'knowledge-sheet',

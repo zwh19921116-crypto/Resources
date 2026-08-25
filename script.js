@@ -8,7 +8,7 @@ const noResults = el('no-results');
 const loadMoreBtn = el('load-more');
 const searchInput = el('q');
 
-const state = { q: '', type: '', subject: '', year: '', shown: CONFIG.pageSize };
+const state = { q: '', type: '', subject: '', year: '', sort: 'newest', shown: CONFIG.pageSize };
 
 document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -41,36 +41,32 @@ function renderCategories() {
   const wrap = el('category-grid');
   wrap.innerHTML = '';
   Object.entries(CONFIG.types).forEach(([key, t]) => {
-    const a = document.createElement('a');
-    a.className = 'category-card';
-    a.href = '#latest';
-    a.innerHTML = `
+    const total = ALL.filter((r) => r.type === key).length;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'category-card';
+    card.dataset.type = key;
+    card.setAttribute('aria-pressed', 'false');
+    card.innerHTML = `
       <span class="cat-icon ${t.colour}"><svg class="ico"><use href="#i-${t.icon}"/></svg></span>
-      <div class="cat-body">
-        <h3>${t.label}</h3>
-        <p>${t.blurb}</p>
-      </div>
-      <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>`;
-    a.addEventListener('click', () => setFilter('type', state.type === key ? '' : key));
-    wrap.appendChild(a);
+      <span class="cat-body">
+        <span class="cat-title">${t.label}</span>
+        <span class="cat-blurb">${t.blurb}</span>
+      </span>
+      <span class="cat-foot">
+        <span class="cat-count">${total} ${total === 1 ? 'resource' : 'resources'}</span>
+        <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
+      </span>`;
+    card.addEventListener('click', () => {
+      setFilter('type', state.type === key ? '' : key);
+      el('latest').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    wrap.appendChild(card);
   });
 }
 
 /* ---------- filters ---------- */
 function renderFilterControls() {
-  const typeWrap = el('filter-type');
-  const mk = (key, label) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'filter-chip';
-    b.dataset.type = key;
-    b.textContent = label;
-    b.addEventListener('click', () => setFilter('type', key));
-    return b;
-  };
-  typeWrap.appendChild(mk('', 'All'));
-  Object.entries(CONFIG.types).forEach(([key, t]) => typeWrap.appendChild(mk(key, t.label)));
-
   const fill = (select, values) => {
     values.forEach((v) => {
       const o = document.createElement('option');
@@ -84,7 +80,7 @@ function renderFilterControls() {
 
   el('filter-subject').addEventListener('change', (e) => setFilter('subject', e.target.value));
   el('filter-year').addEventListener('change', (e) => setFilter('year', e.target.value));
-  el('filter-reset').addEventListener('click', resetFilters);
+  el('sort-by').addEventListener('change', (e) => setFilter('sort', e.target.value));
   el('no-results-reset').addEventListener('click', resetFilters);
 }
 
@@ -104,6 +100,42 @@ function resetFilters() {
   el('filter-subject').value = '';
   el('filter-year').value = '';
   render();
+}
+
+/* ---------- active filter pills ---------- */
+function renderActiveFilters() {
+  const wrap = el('active-filters');
+  const pills = [];
+  if (state.q) pills.push({ key: 'q', label: `“${state.q}”` });
+  if (state.type) pills.push({ key: 'type', label: (CONFIG.types[state.type] || {}).label || state.type });
+  if (state.subject) pills.push({ key: 'subject', label: state.subject });
+  if (state.year) pills.push({ key: 'year', label: state.year });
+
+  wrap.hidden = pills.length === 0;
+  wrap.innerHTML = '';
+  pills.forEach((p) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'active-pill';
+    b.innerHTML = `${p.label}<svg class="ico" aria-hidden="true"><use href="#i-close"/></svg>`;
+    b.setAttribute('aria-label', `Remove filter ${p.label}`);
+    b.addEventListener('click', () => {
+      if (p.key === 'q') searchInput.value = '';
+      if (p.key === 'subject') el('filter-subject').value = '';
+      if (p.key === 'year') el('filter-year').value = '';
+      setFilter(p.key, '');
+    });
+    wrap.appendChild(b);
+  });
+
+  if (pills.length > 1) {
+    const clear = document.createElement('button');
+    clear.type = 'button';
+    clear.className = 'clear-all';
+    clear.textContent = 'Clear all';
+    clear.addEventListener('click', resetFilters);
+    wrap.appendChild(clear);
+  }
 }
 
 /* ---------- matching ---------- */
@@ -205,27 +237,28 @@ document.addEventListener('keydown', (e) => {
 
 /* ---------- render ---------- */
 function render() {
-  const results = ALL.filter(matches);
+  const results = ALL.filter(matches).sort((a, b) => {
+    if (state.sort === 'az') return a.title.localeCompare(b.title);
+    return String(b.added || '').localeCompare(String(a.added || ''));
+  });
   const page = results.slice(0, state.shown);
 
   grid.innerHTML = '';
   page.forEach((r) => grid.appendChild(buildCard(r)));
 
-  countEl.textContent = results.length
-    ? `${results.length} resource${results.length === 1 ? '' : 's'}`
-    : '';
+  const type = CONFIG.types[state.type];
+  el('latest-title').textContent = type ? type.label : 'Latest resources';
+  countEl.textContent = `${results.length} ${results.length === 1 ? 'resource' : 'resources'}`;
   noResults.hidden = results.length > 0;
   loadMoreBtn.hidden = results.length <= state.shown;
+  loadMoreBtn.textContent = `Load more (${results.length - state.shown} remaining)`;
 
-  const filtering = Boolean(state.q || state.type || state.subject || state.year);
-  el('filter-reset').hidden = !filtering;
+  renderActiveFilters();
 
-  document.querySelectorAll('#filter-type .filter-chip').forEach((chip) => {
-    chip.classList.toggle('is-on', chip.dataset.type === state.type);
-  });
-  document.querySelectorAll('.category-card').forEach((c, i) => {
-    const key = Object.keys(CONFIG.types)[i];
-    c.classList.toggle('is-on', key === state.type);
+  document.querySelectorAll('.category-card').forEach((c) => {
+    const on = c.dataset.type === state.type;
+    c.classList.toggle('is-on', on);
+    c.setAttribute('aria-pressed', String(on));
   });
 }
 
