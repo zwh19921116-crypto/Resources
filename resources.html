@@ -88,9 +88,12 @@
 
       <div class="library-main">
         <div class="results-bar">
-          <div>
+          <div class="results-meta">
             <h2 class="section-title" id="latest-title">All resources</h2>
-            <p class="result-count" id="result-count"></p>
+            <div class="results-line">
+              <p class="result-count" id="result-count"></p>
+              <div class="active-filters" id="active-filters" hidden></div>
+            </div>
           </div>
           <div class="sort-wrap">
             <label for="sort-by">Sort by</label>
@@ -100,8 +103,6 @@
             </select>
           </div>
         </div>
-
-        <div class="active-filters" id="active-filters" hidden></div>
 
         <div class="resource-grid" id="resource-grid"></div>
 
