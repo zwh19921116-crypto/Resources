@@ -55,6 +55,12 @@ window.EDG_CONFIG = {
 
   subjects: ['Maths', 'Biology', 'Chemistry', 'Physics', 'English', 'General'],
 
+  educationStages: {
+    primary: { label: 'Primary' },
+    secondary: { label: 'Secondary' },
+    vce: { label: 'VCE' }
+  },
+
   years: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'VCE Units 1&2', 'VCE Units 3&4'],
 
   levels: ['Easy', 'Medium', 'Hard', 'Reference', 'Fun'],

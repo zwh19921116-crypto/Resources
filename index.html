@@ -187,6 +187,77 @@
     </div>
   </section>
 
+  <section class="study-builder" id="study-builder" aria-labelledby="study-builder-title">
+    <div class="container study-builder-grid">
+      <div class="study-builder-copy">
+        <span class="section-badge"><svg class="ico" aria-hidden="true"><use href="#i-spark"/></svg> Build your study session</span>
+        <h2 id="study-builder-title">Make the next <span>30 minutes</span> count.</h2>
+        <p>Choose your subject, time and goal. We will point you to the best place to start.</p>
+        <figure class="daily-quote" aria-labelledby="quote-label">
+          <figcaption id="quote-label">A note for today</figcaption>
+          <blockquote id="daily-quote-text"></blockquote>
+          <button class="quote-next" id="quote-next" type="button">Another thought <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+        </figure>
+      </div>
+      <div class="session-card">
+        <label class="session-label" for="session-subject">I am studying</label>
+        <select id="session-subject"><option value="">Any subject</option></select>
+        <p class="session-label">I have</p>
+        <div class="session-options" id="session-time" role="group" aria-label="Available study time">
+          <button type="button" data-time="15">15 min</button><button type="button" data-time="30" class="is-on">30 min</button><button type="button" data-time="60">60 min</button>
+        </div>
+        <p class="session-label">My goal is to</p>
+        <div class="session-options session-goals" id="session-goal" role="group" aria-label="Study goal">
+          <button type="button" data-type="knowledge-sheet">Understand</button><button type="button" data-type="practice-questions" class="is-on">Practise</button><button type="button" data-type="practice-exam">Test myself</button>
+        </div>
+        <div class="session-result"><span>YOUR SESSION</span><strong id="session-result">30 min of focused practice</strong><em id="session-detail">Start with practice questions, then review what you missed.</em></div>
+        <a class="btn btn-primary btn-block" id="session-start" href="resources.html?type=practice-questions">Start this session <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="suggest-resource" id="suggest-resource" aria-labelledby="suggest-resource-title" hidden>
+    <div class="container suggest-resource-grid">
+      <div class="suggest-visual">
+        <div class="suggest-orbit orbit-one"></div>
+        <div class="suggest-orbit orbit-two"></div>
+        <div class="suggest-note suggest-note-one">Your idea</div>
+        <div class="suggest-note suggest-note-two">New resource</div>
+        <div class="suggest-illustration" aria-hidden="true">
+          <svg viewBox="0 0 260 230" role="presentation">
+            <rect x="43" y="23" width="174" height="184" rx="15" fill="#f9fbff" stroke="#c8d8fa" stroke-width="3"/>
+            <rect x="72" y="52" width="78" height="11" rx="5.5" fill="#1b3f82"/>
+            <rect x="72" y="78" width="115" height="7" rx="3.5" fill="#c8d7f5"/>
+            <rect x="72" y="94" width="95" height="7" rx="3.5" fill="#d9e4f8"/>
+            <rect x="72" y="125" width="116" height="45" rx="10" fill="#edf3ff"/>
+            <path d="M91 147l12 12 25-28" fill="none" stroke="#2563eb" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="197" cy="43" r="19" fill="#ffd21c"/>
+            <path d="M197 33v20M187 43h20" stroke="#173b7d" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="suggest-kicker">Help shape the library</span>
+        <h2 id="suggest-resource-title">What would you like to learn next?</h2>
+        <p>Tell us what resource would help you. Your suggestion helps us decide what to create and add next.</p>
+        <div class="suggest-points">
+          <span><svg class="ico" aria-hidden="true"><use href="#i-checklist"/></svg> Request a topic</span>
+          <span><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg> Suggest a format</span>
+        </div>
+      </div>
+      <div class="suggest-form-panel">
+        <div class="suggest-form-head">
+          <p class="section-eyebrow">Resource request</p>
+          <h3>Share your suggestion</h3>
+          <p>Your feedback helps keep this library useful for students.</p>
+        </div>
+        <div class="ghl-form-slot" data-ghl-form-slot>
+          <svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg>
+          <p>GHL resource request form</p>
+          <span>Paste your GHL embed code here. Configure CAPTCHA within GHL before publishing.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="section section-latest" id="latest">
     <div class="container latest-grid">
       <div>
@@ -218,35 +289,6 @@
         </div>
       </div>
 
-      <aside class="study-panel" aria-label="Study smarter">
-        <div class="sp-head">
-          <p class="sp-eyebrow">Study smarter</p>
-          <h3>A better way to prepare</h3>
-          <p class="sp-sub">A simple routine for making every study session count.</p>
-        </div>
-        <ol class="study-steps">
-          <li>
-            <span class="study-number">01</span>
-            <span><b>Choose one clear goal</b><em>Use a checklist to focus on the topic that needs attention.</em></span>
-          </li>
-          <li>
-            <span class="study-number">02</span>
-            <span><b>Learn actively</b><em>Read, watch or work through an example, then explain it back.</em></span>
-          </li>
-          <li>
-            <span class="study-number">03</span>
-            <span><b>Check your understanding</b><em>Practise questions, review mistakes and note your next step.</em></span>
-          </li>
-        </ol>
-        <div class="study-note">
-          <svg class="ico" aria-hidden="true"><use href="#i-spark"/></svg>
-          <p>Small, regular sessions build confidence faster than last-minute cramming.</p>
-        </div>
-        <a class="study-link" href="resources.html">
-          Browse all resources
-          <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>
-        </a>
-      </aside>
     </div>
   </section>
 
@@ -277,24 +319,87 @@
   </div>
 </div>
 
+<section class="library-cta" aria-labelledby="library-cta-title">
+  <div class="container">
+    <div class="library-cta-banner">
+      <span class="library-cta-icon"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg></span>
+      <div class="library-cta-copy">
+        <h2 id="library-cta-title">Ready to find the <span>right resource?</span></h2>
+        <p>Search by subject, year level or resource type and start learning at your own pace.</p>
+      </div>
+      <a class="library-cta-button" href="resources.html">
+        Explore the library
+        <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>
+      </a>
+    </div>
+    <div class="library-benefits">
+      <div class="library-benefit">
+        <span class="library-benefit-icon"><svg class="ico" aria-hidden="true"><use href="#i-question"/></svg></span>
+        <div><h3>Practice with purpose</h3><p>Questions, exams and interactive resources for focused learning.</p></div>
+      </div>
+      <div class="library-benefit">
+        <span class="library-benefit-icon"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg></span>
+        <div><h3>Learn your way</h3><p>Quick summaries, videos and guides when you need them.</p></div>
+      </div>
+      <div class="library-benefit">
+        <span class="library-benefit-icon"><svg class="ico" aria-hidden="true"><use href="#i-checklist"/></svg></span>
+        <div><h3>Stay organised</h3><p>Use checklists to plan your next step and track progress.</p></div>
+      </div>
+      <div class="library-info">
+        <h3>Start exploring</h3>
+        <p>Everything is organised by subject, year level and resource type.</p>
+        <a class="btn btn-outline" href="resources.html">Browse now</a>
+      </div>
+    </div>
+  </div>
+</section>
+
 <footer class="site-footer">
-  <div class="container footer-inner">
-    <div>
+  <div class="container footer-grid">
+    <div class="footer-social">
       <span class="brand-name light"><strong>Edge</strong>ducate</span>
       <p>Leading Edge in Education</p>
+      <div class="social-links" aria-label="Social media">
+        <a href="https://www.facebook.com/" aria-label="Facebook" target="_blank" rel="noopener">f</a>
+        <a href="https://www.instagram.com/" aria-label="Instagram" target="_blank" rel="noopener">◎</a>
+        <a href="https://www.linkedin.com/" aria-label="LinkedIn" target="_blank" rel="noopener">in</a>
+        <a href="https://www.youtube.com/" aria-label="YouTube" target="_blank" rel="noopener">▶</a>
+      </div>
     </div>
-    <nav aria-label="Footer">
-      <a href="#">Pricing</a>
-      <a href="#">VCE Preparation</a>
+    <nav class="footer-column" aria-label="Site links">
+      <h2>Links</h2>
+      <a href="index.html">Home</a>
+      <a href="#categories">Categories</a>
       <a href="resources.html">Resources</a>
-      <a href="#">Contact Us</a>
+      <a href="#exam-tips">Exam preparation</a>
     </nav>
-    <p class="copyright">&copy; <span id="year"></span> Edgeducate. All rights reserved.</p>
+    <nav class="footer-column" aria-label="Resource links">
+      <h2>Resources</h2>
+      <a href="resources.html?type=interactive-app">Interactive learning</a>
+      <a href="resources.html?type=knowledge-sheet">Knowledge sheets</a>
+      <a href="resources.html?type=practice-questions">Practice questions</a>
+      <a href="resources.html?type=practice-exam">Practice exams</a>
+      <a href="resources.html?type=video">Videos</a>
+    </nav>
+    <nav class="footer-column" aria-label="Subject links">
+      <h2>Subjects</h2>
+      <a href="resources.html?q=Biology">Biology</a>
+      <a href="resources.html?q=Chemistry">Chemistry</a>
+      <a href="resources.html?q=Maths">Mathematics</a>
+      <a href="resources.html?q=Physics">Physics</a>
+      <a href="resources.html?q=English">English</a>
+    </nav>
+    <div class="footer-column footer-about">
+      <h2>About</h2>
+      <p>A practical library for students to find, use and revisit quality learning resources.</p>
+      <p class="copyright">&copy; <span id="year"></span> Edgeducate</p>
+    </div>
   </div>
 </footer>
 
 <script src="data/config.js"></script>
 <script src="data/resources.js"></script>
+<script src="data/quotes.js"></script>
 <script src="art.js"></script>
 <script src="script.js"></script>
 </body>

@@ -43,25 +43,30 @@ function buildCard(r) {
   const card = document.createElement('article');
   card.className = 'resource-card';
   card.dataset.id = r.id;
+  const detailUrl = `resource-pages/${encodeURIComponent(r.id)}/index.html`;
 
   const tone = levelTone(r.level);
   card.innerHTML = `
-    <div class="thumb">
+    <a class="thumb" href="${detailUrl}" target="_blank" rel="noopener" aria-label="Open ${esc(r.title)} in a new tab">
       ${window.edgThumb(r.art, r.image)}
       <span class="badge badge-${type.colour}">${esc(type.label)}</span>
       ${type.action === 'embed' ? '<span class="play-overlay"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg></span>' : ''}
-    </div>
-    <button class="card-link" type="button">
+    </a>
+    <a class="card-link" href="${detailUrl}" target="_blank" rel="noopener">
       <h3>${esc(r.title)}</h3>
       <p class="meta">${[r.year, r.details].filter(Boolean).map(esc).join(' &nbsp;•&nbsp; ')}</p>
-    </button>
+    </a>
     <p class="foot">
       <span class="level ${tone}">${esc(r.level || '')}</span>
-      <svg class="ico bars ${tone}" aria-hidden="true"><use href="#i-bars"/></svg>
+      <span class="card-actions">
+        <button class="card-info" type="button" aria-label="Preview and details for ${esc(r.title)}">Info</button>
+      </span>
     </p>`;
-
-  card.querySelector('.thumb').addEventListener('click', () => openDetail(r));
-  card.querySelector('.card-link').addEventListener('click', () => openDetail(r));
+  card.querySelector('.card-info').addEventListener('click', () => openDetail(r));
+  card.addEventListener('click', (event) => {
+    if (event.target.closest('a, button')) return;
+    window.open(detailUrl, '_blank', 'noopener');
+  });
   return card;
 }
 
@@ -195,6 +200,13 @@ function renderHome() {
   }
   renderLatest();
 
+  document.querySelectorAll('.finder-choice').forEach((choice) => {
+    choice.addEventListener('click', () => {
+      const type = choice.dataset.resourceType;
+      location.href = `resources.html?type=${encodeURIComponent(type)}`;
+    });
+  });
+
   el('resource-search').addEventListener('submit', (e) => {
     e.preventDefault();
     const q = searchInput.value.trim();
@@ -232,6 +244,64 @@ function renderPopular() {
     wrap.appendChild(b);
   });
   wrap.hidden = false;
+}
+
+function renderDailyQuote() {
+  const text = el('daily-quote-text');
+  if (!text || !Array.isArray(window.EDG_QUOTES) || !window.EDG_QUOTES.length) return;
+
+  const now = new Date();
+  const leap = new Date(now.getFullYear(), 1, 29).getMonth() === 1;
+  const day = Math.floor((now - new Date(now.getFullYear(), 0, 1)) / 86400000);
+  const index = leap || day < 59 ? day : day + 1;
+  let shown = index;
+
+  const show = () => {
+    text.textContent = `“${window.EDG_QUOTES[shown]}”`;
+  };
+  show();
+  el('quote-next').addEventListener('click', () => {
+    shown = (shown + 1) % window.EDG_QUOTES.length;
+    show();
+  });
+}
+
+function renderStudyBuilder() {
+  const subject = el('session-subject');
+  if (!subject) return;
+  CONFIG.subjects.forEach((name) => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    subject.appendChild(option);
+  });
+
+  let minutes = '30';
+  let type = 'practice-questions';
+  const labels = { 'knowledge-sheet': 'understanding', 'practice-questions': 'focused practice', 'practice-exam': 'exam preparation' };
+  const details = {
+    'knowledge-sheet': 'Read a knowledge sheet, then explain the key idea in your own words.',
+    'practice-questions': 'Start with practice questions, then review what you missed.',
+    'practice-exam': 'Try a timed exam section and use your mistakes to plan the next session.'
+  };
+  const update = () => {
+    el('session-result').textContent = `${minutes} min of ${labels[type]}`;
+    el('session-detail').textContent = details[type];
+    const params = new URLSearchParams({ type });
+    if (subject.value) params.set('q', subject.value);
+    el('session-start').href = `resources.html?${params}`;
+  };
+  document.querySelectorAll('#session-time button').forEach((button) => button.addEventListener('click', () => {
+    minutes = button.dataset.time;
+    document.querySelectorAll('#session-time button').forEach((item) => item.classList.toggle('is-on', item === button));
+    update();
+  }));
+  document.querySelectorAll('#session-goal button').forEach((button) => button.addEventListener('click', () => {
+    type = button.dataset.type;
+    document.querySelectorAll('#session-goal button').forEach((item) => item.classList.toggle('is-on', item === button));
+    update();
+  }));
+  subject.addEventListener('change', update);
 }
 
 /* ---------- library page ---------- */
@@ -406,4 +476,6 @@ if (PAGE === 'library') {
   renderLibrary();
 } else {
   renderHome();
+  renderDailyQuote();
+  renderStudyBuilder();
 }
