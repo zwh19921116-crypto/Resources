@@ -1,0 +1,7 @@
+# Admin control panel — never published to the website
+admin.html
+admin.js
+
+# Local scratch
+.tmp-*
+*.zip

@@ -53,6 +53,13 @@
       <rect x="16.5" y="5" width="4" height="16" rx="1.3"/>
     </g>
   </symbol>
+  <symbol id="i-play" viewBox="0 0 24 24">
+    <path d="M8 5.2l11 6.8-11 6.8z" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24">
+    <path d="M12 3l2.1 5.4L19.5 10l-5.4 2.1L12 17.5l-2.1-5.4L4.5 10l5.4-1.6z" fill="currentColor" stroke="none"/>
+  </symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
 </svg>
 
 <a class="skip-link" href="#main">Skip to content</a>
@@ -220,48 +227,7 @@
   <section class="section" id="categories">
     <div class="container">
       <h2 class="section-title">Explore our resource categories</h2>
-      <div class="category-grid">
-        <a class="category-card" href="#latest">
-          <span class="cat-icon purple"><svg class="ico" aria-hidden="true"><use href="#i-question"/></svg></span>
-          <div class="cat-body">
-            <h3>Practice Questions</h3>
-            <p>Topic based questions to build skills and confidence.</p>
-          </div>
-          <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
-        </a>
-        <a class="category-card" href="#latest">
-          <span class="cat-icon blue"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></span>
-          <div class="cat-body">
-            <h3>Practice Exams</h3>
-            <p>Realistic exams to test your knowledge.</p>
-          </div>
-          <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
-        </a>
-        <a class="category-card" href="#latest">
-          <span class="cat-icon green"><svg class="ico" aria-hidden="true"><use href="#i-checklist"/></svg></span>
-          <div class="cat-body">
-            <h3>Subject Checklists</h3>
-            <p>Track your learning and stay on top of key topics.</p>
-          </div>
-          <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
-        </a>
-        <a class="category-card" href="#latest">
-          <span class="cat-icon amber"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg></span>
-          <div class="cat-body">
-            <h3>Knowledge Sheets</h3>
-            <p>Concise notes and summary sheets for quick revision.</p>
-          </div>
-          <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
-        </a>
-        <a class="category-card" href="#latest">
-          <span class="cat-icon pink"><svg class="ico" aria-hidden="true"><use href="#i-tap"/></svg></span>
-          <div class="cat-body">
-            <h3>Interactive Apps</h3>
-            <p>Engaging tools and games that make learning fun.</p>
-          </div>
-          <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
-        </a>
-      </div>
+      <div class="category-grid" id="category-grid"></div>
     </div>
   </section>
 
@@ -270,12 +236,33 @@
       <div>
         <div class="latest-head">
           <h2 class="section-title">Latest resources</h2>
-          <a class="link" href="#">View all</a>
+          <p class="result-count" id="result-count"></p>
         </div>
 
-        <div class="resource-grid" id="resource-grid">
-          <article class="resource-card" data-title="Algebra – Linear Equations" data-tags="year 7 maths algebra practice questions">
-            <div class="thumb">
+        <div class="filter-bar">
+          <div class="filter-group" id="filter-type" role="group" aria-label="Filter by type"></div>
+          <div class="filter-selects">
+            <label class="sr-only" for="filter-subject">Subject</label>
+            <select id="filter-subject"><option value="">All subjects</option></select>
+            <label class="sr-only" for="filter-year">Year level</label>
+            <select id="filter-year"><option value="">All year levels</option></select>
+            <button class="btn-reset" type="button" id="filter-reset" hidden>Clear all</button>
+          </div>
+        </div>
+
+        <div class="resource-grid" id="resource-grid"></div>
+
+        <p class="no-results" id="no-results" hidden>
+          No resources match your search. <button class="linkish" type="button" id="no-results-reset">Clear filters</button>
+        </p>
+
+        <div class="load-more-wrap">
+          <button class="btn btn-ghost" type="button" id="load-more" hidden>Load more</button>
+        </div>
+      </div>
+
+      <div class="art-templates" hidden>
+        <template data-art="maths">
               <svg class="art" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
                 <rect width="300" height="180" fill="#eef0fb"/>
                 <g stroke="#c3cbe8" stroke-width="1.4" fill="none" opacity=".85">
@@ -293,21 +280,8 @@
                   <circle cx="170" cy="78" r="3"/><circle cx="92" cy="152" r="3"/><circle cx="274" cy="64" r="3"/>
                 </g>
               </svg>
-              <span class="badge badge-purple">Practice Questions</span>
-              <button class="save" type="button" aria-label="Save Algebra – Linear Equations" aria-pressed="false">
-                <svg class="ico" aria-hidden="true"><use href="#i-bookmark"/></svg>
-              </button>
-            </div>
-            <h3>Algebra – Linear Equations</h3>
-            <p class="meta">Year 7 &nbsp;•&nbsp; 20 questions</p>
-            <p class="foot">
-              <span class="level easy">Easy</span>
-              <svg class="ico bars easy" aria-hidden="true"><use href="#i-bars"/></svg>
-            </p>
-          </article>
-
-          <article class="resource-card" data-title="Year 9 Mathematics Practice Exam 1" data-tags="year 9 maths exam">
-            <div class="thumb">
+        </template>
+        <template data-art="exam">
               <svg class="art" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
                 <rect width="300" height="180" fill="#e8e2d8"/>
                 <rect x="22" y="14" width="196" height="170" rx="6" fill="#fbf9f5" transform="rotate(-4 120 99)"/>
@@ -321,21 +295,8 @@
                   <rect x="222" y="150" width="18" height="14" rx="3" fill="#e07a6a"/>
                 </g>
               </svg>
-              <span class="badge badge-blue">Practice Exam</span>
-              <button class="save" type="button" aria-label="Save Year 9 Mathematics Practice Exam 1" aria-pressed="false">
-                <svg class="ico" aria-hidden="true"><use href="#i-bookmark"/></svg>
-              </button>
-            </div>
-            <h3>Year 9 Mathematics<br />Practice Exam 1</h3>
-            <p class="meta">Year 9 &nbsp;•&nbsp; 45 questions</p>
-            <p class="foot">
-              <span class="level medium">Medium</span>
-              <svg class="ico bars medium" aria-hidden="true"><use href="#i-bars"/></svg>
-            </p>
-          </article>
-
-          <article class="resource-card" data-title="Photosynthesis" data-tags="biology knowledge sheet science leaf">
-            <div class="thumb">
+        </template>
+        <template data-art="leaf">
               <svg class="art" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
                 <defs>
                   <linearGradient id="leafBg" x1="0" y1="0" x2="1" y2="1">
@@ -353,21 +314,8 @@
                 </g>
                 <path d="M196 128c-4-42 26-68 68-74 8 44-22 72-68 74z" fill="#57a83e" opacity=".9"/>
               </svg>
-              <span class="badge badge-green">Knowledge Sheet</span>
-              <button class="save" type="button" aria-label="Save Photosynthesis" aria-pressed="false">
-                <svg class="ico" aria-hidden="true"><use href="#i-bookmark"/></svg>
-              </button>
-            </div>
-            <h3>Photosynthesis</h3>
-            <p class="meta">Biology &nbsp;•&nbsp; 2 pages</p>
-            <p class="foot">
-              <span class="level info">Reference</span>
-              <svg class="ico bars info" aria-hidden="true"><use href="#i-bars"/></svg>
-            </p>
-          </article>
-
-          <article class="resource-card" data-title="Solar System Explorer" data-tags="science interactive app space planets">
-            <div class="thumb">
+        </template>
+        <template data-art="space">
               <svg class="art" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
                 <defs>
                   <radialGradient id="spaceBg" cx="35%" cy="40%">
@@ -392,20 +340,42 @@
                   <ellipse cx="254" cy="132" rx="21" ry="5" fill="none" stroke="#e2c79b" stroke-width="2.5"/>
                 </g>
               </svg>
-              <span class="badge badge-pink">Interactive App</span>
-              <button class="save" type="button" aria-label="Save Solar System Explorer" aria-pressed="false">
-                <svg class="ico" aria-hidden="true"><use href="#i-bookmark"/></svg>
-              </button>
-            </div>
-            <h3>Solar System Explorer</h3>
-            <p class="meta">Science &nbsp;•&nbsp; Interactive</p>
-            <p class="foot">
-              <span class="level fun">Fun</span>
-              <svg class="ico bars info" aria-hidden="true"><use href="#i-bars"/></svg>
-            </p>
-          </article>
-        </div>
-        <p class="no-results" id="no-results" hidden>No resources match your search.</p>
+        </template>
+
+        <template data-art="video">
+          <svg class="art" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <defs>
+              <linearGradient id="vidBg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#3b2a5e"/><stop offset="1" stop-color="#181233"/>
+              </linearGradient>
+            </defs>
+            <rect width="300" height="180" fill="url(#vidBg)"/>
+            <g opacity=".18" stroke="#ffffff" stroke-width="1.2">
+              <path d="M0 40h300M0 90h300M0 140h300M75 0v180M150 0v180M225 0v180"/>
+            </g>
+            <circle cx="150" cy="90" r="38" fill="#ffffff" opacity=".16"/>
+            <circle cx="150" cy="90" r="28" fill="#ffffff"/>
+            <path d="M143 78l20 12-20 12z" fill="#2b1e4d"/>
+          </svg>
+        </template>
+
+        <template data-art="checklist">
+          <svg class="art" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="300" height="180" fill="#e8f4ec"/>
+            <rect x="58" y="12" width="184" height="170" rx="10" fill="#ffffff"/>
+            <rect x="118" y="4" width="64" height="20" rx="6" fill="#cbd8e8"/>
+            <g>
+              <rect x="82" y="48" width="20" height="20" rx="6" fill="#22a94b"/>
+              <path d="M87 58l4 4 7-8" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="112" y="55" width="104" height="6" rx="3" fill="#d9e2ee"/>
+              <rect x="82" y="84" width="20" height="20" rx="6" fill="#22a94b"/>
+              <path d="M87 94l4 4 7-8" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="112" y="91" width="80" height="6" rx="3" fill="#d9e2ee"/>
+              <rect x="82" y="120" width="20" height="20" rx="6" fill="none" stroke="#bcc9d8" stroke-width="2.4"/>
+              <rect x="112" y="127" width="92" height="6" rx="3" fill="#e4ebf3"/>
+            </g>
+          </svg>
+        </template>
       </div>
 
       <aside class="study-panel" aria-label="Study smarter">
@@ -439,6 +409,19 @@
 
 </main>
 
+<div class="modal" id="video-modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="video-title">
+    <div class="modal-head">
+      <h3 id="video-title"></h3>
+      <button class="modal-close" type="button" data-close aria-label="Close video">
+        <svg class="ico" aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+    </div>
+    <div class="modal-video" id="video-frame"></div>
+  </div>
+</div>
+
 <footer class="site-footer">
   <div class="container footer-inner">
     <div>
@@ -455,6 +438,8 @@
   </div>
 </footer>
 
+<script src="data/config.js"></script>
+<script src="data/resources.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
