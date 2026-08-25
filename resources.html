@@ -52,52 +52,74 @@
         <span aria-hidden="true">/</span>
         <span>All resources</span>
       </nav>
-      <h1>The full library</h1>
-      <p class="lede">Every practice question set, exam, knowledge sheet, checklist, app and video in one place.</p>
-
-      <form class="search" role="search" id="resource-search">
-        <label class="sr-only" for="q">Search resources</label>
-        <input id="q" name="q" type="search" placeholder="Search resources…" autocomplete="off" />
-        <button class="search-btn" type="submit" aria-label="Search resources">
-          <svg class="ico" aria-hidden="true"><use href="#i-search"/></svg>
-        </button>
-      </form>
+      <div class="page-hero-grid">
+        <div>
+          <h1>The full library</h1>
+          <p class="lede">Every practice question set, exam, knowledge sheet, checklist, app and video in one place.</p>
+          <form class="search" role="search" id="resource-search">
+            <label class="sr-only" for="q">Search resources</label>
+            <input id="q" name="q" type="search" placeholder="Search by title, topic or tag…" autocomplete="off" />
+            <button class="search-btn" type="submit" aria-label="Search resources">
+              <svg class="ico" aria-hidden="true"><use href="#i-search"/></svg>
+            </button>
+          </form>
+        </div>
+        <dl class="hero-stats" id="hero-stats"></dl>
+      </div>
     </div>
   </section>
 
   <section class="section library">
-    <div class="container">
+    <div class="container library-layout">
 
-      <div class="library-toolbar">
-        <div class="filter-group" id="filter-type" role="group" aria-label="Filter by type"></div>
-        <div class="filter-controls">
-          <label class="sr-only" for="filter-subject">Subject</label>
-          <select id="filter-subject"><option value="">All subjects</option></select>
-          <label class="sr-only" for="filter-year">Year level</label>
-          <select id="filter-year"><option value="">All year levels</option></select>
-          <label class="sr-only" for="sort-by">Sort</label>
-          <select id="sort-by">
-            <option value="newest">Newest first</option>
-            <option value="az">A – Z</option>
-          </select>
+      <aside class="filters-panel" aria-label="Filters">
+        <div class="filters-head">
+          <h2>Filters</h2>
+          <button class="clear-all" type="button" id="filter-reset" hidden>Reset</button>
         </div>
-      </div>
 
-      <div class="library-head">
-        <h2 class="section-title" id="latest-title">All resources</h2>
-        <p class="result-count" id="result-count"></p>
-      </div>
+        <div class="filter-block">
+          <h3 class="filter-label">Resource type</h3>
+          <div class="filter-list" id="filter-type" role="group" aria-label="Filter by type"></div>
+        </div>
 
-      <div class="active-filters" id="active-filters" hidden></div>
+        <div class="filter-block">
+          <label class="filter-label" for="filter-subject">Subject</label>
+          <select id="filter-subject"><option value="">All subjects</option></select>
+        </div>
 
-      <div class="resource-grid" id="resource-grid"></div>
+        <div class="filter-block">
+          <label class="filter-label" for="filter-year">Year level</label>
+          <select id="filter-year"><option value="">All year levels</option></select>
+        </div>
+      </aside>
 
-      <p class="no-results" id="no-results" hidden>
-        No resources match your search. <button class="linkish" type="button" id="no-results-reset">Clear filters</button>
-      </p>
+      <div class="library-main">
+        <div class="results-bar">
+          <div>
+            <h2 class="section-title" id="latest-title">All resources</h2>
+            <p class="result-count" id="result-count"></p>
+          </div>
+          <div class="sort-wrap">
+            <label for="sort-by">Sort by</label>
+            <select id="sort-by">
+              <option value="newest">Newest first</option>
+              <option value="az">A – Z</option>
+            </select>
+          </div>
+        </div>
 
-      <div class="load-more-wrap">
-        <button class="btn btn-ghost" type="button" id="load-more" hidden>Load more</button>
+        <div class="active-filters" id="active-filters" hidden></div>
+
+        <div class="resource-grid" id="resource-grid"></div>
+
+        <p class="no-results" id="no-results" hidden>
+          No resources match your search. <button class="linkish" type="button" id="no-results-reset">Clear filters</button>
+        </p>
+
+        <div class="load-more-wrap">
+          <button class="btn btn-ghost" type="button" id="load-more" hidden>Load more</button>
+        </div>
       </div>
     </div>
   </section>

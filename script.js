@@ -262,19 +262,36 @@ function resetFilters() {
 }
 
 function renderLibraryControls() {
+  const stats = el('hero-stats');
+  if (stats) {
+    const subjects = new Set(ALL.map((r) => r.subject).filter(Boolean));
+    [
+      ['Resources', ALL.length],
+      ['Categories', Object.keys(CONFIG.types).length],
+      ['Subjects', subjects.size]
+    ].forEach(([label, value]) => {
+      const d = document.createElement('div');
+      d.innerHTML = `<dt>${esc(label)}</dt><dd>${value}</dd>`;
+      stats.appendChild(d);
+    });
+  }
+
   const typeWrap = el('filter-type');
-  const mk = (key, label, count) => {
+  const option = (key, label, count, icon, colour) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'filter-chip';
+    b.className = 'filter-option';
     b.dataset.type = key;
-    b.innerHTML = `${esc(label)} <span class="chip-count">${count}</span>`;
-    b.addEventListener('click', () => setFilter('type', key));
+    b.innerHTML = `
+      ${icon ? `<span class="opt-icon ${colour}"><svg class="ico"><use href="#i-${icon}"/></svg></span>` : '<span class="opt-icon all">✦</span>'}
+      <span class="opt-label">${esc(label)}</span>
+      <span class="opt-count">${count}</span>`;
+    b.addEventListener('click', () => setFilter('type', state.type === key ? '' : key));
     return b;
   };
-  typeWrap.appendChild(mk('', 'All', ALL.length));
+  typeWrap.appendChild(option('', 'All resources', ALL.length));
   Object.entries(CONFIG.types).forEach(([key, t]) =>
-    typeWrap.appendChild(mk(key, t.label, ALL.filter((r) => r.type === key).length))
+    typeWrap.appendChild(option(key, t.label, ALL.filter((r) => r.type === key).length, t.icon, t.colour))
   );
 
   const fill = (select, values) => values.forEach((v) => {
@@ -290,6 +307,7 @@ function renderLibraryControls() {
   el('filter-year').addEventListener('change', (e) => setFilter('year', e.target.value));
   el('sort-by').addEventListener('change', (e) => setFilter('sort', e.target.value));
   el('no-results-reset').addEventListener('click', resetFilters);
+  el('filter-reset').addEventListener('click', resetFilters);
   el('load-more').addEventListener('click', () => {
     state.shown += CONFIG.pageSize;
     renderLibrary();
@@ -366,8 +384,11 @@ function renderLibrary() {
   el('load-more').textContent = `Load more (${more} remaining)`;
 
   renderActiveFilters();
-  document.querySelectorAll('#filter-type .filter-chip').forEach((chip) => {
-    chip.classList.toggle('is-on', chip.dataset.type === state.type);
+  el('filter-reset').hidden = !(state.q || state.type || state.subject || state.year);
+  document.querySelectorAll('#filter-type .filter-option').forEach((opt) => {
+    const on = opt.dataset.type === state.type;
+    opt.classList.toggle('is-on', on);
+    opt.setAttribute('aria-pressed', String(on));
   });
 }
 
