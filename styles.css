@@ -812,21 +812,20 @@ body.modal-open{overflow:hidden}
 .session-tile strong{font-size:.88rem;color:var(--ink);line-height:1.3}
 .session-tile-meta{font-size:.75rem;color:var(--muted)}
 .session-viewer{background:#fff;border:1px solid #dce5f5;border-radius:16px;overflow:hidden;box-shadow:0 16px 38px rgba(15,23,42,.08)}
-.session-viewer-preview{position:relative;min-height:480px;background:#eef2fb}
+.session-viewer-preview{position:relative;min-height:calc(100vh - 260px);background:#eef2fb}
 .session-viewer-preview iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .session-viewer-preview .art{width:100%;height:100%;object-fit:cover}
-.session-viewer-info{padding:1.5rem 1.75rem}
+.session-viewer-info{padding:1.25rem 1.75rem}
 .session-viewer-info .badge{display:inline-block;margin-bottom:.7rem}
 .session-viewer-info h2{font-size:1.25rem;line-height:1.3}
 .session-viewer-desc{font-size:.9rem;color:var(--body);line-height:1.6;margin-top:.5rem}
-.session-viewer-info .btn{margin-top:1.1rem;gap:.55rem}
 .session-empty{padding:3rem 0;text-align:center}
 .session-empty h2{font-size:1.4rem}
 .session-empty p{margin:.75rem 0 1.5rem;color:var(--muted)}
 @media (max-width:900px){
   .session-workspace-grid{grid-template-columns:1fr}
   .session-tile-list{max-height:none;grid-template-columns:repeat(2,minmax(0,1fr));display:grid}
-  .session-viewer-preview{min-height:320px}
+  .session-viewer-preview{min-height:70vh}
 }
 @media (max-width:560px){
   .session-tile-list{grid-template-columns:1fr}

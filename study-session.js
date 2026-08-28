@@ -73,7 +73,6 @@ function renderStudySession() {
     ss('session-viewer-badge').textContent = t.label;
     ss('session-viewer-title').textContent = r.title;
     ss('session-viewer-desc').textContent = r.desc || t.blurb || '';
-    ss('session-viewer-open').href = r.url || '#';
   };
 
   tiles.querySelectorAll('.session-tile').forEach((tile) => tile.addEventListener('click', () => {
