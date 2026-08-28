@@ -1,5 +1,6 @@
 const SS_CONFIG = window.EDG_CONFIG;
 const SS_ALL = (window.EDG_RESOURCES || []).filter((r) => r.status !== 'draft');
+const SS_LOADING_MS = 2600;
 const ss = (id) => document.getElementById(id);
 const ssEsc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -48,11 +49,23 @@ function renderStudySession() {
   const bySubject = subject ? byType.filter((r) => r.subject === subject) : byType;
   const list = (bySubject.length ? bySubject : byType).sort((a, b) => new Date(b.added) - new Date(a.added));
 
+  // Reveal the matched content only once the mandatory loading screen has finished.
+  const reveal = () => {
+    const loading = ss('session-loading');
+    loading.classList.add('is-done');
+    loading.addEventListener('transitionend', () => loading.remove(), { once: true });
+
+    if (!list.length) {
+      ss('session-empty').hidden = false;
+      return;
+    }
+    ss('session-workspace').hidden = false;
+  };
+
   if (!list.length) {
-    ss('session-empty').hidden = false;
+    setTimeout(reveal, SS_LOADING_MS);
     return;
   }
-  ss('session-workspace').hidden = false;
 
   const tiles = ss('session-tiles');
   tiles.innerHTML = list
@@ -82,6 +95,7 @@ function renderStudySession() {
   }));
 
   showResource(list[0]);
+  setTimeout(reveal, SS_LOADING_MS);
 }
 
 renderStudySession();
