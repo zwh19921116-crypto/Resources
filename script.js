@@ -267,16 +267,22 @@ function renderDailyQuote() {
 }
 
 function renderStudyBuilder() {
-  const subject = el('session-subject');
-  if (!subject) return;
+  const subjectSelect = el('session-subject');
+  if (!subjectSelect) return;
+
   CONFIG.subjects.forEach((name) => {
     const option = document.createElement('option');
     option.value = name;
     option.textContent = name;
-    subject.appendChild(option);
+    subjectSelect.appendChild(option);
   });
 
-  let minutes = '30';
+  const timeGroup = el('session-time');
+  const timeMore = el('session-time-more');
+  const goalGroup = el('session-goal');
+
+  let subject = '';
+  let minutes = 30;
   let type = 'practice-questions';
   const labels = { 'knowledge-sheet': 'understanding', 'practice-questions': 'focused practice', 'practice-exam': 'exam preparation' };
   const details = {
@@ -284,24 +290,64 @@ function renderStudyBuilder() {
     'practice-questions': 'Start with practice questions, then review what you missed.',
     'practice-exam': 'Try a timed exam section and use your mistakes to plan the next session.'
   };
-  const update = () => {
-    el('session-result').textContent = `${minutes} min of ${labels[type]}`;
-    el('session-detail').textContent = details[type];
-    const params = new URLSearchParams({ type });
-    if (subject.value) params.set('q', subject.value);
-    el('session-start').href = `resources.html?${params}`;
+
+  const formatMinutes = (mins) => {
+    if (mins < 60) return `${mins} min`;
+    const hrs = mins / 60;
+    return `${Number.isInteger(hrs) ? hrs : hrs.toFixed(1)} hr`;
   };
-  document.querySelectorAll('#session-time button').forEach((button) => button.addEventListener('click', () => {
-    minutes = button.dataset.time;
-    document.querySelectorAll('#session-time button').forEach((item) => item.classList.toggle('is-on', item === button));
+
+  // Recommend the newest published resource matching the goal, preferring the chosen subject.
+  const findMatch = () => {
+    const byType = ALL.filter((r) => r.type === type);
+    const bySubject = subject ? byType.filter((r) => r.subject === subject) : byType;
+    const pool = bySubject.length ? bySubject : byType;
+    if (!pool.length) return null;
+    return [...pool].sort((a, b) => new Date(b.added) - new Date(a.added))[0];
+  };
+
+  const update = () => {
+    el('session-result').textContent = `${formatMinutes(minutes)} of ${labels[type]}`;
+    const match = findMatch();
+    const start = el('session-start');
+    if (match) {
+      el('session-detail').textContent = `Recommended: “${match.title}”${match.subject ? ` (${match.subject})` : ''}`;
+      start.href = `resource-pages/${encodeURIComponent(match.id)}/index.html`;
+      start.target = '_blank';
+      start.rel = 'noopener';
+    } else {
+      el('session-detail').textContent = details[type];
+      const params = new URLSearchParams({ type });
+      if (subject) params.set('q', subject);
+      start.href = `resources.html?${params}`;
+      start.removeAttribute('target');
+      start.removeAttribute('rel');
+    }
+  };
+
+  subjectSelect.addEventListener('change', () => {
+    subject = subjectSelect.value;
+    update();
+  });
+  timeGroup.querySelectorAll('button').forEach((button) => button.addEventListener('click', () => {
+    minutes = Number(button.dataset.time);
+    timeGroup.querySelectorAll('button').forEach((item) => item.classList.toggle('is-on', item === button));
+    timeMore.value = '';
     update();
   }));
-  document.querySelectorAll('#session-goal button').forEach((button) => button.addEventListener('click', () => {
+  timeMore.addEventListener('change', () => {
+    if (!timeMore.value) return;
+    minutes = Number(timeMore.value);
+    timeGroup.querySelectorAll('button').forEach((item) => item.classList.remove('is-on'));
+    update();
+  });
+  goalGroup.querySelectorAll('button').forEach((button) => button.addEventListener('click', () => {
     type = button.dataset.type;
-    document.querySelectorAll('#session-goal button').forEach((item) => item.classList.toggle('is-on', item === button));
+    goalGroup.querySelectorAll('button').forEach((item) => item.classList.toggle('is-on', item === button));
     update();
   }));
-  subject.addEventListener('change', update);
+
+  update();
 }
 
 /* ---------- library page ---------- */
