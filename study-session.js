@@ -34,8 +34,43 @@ function formatMinutes(mins) {
   return `${mins / 60} hr`;
 }
 
+/** True when now falls inside the ad's date period and daily time slot (blank = no restriction). */
+function ssAdIsEligible(ad, now) {
+  const today = now.toISOString().slice(0, 10);
+  if (ad.startDate && today < ad.startDate) return false;
+  if (ad.endDate && today > ad.endDate) return false;
+
+  if (ad.startTime || ad.endTime) {
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const [sh, sm] = (ad.startTime || '00:00').split(':').map(Number);
+    const [eh, em] = (ad.endTime || '23:59').split(':').map(Number);
+    const start = sh * 60 + sm;
+    const end = eh * 60 + em;
+    const inSlot = start <= end ? nowMinutes >= start && nowMinutes <= end : nowMinutes >= start || nowMinutes <= end;
+    if (!inSlot) return false;
+  }
+  return true;
+}
+
+/** Shows a random ad eligible right now, or hides the ad block if ads are off / none are eligible. */
+function renderLoadingAd() {
+  const block = ss('session-loading-ad');
+  if (window.EDG_ADS_ENABLED === false) return;
+  const now = new Date();
+  const eligible = (window.EDG_ADS || []).filter((ad) => ad.status !== 'draft' && ssAdIsEligible(ad, now));
+  if (!eligible.length) return;
+  const ad = eligible[Math.floor(Math.random() * eligible.length)];
+  ss('session-loading-ad-title').textContent = ad.title || '';
+  ss('session-loading-ad-body').textContent = ad.body || '';
+  const cta = ss('session-loading-ad-cta');
+  cta.textContent = ad.ctaLabel || 'Learn more';
+  cta.href = ad.ctaUrl || '#';
+  block.hidden = false;
+}
+
 function renderStudySession() {
   ss('year').textContent = new Date().getFullYear();
+  renderLoadingAd();
   const params = new URLSearchParams(location.search);
   const type = params.get('type') || '';
   const subject = params.get('subject') || '';
