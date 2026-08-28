@@ -505,7 +505,8 @@ button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
 .dropdown-list li.is-selected{background:#e8f0ff;color:#1d4f9e;font-weight:700}
 .session-options{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:.45rem}.session-options button{border:1px solid #dce5f5;border-radius:9px;padding:.65rem .35rem;background:#fff;color:#52627b;font-size:.8rem;font-weight:700}.session-options button:hover{border-color:#93b4ff;color:#2563eb}.session-options button.is-on{background:#e8f0ff;border-color:#80a7ff;color:#1d4f9e}
 #session-time{grid-template-columns:repeat(4,1fr)}
-#session-time button{padding:.65rem .2rem}.session-result{background:#f4f7fd;border-radius:11px;padding:1rem;margin-top:1.35rem}.session-result span{display:block;color:#5870a0;font-size:.65rem;font-weight:800;letter-spacing:.1em}.session-result strong{display:block;color:#102d67;font-size:1rem;margin-top:.25rem}.session-result em{display:block;color:#5d6e89;font-style:normal;font-size:.78rem;line-height:1.45;margin-top:.25rem}.session-card .btn{margin-top:1rem;gap:.55rem}
+#session-time button{padding:.65rem .2rem}
+#session-goal{grid-template-columns:repeat(3,1fr)}.session-result{background:#f4f7fd;border-radius:11px;padding:1rem;margin-top:1.35rem}.session-result span{display:block;color:#5870a0;font-size:.65rem;font-weight:800;letter-spacing:.1em}.session-result strong{display:block;color:#102d67;font-size:1rem;margin-top:.25rem}.session-result em{display:block;color:#5d6e89;font-style:normal;font-size:.78rem;line-height:1.45;margin-top:.25rem}.session-card .btn{margin-top:1rem;gap:.55rem}
 
 /* ---------- Resource finder ---------- */
 .resource-finder{padding:4.25rem 0;background:#f4f7fd}
