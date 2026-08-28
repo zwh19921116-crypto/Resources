@@ -266,19 +266,84 @@ function renderDailyQuote() {
   });
 }
 
-function renderStudyBuilder() {
-  const subjectSelect = el('session-subject');
-  if (!subjectSelect) return;
+/* ---------- custom dropdown (styled to match the rest of the UI) ---------- */
+function createDropdown(container, options) {
+  const placeholder = container.dataset.placeholder || 'Select…';
+  container.innerHTML = `
+    <button type="button" class="dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
+      <span class="dropdown-value">${esc(placeholder)}</span>
+      <svg class="ico chev" aria-hidden="true"><use href="#i-chevron"/></svg>
+    </button>
+    <ul class="dropdown-list" role="listbox" hidden></ul>`;
+  const trigger = container.querySelector('.dropdown-trigger');
+  const valueEl = container.querySelector('.dropdown-value');
+  const list = container.querySelector('.dropdown-list');
+  let value = '';
 
-  CONFIG.subjects.forEach((name) => {
-    const option = document.createElement('option');
-    option.value = name;
-    option.textContent = name;
-    subjectSelect.appendChild(option);
+  const renderOptions = () => {
+    list.innerHTML = options
+      .map((opt) => `<li role="option" data-value="${esc(opt.value)}" class="${opt.value === value ? 'is-selected' : ''}">${esc(opt.label)}</li>`)
+      .join('');
+  };
+  renderOptions();
+
+  const close = () => {
+    list.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+  };
+  const open = () => {
+    list.hidden = false;
+    trigger.setAttribute('aria-expanded', 'true');
+  };
+
+  trigger.addEventListener('click', () => (list.hidden ? open() : close()));
+  document.addEventListener('click', (event) => {
+    if (!container.contains(event.target)) close();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') close();
   });
 
+  let onChange = () => {};
+  list.addEventListener('click', (event) => {
+    const item = event.target.closest('li');
+    if (!item) return;
+    value = item.dataset.value;
+    valueEl.textContent = value ? options.find((o) => o.value === value).label : placeholder;
+    list.querySelectorAll('li').forEach((li) => li.classList.toggle('is-selected', li === item));
+    close();
+    onChange(value);
+  });
+
+  return {
+    get value() { return value; },
+    reset() {
+      value = '';
+      valueEl.textContent = placeholder;
+      list.querySelectorAll('li').forEach((li) => li.classList.remove('is-selected'));
+    },
+    onChange(fn) { onChange = fn; }
+  };
+}
+
+function renderStudyBuilder() {
+  const subjectEl = el('session-subject');
+  if (!subjectEl) return;
+
+  const subjectDropdown = createDropdown(subjectEl, [
+    { value: '', label: 'Any subject' },
+    ...CONFIG.subjects.map((name) => ({ value: name, label: name }))
+  ]);
+  const timeMoreDropdown = createDropdown(el('session-time-more'), [
+    { value: '180', label: '3 hr' },
+    { value: '240', label: '4 hr' },
+    { value: '300', label: '5 hr' },
+    { value: '360', label: '6 hr' },
+    { value: '420', label: '7 hr' },
+    { value: '480', label: '8 hr' }
+  ]);
+
   const timeGroup = el('session-time');
-  const timeMore = el('session-time-more');
   const goalGroup = el('session-goal');
 
   let subject = '';
@@ -325,19 +390,19 @@ function renderStudyBuilder() {
     }
   };
 
-  subjectSelect.addEventListener('change', () => {
-    subject = subjectSelect.value;
+  subjectDropdown.onChange((value) => {
+    subject = value;
     update();
   });
   timeGroup.querySelectorAll('button').forEach((button) => button.addEventListener('click', () => {
     minutes = Number(button.dataset.time);
     timeGroup.querySelectorAll('button').forEach((item) => item.classList.toggle('is-on', item === button));
-    timeMore.value = '';
+    timeMoreDropdown.reset();
     update();
   }));
-  timeMore.addEventListener('change', () => {
-    if (!timeMore.value) return;
-    minutes = Number(timeMore.value);
+  timeMoreDropdown.onChange((value) => {
+    if (!value) return;
+    minutes = Number(value);
     timeGroup.querySelectorAll('button').forEach((item) => item.classList.remove('is-on'));
     update();
   });
