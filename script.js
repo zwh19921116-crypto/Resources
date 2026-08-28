@@ -366,20 +366,13 @@ function renderStudyBuilder() {
   const update = () => {
     el('session-result').textContent = `${formatMinutes(minutes)} of ${labels[type]}`;
     const match = findMatch();
-    const start = el('session-start');
-    if (match) {
-      el('session-detail').textContent = `Recommended: “${match.title}”${match.subject ? ` (${match.subject})` : ''}`;
-      start.href = `resource-pages/${encodeURIComponent(match.id)}/index.html`;
-      start.target = '_blank';
-      start.rel = 'noopener';
-    } else {
-      el('session-detail').textContent = details[type];
-      const params = new URLSearchParams({ type });
-      if (subject) params.set('q', subject);
-      start.href = `resources.html?${params}`;
-      start.removeAttribute('target');
-      start.removeAttribute('rel');
-    }
+    el('session-detail').textContent = match
+      ? `Recommended: “${match.title}”${match.subject ? ` (${match.subject})` : ''}`
+      : details[type];
+    const params = new URLSearchParams({ type });
+    if (subject) params.set('subject', subject);
+    params.set('minutes', minutes);
+    el('session-start').href = `study-session.html?${params}`;
   };
 
   subjectDropdown.onChange((value) => {
