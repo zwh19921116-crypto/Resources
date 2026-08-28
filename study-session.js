@@ -13,6 +13,25 @@ function ssDriveId(url) {
   return m ? m[1] : null;
 }
 const ssIsPdf = (url) => /\.pdf(\?|#|$)/i.test(String(url));
+const ssIsVideoFile = (url) => /\.(mp4|webm|ogg)(\?|#|$)/i.test(String(url));
+
+function ssAdMediaMarkup(ad) {
+  if (ad.mediaType === 'image' && ad.image) {
+    return `<img src="${ssEsc(ad.image)}" alt="" />`;
+  }
+  if (ad.mediaType === 'video' && ad.videoUrl) {
+    const yt = ssYoutubeId(ad.videoUrl);
+    if (yt) {
+      return `<iframe src="https://www.youtube-nocookie.com/embed/${yt}?rel=0&autoplay=1&mute=1" title="${ssEsc(ad.title)}"
+        allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen
+        referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+    }
+    if (ssIsVideoFile(ad.videoUrl)) {
+      return `<video src="${ssEsc(ad.videoUrl)}" autoplay muted loop playsinline></video>`;
+    }
+  }
+  return '';
+}
 
 function ssPreviewMarkup(r) {
   const yt = ssYoutubeId(r.url);
@@ -52,25 +71,38 @@ function ssAdIsEligible(ad, now) {
   return true;
 }
 
-/** Shows a random ad eligible right now, or hides the ad block if ads are off / none are eligible. */
+/** Guaranteed fallback so the loading screen always has something to show, even with no ads configured. */
+const SS_DEFAULT_AD = {
+  title: 'Get exam-ready with Edgeducate classes',
+  body: 'Small-group VCE and secondary tuition led by top-performing tutors — book a free consultation to find your class.',
+  ctaLabel: 'Explore our classes',
+  ctaUrl: '#',
+  duration: 4
+};
+
+/** Shows a random ad eligible right now (or the default Edgeducate ad if nothing is scheduled) and returns how long (ms) it should stay on screen. */
 function renderLoadingAd() {
   const block = ss('session-loading-ad');
-  if (window.EDG_ADS_ENABLED === false) return;
+  if (window.EDG_ADS_ENABLED === false) return SS_LOADING_MS;
   const now = new Date();
   const eligible = (window.EDG_ADS || []).filter((ad) => ad.status !== 'draft' && ssAdIsEligible(ad, now));
-  if (!eligible.length) return;
-  const ad = eligible[Math.floor(Math.random() * eligible.length)];
+  const ad = eligible.length ? eligible[Math.floor(Math.random() * eligible.length)] : SS_DEFAULT_AD;
+  const media = ss('session-loading-ad-media');
+  const mediaMarkup = ssAdMediaMarkup(ad);
+  media.innerHTML = mediaMarkup;
+  media.hidden = !mediaMarkup;
   ss('session-loading-ad-title').textContent = ad.title || '';
   ss('session-loading-ad-body').textContent = ad.body || '';
   const cta = ss('session-loading-ad-cta');
   cta.textContent = ad.ctaLabel || 'Learn more';
   cta.href = ad.ctaUrl || '#';
   block.hidden = false;
+  return Math.max(2, Number(ad.duration) || 4) * 1000;
 }
 
 function renderStudySession() {
   ss('year').textContent = new Date().getFullYear();
-  renderLoadingAd();
+  const loadingMs = renderLoadingAd();
   const params = new URLSearchParams(location.search);
   const type = params.get('type') || '';
   const subject = params.get('subject') || '';
@@ -98,7 +130,7 @@ function renderStudySession() {
   };
 
   if (!list.length) {
-    setTimeout(reveal, SS_LOADING_MS);
+    setTimeout(reveal, loadingMs);
     return;
   }
 
@@ -130,7 +162,7 @@ function renderStudySession() {
   }));
 
   showResource(list[0]);
-  setTimeout(reveal, SS_LOADING_MS);
+  setTimeout(reveal, loadingMs);
 }
 
 renderStudySession();
