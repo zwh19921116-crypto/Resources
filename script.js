@@ -351,7 +351,8 @@ function renderStudyBuilder() {
   const formatMinutes = (mins) => {
     if (mins < 60) return `${mins} min`;
     const hrs = mins / 60;
-    return `${Number.isInteger(hrs) ? hrs : hrs.toFixed(1)} hr`;
+    const label = Number.isInteger(hrs) ? hrs : hrs.toFixed(1);
+    return mins >= 120 ? `${label}+ hr` : `${label} hr`;
   };
 
   // Recommend the newest published resource matching the goal, preferring the chosen subject.
