@@ -334,14 +334,6 @@ function renderStudyBuilder() {
     { value: '', label: 'Any subject' },
     ...CONFIG.subjects.map((name) => ({ value: name, label: name }))
   ]);
-  const timeMoreDropdown = createDropdown(el('session-time-more'), [
-    { value: '180', label: '3 hr' },
-    { value: '240', label: '4 hr' },
-    { value: '300', label: '5 hr' },
-    { value: '360', label: '6 hr' },
-    { value: '420', label: '7 hr' },
-    { value: '480', label: '8 hr' }
-  ]);
 
   const timeGroup = el('session-time');
   const goalGroup = el('session-goal');
@@ -397,15 +389,8 @@ function renderStudyBuilder() {
   timeGroup.querySelectorAll('button').forEach((button) => button.addEventListener('click', () => {
     minutes = Number(button.dataset.time);
     timeGroup.querySelectorAll('button').forEach((item) => item.classList.toggle('is-on', item === button));
-    timeMoreDropdown.reset();
     update();
   }));
-  timeMoreDropdown.onChange((value) => {
-    if (!value) return;
-    minutes = Number(value);
-    timeGroup.querySelectorAll('button').forEach((item) => item.classList.remove('is-on'));
-    update();
-  });
   goalGroup.querySelectorAll('button').forEach((button) => button.addEventListener('click', () => {
     type = button.dataset.type;
     goalGroup.querySelectorAll('button').forEach((item) => item.classList.toggle('is-on', item === button));
