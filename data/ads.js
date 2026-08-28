@@ -14,6 +14,7 @@ window.EDG_ADS = [
     image: '',
     videoUrl: '',
     duration: 4,
+    revenue: 0,
     startDate: '',
     endDate: '',
     startTime: '',
