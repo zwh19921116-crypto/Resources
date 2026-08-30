@@ -1,5 +1,5 @@
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -299,19 +299,56 @@ async function resolveProjectRoot() {
 
 async function gitSync(message) {
   const status = await runGit(['status', '--porcelain']);
-  if (!status.ok) return { ok: false, log: `git status failed:\n${status.output || status.error}` };
-  if (!status.output.trim()) return { ok: true, log: 'Nothing to sync — no local changes.' };
+  if (!status.ok) return { ok: false, pushed: false, log: `git status failed:\n${status.output || status.error}` };
+  if (!status.output.trim()) return { ok: true, pushed: false, log: 'Nothing to sync — no local changes.' };
 
   const add = await runGit(['add', '-A']);
-  if (!add.ok) return { ok: false, log: `git add failed:\n${add.output || add.error}` };
+  if (!add.ok) return { ok: false, pushed: false, log: `git add failed:\n${add.output || add.error}` };
 
   const commit = await runGit(['commit', '-m', message || 'Update via Edgeducate Admin']);
-  if (!commit.ok) return { ok: false, log: `git commit failed:\n${commit.output || commit.error}` };
+  if (!commit.ok) return { ok: false, pushed: false, log: `git commit failed:\n${commit.output || commit.error}` };
 
   const push = await runGit(['push']);
-  if (!push.ok) return { ok: false, log: `git push failed:\n${push.output || push.error}` };
+  if (!push.ok) return { ok: false, pushed: false, log: `git push failed:\n${push.output || push.error}` };
 
-  return { ok: true, log: `${commit.output}\n${push.output}`.trim() };
+  const rev = await runGit(['rev-parse', 'HEAD']);
+  return { ok: true, pushed: true, commitSha: rev.ok ? rev.output.trim() : '', log: `${commit.output}\n${push.output}`.trim() };
+}
+
+/* ---------- Cloudflare Pages deployment status (optional — needs CF_ACCOUNT_ID/CF_API_TOKEN in .env) ---------- */
+const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || '';
+const CF_API_TOKEN = process.env.CF_API_TOKEN || '';
+const CF_PROJECT_NAME = process.env.CF_PROJECT_NAME || 'resources';
+
+function cfConfigured() {
+  return !!(CF_ACCOUNT_ID && CF_API_TOKEN);
+}
+
+async function cfDeploymentStatus(commitSha) {
+  if (!cfConfigured()) return { configured: false };
+  try {
+    const res = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/pages/projects/${CF_PROJECT_NAME}/deployments?per_page=10`,
+      { headers: { Authorization: `Bearer ${CF_API_TOKEN}` } }
+    );
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      return { configured: true, ok: false, error: (data.errors && data.errors[0] && data.errors[0].message) || `HTTP ${res.status}` };
+    }
+    const deployment = (data.result || []).find((d) => d.deployment_trigger && d.deployment_trigger.metadata && d.deployment_trigger.metadata.commit_hash === commitSha);
+    if (!deployment) return { configured: true, ok: true, found: false };
+    const stage = deployment.latest_stage || {};
+    return {
+      configured: true,
+      ok: true,
+      found: true,
+      stageName: stage.name || '',
+      status: stage.status || '',
+      url: deployment.url || ''
+    };
+  } catch (e) {
+    return { configured: true, ok: false, error: e.message };
+  }
 }
 
 function createWindow(startFile) {
@@ -366,7 +403,41 @@ ipcMain.handle('auth:pullBeforeUnlock', async () => {
 });
 ipcMain.handle('git:sync', (event, message) => gitSync(message));
 ipcMain.handle('git:pull', () => runGit(['pull']));
+ipcMain.handle('cf:deploymentStatus', (event, commitSha) => cfDeploymentStatus(commitSha));
 ipcMain.handle('app:getPaths', () => ({ standaloneDir: PROJECT_ROOT }));
+
+/* ---------- native filesystem bridge (replaces the browser File System Access API, which can
+ * silently hang forever in this Electron build instead of resolving/rejecting) ---------- */
+ipcMain.handle('fs:pickFolder', async () => {
+  const result = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
+  if (result.canceled || !result.filePaths[0]) return { canceled: true };
+  return { canceled: false, path: result.filePaths[0] };
+});
+ipcMain.handle('fs:ensureDir', (event, dirPath) => {
+  fs.mkdirSync(dirPath, { recursive: true });
+  return true;
+});
+ipcMain.handle('fs:readFile', (event, filePath) => {
+  try {
+    return fs.readFileSync(filePath, 'utf8');
+  } catch (e) {
+    return null;
+  }
+});
+ipcMain.handle('fs:writeFile', (event, filePath, content) => {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, content);
+  return true;
+});
+ipcMain.handle('fs:exists', (event, filePath) => fs.existsSync(filePath));
+ipcMain.handle('fs:listDir', (event, dirPath) => {
+  if (!fs.existsSync(dirPath)) return [];
+  return fs.readdirSync(dirPath, { withFileTypes: true }).map((entry) => ({ name: entry.name, isDirectory: entry.isDirectory() }));
+});
+ipcMain.handle('fs:removeEntry', (event, entryPath, recursive) => {
+  fs.rmSync(entryPath, { recursive: !!recursive, force: true });
+  return true;
+});
 
 app.whenReady().then(async () => {
   const resolved = await resolveProjectRoot();

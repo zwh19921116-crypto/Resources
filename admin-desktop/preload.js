@@ -18,5 +18,13 @@ contextBridge.exposeInMainWorld('desktop', {
   pullBeforeUnlock: () => ipcRenderer.invoke('auth:pullBeforeUnlock'),
   gitSync: (message) => ipcRenderer.invoke('git:sync', message),
   gitPull: () => ipcRenderer.invoke('git:pull'),
-  getPaths: () => ipcRenderer.invoke('app:getPaths')
+  cfDeploymentStatus: (commitSha) => ipcRenderer.invoke('cf:deploymentStatus', commitSha),
+  getPaths: () => ipcRenderer.invoke('app:getPaths'),
+  pickFolder: () => ipcRenderer.invoke('fs:pickFolder'),
+  fsEnsureDir: (dirPath) => ipcRenderer.invoke('fs:ensureDir', dirPath),
+  fsReadFile: (filePath) => ipcRenderer.invoke('fs:readFile', filePath),
+  fsWriteFile: (filePath, content) => ipcRenderer.invoke('fs:writeFile', filePath, content),
+  fsExists: (filePath) => ipcRenderer.invoke('fs:exists', filePath),
+  fsListDir: (dirPath) => ipcRenderer.invoke('fs:listDir', dirPath),
+  fsRemoveEntry: (entryPath, recursive) => ipcRenderer.invoke('fs:removeEntry', entryPath, recursive)
 });
