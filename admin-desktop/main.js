@@ -315,42 +315,6 @@ async function gitSync(message) {
   return { ok: true, pushed: true, commitSha: rev.ok ? rev.output.trim() : '', log: `${commit.output}\n${push.output}`.trim() };
 }
 
-/* ---------- Cloudflare Pages deployment status (optional — needs CF_ACCOUNT_ID/CF_API_TOKEN in .env) ---------- */
-const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || '';
-const CF_API_TOKEN = process.env.CF_API_TOKEN || '';
-const CF_PROJECT_NAME = process.env.CF_PROJECT_NAME || 'resources';
-
-function cfConfigured() {
-  return !!(CF_ACCOUNT_ID && CF_API_TOKEN);
-}
-
-async function cfDeploymentStatus(commitSha) {
-  if (!cfConfigured()) return { configured: false };
-  try {
-    const res = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/pages/projects/${CF_PROJECT_NAME}/deployments?per_page=10`,
-      { headers: { Authorization: `Bearer ${CF_API_TOKEN}` } }
-    );
-    const data = await res.json();
-    if (!res.ok || !data.success) {
-      return { configured: true, ok: false, error: (data.errors && data.errors[0] && data.errors[0].message) || `HTTP ${res.status}` };
-    }
-    const deployment = (data.result || []).find((d) => d.deployment_trigger && d.deployment_trigger.metadata && d.deployment_trigger.metadata.commit_hash === commitSha);
-    if (!deployment) return { configured: true, ok: true, found: false };
-    const stage = deployment.latest_stage || {};
-    return {
-      configured: true,
-      ok: true,
-      found: true,
-      stageName: stage.name || '',
-      status: stage.status || '',
-      url: deployment.url || ''
-    };
-  } catch (e) {
-    return { configured: true, ok: false, error: e.message };
-  }
-}
-
 function createWindow(startFile) {
   win = new BrowserWindow({
     width: 1400,
@@ -403,7 +367,6 @@ ipcMain.handle('auth:pullBeforeUnlock', async () => {
 });
 ipcMain.handle('git:sync', (event, message) => gitSync(message));
 ipcMain.handle('git:pull', () => runGit(['pull']));
-ipcMain.handle('cf:deploymentStatus', (event, commitSha) => cfDeploymentStatus(commitSha));
 ipcMain.handle('app:getPaths', () => ({ standaloneDir: PROJECT_ROOT }));
 
 /* ---------- native filesystem bridge (replaces the browser File System Access API, which can
