@@ -2,6 +2,12 @@
 admin.html
 admin.js
 
+# Desktop admin app — local build artefacts only, keep the source
+admin-desktop/node_modules
+admin-desktop/dist
+admin-desktop/.env
+admin-desktop/admin-panel
+
 # Local scratch
 .tmp-*
 *.zip
