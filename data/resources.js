@@ -5,6 +5,23 @@
  */
 window.EDG_RESOURCES = [
   {
+    id: 'hello-world',
+    title: 'hello world',
+    type: 'video',
+    stage: 'secondary',
+    subject: 'Maths',
+    year: 'Year 7',
+    level: 'Easy',
+    desc: '',
+    details: '',
+    art: 'maths',
+    image: '',
+    tags: [],
+    url: 'https://www.youtube.com/watch?v=Y9mRoCerrpY',
+    added: '2026-08-30',
+    status: 'published'
+  },
+  {
     id: 'testcov-vid2',
     title: 'testcov-vid2',
     type: 'practice-questions',
