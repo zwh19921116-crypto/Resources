@@ -22,7 +22,7 @@
 
 const FLUSH_INTERVAL_MS = 60_000; // batch impressions for up to 1 minute before writing to D1
 
-export class ImpressionCounter {
+export class ImpressionCounterV2 {
   constructor(state, env) {
     this.state = state;
     this.env = env;
@@ -35,22 +35,33 @@ export class ImpressionCounter {
     if (!adId) return new Response('missing ad', { status: 400 });
 
     this.pending.set(adId, (this.pending.get(adId) || 0) + 1);
+    console.log(`[ImpressionCounterV2] queued ${adId}, pending size=${this.pending.size}`);
 
     // Schedule (or reuse) a flush alarm so many rapid impressions share one D1 write.
     const current = await this.state.storage.getAlarm();
-    if (!current) await this.state.storage.setAlarm(Date.now() + FLUSH_INTERVAL_MS);
+    console.log(`[ImpressionCounterV2] existing alarm: ${current}`);
+    if (!current) {
+      await this.state.storage.setAlarm(Date.now() + FLUSH_INTERVAL_MS);
+      console.log('[ImpressionCounterV2] scheduled new alarm');
+    }
 
     return new Response('ok');
   }
 
   async alarm() {
+    console.log(`[ImpressionCounterV2] ALARM FIRED, flushing ${this.pending.size} ad(s)`);
     const toFlush = this.pending;
     this.pending = new Map();
     for (const [adId, n] of toFlush) {
-      await this.env.DB
-        .prepare('INSERT INTO impressions (ad_id, count) VALUES (?1, ?2) ON CONFLICT(ad_id) DO UPDATE SET count = count + ?2')
-        .bind(adId, n)
-        .run();
+      try {
+        await this.env.DB
+          .prepare('INSERT INTO impressions (ad_id, count) VALUES (?1, ?2) ON CONFLICT(ad_id) DO UPDATE SET count = count + ?2')
+          .bind(adId, n)
+          .run();
+        console.log(`[ImpressionCounterV2] wrote ${adId} +${n} to D1`);
+      } catch (e) {
+        console.log(`[ImpressionCounterV2] D1 WRITE FAILED for ${adId}: ${e.message}`);
+      }
     }
   }
 }
