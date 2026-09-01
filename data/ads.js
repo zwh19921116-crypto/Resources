@@ -75,23 +75,6 @@ window.EDG_ADS = [
     status: 'published'
   },
   {
-    id: 'holiday-program',
-    title: 'School holiday catch-up program',
-    body: 'A head start on next term — small classes covering the topics students find hardest.',
-    ctaLabel: 'See the program',
-    ctaUrl: '#',
-    mediaType: '',
-    image: '',
-    videoUrl: '',
-    duration: 4,
-    revenue: 0,
-    startDate: '',
-    endDate: '',
-    startTime: '',
-    endTime: '',
-    status: 'draft'
-  },
-  {
     id: 'maths-crash-course',
     title: 'Maths crash course — spots open',
     body: 'Fast-track your algebra and trigonometry skills before the next test.',
