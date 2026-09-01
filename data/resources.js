@@ -22,23 +22,6 @@ window.EDG_RESOURCES = [
     status: 'published'
   },
   {
-    id: 'testcov-vid2',
-    title: 'testcov-vid2',
-    type: 'practice-questions',
-    stage: 'secondary',
-    subject: 'Maths',
-    year: 'Year 7',
-    level: 'Easy',
-    desc: 'tetsehgsrhdsdfs',
-    details: '',
-    art: 'maths',
-    image: '',
-    tags: [],
-    url: 'https://resources.edgeducate.com.au/Test/Report+of+the+COVID+Review+-+June+2024_0.pdf',
-    added: '2026-08-30',
-    status: 'published'
-  },
-  {
     id: 'testtest2',
     title: 'testtest2',
     type: 'practice-questions',
