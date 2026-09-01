@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('desktop', {
   resetPassword: (password) => ipcRenderer.invoke('auth:resetPassword', password),
   reset2faViaEmail: () => ipcRenderer.invoke('auth:reset2faViaEmail'),
   unlock: () => ipcRenderer.invoke('auth:unlock'),
+  hasRecentSession: () => ipcRenderer.invoke('auth:hasRecentSession'),
+  signOut: () => ipcRenderer.invoke('auth:signOut'),
   pullBeforeUnlock: () => ipcRenderer.invoke('auth:pullBeforeUnlock'),
   gitSync: (message) => ipcRenderer.invoke('git:sync', message),
   gitPull: () => ipcRenderer.invoke('git:pull'),

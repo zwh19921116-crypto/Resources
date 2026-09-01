@@ -151,6 +151,12 @@
 
   /* ---------- step 1: account ---------- */
   (async () => {
+    if (await window.desktop.hasRecentSession()) {
+      document.querySelector('.card').innerHTML = '<p class="hint" style="margin:0">Welcome back — signing you in…</p>';
+      await window.desktop.pullBeforeUnlock();
+      await window.desktop.unlock();
+      return;
+    }
     isSetup = !(await window.desktop.hasAccount());
     if (isSetup) {
       $('account-title').textContent = 'Create your admin account';

@@ -11,6 +11,8 @@ const REPO_URL = 'https://github.com/zwh19921116-crypto/Resources.git';
 const STANDALONE_CLONE_DIR = path.join(app.getPath('userData'), 'repo');
 const LOGIN_HTML_PATH = path.join(__dirname, 'login.html');
 const AUTH_FILE = path.join(app.getPath('userData'), 'auth.json');
+const SESSION_FILE = path.join(app.getPath('userData'), 'session.json');
+const SESSION_TTL_MS = 30 * 60 * 1000; // stay signed in for 30 minutes across app restarts
 
 let PROJECT_ROOT = path.join(__dirname, '..');
 let ADMIN_HTML_PATH = path.join(PROJECT_ROOT, 'admin.html');
@@ -30,6 +32,22 @@ function writeAuth(data) {
 
 function hasAccount() {
   return !!readAuth();
+}
+
+function markSessionUnlocked() {
+  fs.writeFileSync(SESSION_FILE, JSON.stringify({ ts: Date.now() }));
+}
+function hasRecentSession() {
+  if (!fs.existsSync(SESSION_FILE)) return false;
+  try {
+    const { ts } = JSON.parse(fs.readFileSync(SESSION_FILE, 'utf8'));
+    return Date.now() - ts < SESSION_TTL_MS;
+  } catch (e) {
+    return false;
+  }
+}
+function clearSession() {
+  if (fs.existsSync(SESSION_FILE)) fs.unlinkSync(SESSION_FILE);
 }
 
 function setAccount(username, password) {
@@ -427,6 +445,7 @@ ipcMain.handle('auth:verifyResetCode', (event, code) => verifyResetCode(code));
 ipcMain.handle('auth:resetPassword', (event, password) => resetPassword(password));
 ipcMain.handle('auth:reset2faViaEmail', () => reset2faViaEmail());
 ipcMain.handle('auth:unlock', () => {
+  markSessionUnlocked();
   if (!checkAdminFilesPresent(PROJECT_ROOT)) {
     win.loadFile(path.join(__dirname, 'missing-admin.html'));
     return true;
@@ -434,6 +453,8 @@ ipcMain.handle('auth:unlock', () => {
   win.loadFile(ADMIN_HTML_PATH);
   return true;
 });
+ipcMain.handle('auth:hasRecentSession', () => hasRecentSession());
+ipcMain.handle('auth:signOut', () => { clearSession(); return true; });
 ipcMain.handle('auth:pullBeforeUnlock', async () => {
   if (!fs.existsSync(path.join(PROJECT_ROOT, '.git'))) return { ok: true, log: 'Not a git checkout — nothing to pull.' };
   return runGit(['pull']);
