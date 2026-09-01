@@ -315,6 +315,78 @@ async function gitSync(message) {
   return { ok: true, pushed: true, commitSha: rev.ok ? rev.output.trim() : '', log: `${commit.output}\n${push.output}`.trim() };
 }
 
+/* ---------- settings (SMTP etc.) stored in .env, editable from the app ---------- */
+const ENV_PATH = path.join(__dirname, '.env');
+const SETTINGS_KEYS = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'ADMIN_EMAIL_TO'];
+
+function readEnvFile() {
+  if (!fs.existsSync(ENV_PATH)) return {};
+  const out = {};
+  for (const line of fs.readFileSync(ENV_PATH, 'utf8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq === -1) continue;
+    out[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
+  }
+  return out;
+}
+
+function writeEnvFile(updates) {
+  const current = readEnvFile();
+  Object.assign(current, updates);
+  const lines = Object.entries(current).map(([k, v]) => `${k}=${v}`);
+  fs.writeFileSync(ENV_PATH, lines.join('\n') + '\n');
+  for (const [k, v] of Object.entries(updates)) process.env[k] = v;
+}
+
+function getSettings() {
+  const env = { ...process.env, ...readEnvFile() };
+  const out = {};
+  for (const key of SETTINGS_KEYS) out[key] = env[key] || '';
+  return out;
+}
+
+function saveSettings(fields) {
+  const updates = {};
+  for (const key of SETTINGS_KEYS) if (fields[key] !== undefined) updates[key] = String(fields[key]);
+  writeEnvFile(updates);
+  return getSettings();
+}
+
+/* ---------- native filesystem bridge (reliable folder picker + file read/write, avoids the browser
+ * File System Access API which can silently hang forever in Electron instead of resolving/rejecting) ---------- */
+ipcMain.handle('fs:pickFolder', async () => {
+  const result = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
+  if (result.canceled || !result.filePaths[0]) return { canceled: true };
+  return { canceled: false, path: result.filePaths[0] };
+});
+ipcMain.handle('fs:ensureDir', (event, dirPath) => {
+  fs.mkdirSync(dirPath, { recursive: true });
+  return true;
+});
+ipcMain.handle('fs:readFile', (event, filePath) => {
+  try {
+    return fs.readFileSync(filePath, 'utf8');
+  } catch (e) {
+    return null;
+  }
+});
+ipcMain.handle('fs:writeFile', (event, filePath, content) => {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, content);
+  return true;
+});
+ipcMain.handle('fs:exists', (event, filePath) => fs.existsSync(filePath));
+ipcMain.handle('fs:listDir', (event, dirPath) => {
+  if (!fs.existsSync(dirPath)) return [];
+  return fs.readdirSync(dirPath, { withFileTypes: true }).map((entry) => ({ name: entry.name, isDirectory: entry.isDirectory() }));
+});
+ipcMain.handle('fs:removeEntry', (event, entryPath, recursive) => {
+  fs.rmSync(entryPath, { recursive: !!recursive, force: true });
+  return true;
+});
+
 function createWindow(startFile) {
   win = new BrowserWindow({
     width: 1400,
@@ -367,40 +439,14 @@ ipcMain.handle('auth:pullBeforeUnlock', async () => {
 });
 ipcMain.handle('git:sync', (event, message) => gitSync(message));
 ipcMain.handle('git:pull', () => runGit(['pull']));
+ipcMain.handle('git:status', async () => {
+  const status = await runGit(['status', '--porcelain']);
+  const files = status.output.split('\n').map((l) => l.trim()).filter(Boolean);
+  return { ok: status.ok, count: files.length, files };
+});
 ipcMain.handle('app:getPaths', () => ({ standaloneDir: PROJECT_ROOT }));
-
-/* ---------- native filesystem bridge (replaces the browser File System Access API, which can
- * silently hang forever in this Electron build instead of resolving/rejecting) ---------- */
-ipcMain.handle('fs:pickFolder', async () => {
-  const result = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
-  if (result.canceled || !result.filePaths[0]) return { canceled: true };
-  return { canceled: false, path: result.filePaths[0] };
-});
-ipcMain.handle('fs:ensureDir', (event, dirPath) => {
-  fs.mkdirSync(dirPath, { recursive: true });
-  return true;
-});
-ipcMain.handle('fs:readFile', (event, filePath) => {
-  try {
-    return fs.readFileSync(filePath, 'utf8');
-  } catch (e) {
-    return null;
-  }
-});
-ipcMain.handle('fs:writeFile', (event, filePath, content) => {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, content);
-  return true;
-});
-ipcMain.handle('fs:exists', (event, filePath) => fs.existsSync(filePath));
-ipcMain.handle('fs:listDir', (event, dirPath) => {
-  if (!fs.existsSync(dirPath)) return [];
-  return fs.readdirSync(dirPath, { withFileTypes: true }).map((entry) => ({ name: entry.name, isDirectory: entry.isDirectory() }));
-});
-ipcMain.handle('fs:removeEntry', (event, entryPath, recursive) => {
-  fs.rmSync(entryPath, { recursive: !!recursive, force: true });
-  return true;
-});
+ipcMain.handle('settings:get', () => getSettings());
+ipcMain.handle('settings:save', (event, fields) => saveSettings(fields));
 
 app.whenReady().then(async () => {
   const resolved = await resolveProjectRoot();
