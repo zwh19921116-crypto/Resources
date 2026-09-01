@@ -443,7 +443,8 @@ ipcMain.handle('git:pull', () => runGit(['pull']));
 ipcMain.handle('git:status', async () => {
   const status = await runGit(['status', '--porcelain']);
   const files = status.output.split('\n').map((l) => l.trim()).filter(Boolean);
-  return { ok: status.ok, count: files.length, files };
+  const lastCommit = await runGit(['log', '-1', '--format=%ci']);
+  return { ok: status.ok, count: files.length, files, lastCommit: lastCommit.ok ? lastCommit.output.trim() : '' };
 });
 ipcMain.handle('app:getPaths', () => ({ standaloneDir: PROJECT_ROOT }));
 ipcMain.handle('settings:get', () => getSettings());
