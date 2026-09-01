@@ -3,6 +3,8 @@
  * Managed by admin.html — you shouldn't need to edit this by hand.
  */
 window.EDG_ADS_ENABLED = true;
+window.EDG_ADS_TRACKING_ENABLED = true;
+window.EDG_ADS_TRACKING_URL = 'https://impressions-worker.zwh19921116.workers.dev/track';
 window.EDG_ADS = [
   {
     id: 'edgeducate-classes',
@@ -34,8 +36,8 @@ window.EDG_ADS = [
     revenue: 0,
     startDate: '',
     endDate: '',
-    startTime: '',
-    endTime: '',
+    startTime: '00:00',
+    endTime: '23:59',
     status: 'published'
   },
   {

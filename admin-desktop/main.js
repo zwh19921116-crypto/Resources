@@ -335,7 +335,7 @@ async function gitSync(message) {
 
 /* ---------- settings (SMTP etc.) stored in .env, editable from the app ---------- */
 const ENV_PATH = path.join(__dirname, '.env');
-const SETTINGS_KEYS = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'ADMIN_EMAIL_TO'];
+const SETTINGS_KEYS = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'ADMIN_EMAIL_TO', 'IMPRESSIONS_STATS_SECRET'];
 
 function readEnvFile() {
   if (!fs.existsSync(ENV_PATH)) return {};
@@ -474,6 +474,17 @@ ipcMain.handle('git:status', async () => {
 ipcMain.handle('app:getPaths', () => ({ standaloneDir: PROJECT_ROOT }));
 ipcMain.handle('settings:get', () => getSettings());
 ipcMain.handle('settings:save', (event, fields) => saveSettings(fields));
+ipcMain.handle('impressions:get', async (event, trackUrl) => {
+  try {
+    const secret = readEnvFile().IMPRESSIONS_STATS_SECRET || process.env.IMPRESSIONS_STATS_SECRET || '';
+    const statsUrl = String(trackUrl).replace(/\/track\/?$/, '') + '/stats';
+    const res = await fetch(statsUrl, { headers: { Authorization: `Bearer ${secret}` } });
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    return { ok: true, counts: await res.json() };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
 
 app.whenReady().then(async () => {
   const resolved = await resolveProjectRoot();

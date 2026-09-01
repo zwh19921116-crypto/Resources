@@ -31,5 +31,6 @@ contextBridge.exposeInMainWorld('desktop', {
   fsListDir: (dirPath) => ipcRenderer.invoke('fs:listDir', dirPath),
   fsRemoveEntry: (entryPath, recursive) => ipcRenderer.invoke('fs:removeEntry', entryPath, recursive),
   getSettings: () => ipcRenderer.invoke('settings:get'),
-  saveSettings: (fields) => ipcRenderer.invoke('settings:save', fields)
+  saveSettings: (fields) => ipcRenderer.invoke('settings:save', fields),
+  getImpressions: (trackUrl) => ipcRenderer.invoke('impressions:get', trackUrl)
 });

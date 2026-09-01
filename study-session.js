@@ -80,6 +80,14 @@ const SS_DEFAULT_AD = {
   duration: 4
 };
 
+/** Fire-and-forget impression beacon — never blocks or breaks the loading screen if it fails. */
+function trackAdImpression(ad) {
+  if (!window.EDG_ADS_TRACKING_ENABLED || !window.EDG_ADS_TRACKING_URL || !ad || !ad.id) return;
+  try {
+    fetch(`${window.EDG_ADS_TRACKING_URL}?ad=${encodeURIComponent(ad.id)}`, { mode: 'no-cors', keepalive: true }).catch(() => {});
+  } catch (e) { /* ignore — impression tracking must never break the loading screen */ }
+}
+
 /** Shows a random ad eligible right now (or the default Edgeducate ad if nothing is scheduled) and returns how long (ms) it should stay on screen. */
 function renderLoadingAd() {
   const block = ss('session-loading-ad');
@@ -87,6 +95,7 @@ function renderLoadingAd() {
   const now = new Date();
   const eligible = (window.EDG_ADS || []).filter((ad) => ad.status !== 'draft' && ssAdIsEligible(ad, now));
   const ad = eligible.length ? eligible[Math.floor(Math.random() * eligible.length)] : SS_DEFAULT_AD;
+  trackAdImpression(ad);
   const media = ss('session-loading-ad-media');
   const mediaMarkup = ssAdMediaMarkup(ad);
   media.innerHTML = mediaMarkup;
