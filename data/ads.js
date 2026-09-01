@@ -4,7 +4,7 @@
  */
 window.EDG_ADS_ENABLED = true;
 window.EDG_ADS_TRACKING_ENABLED = true;
-window.EDG_ADS_TRACKING_URL = 'https://impressions-worker.zwh19921116.workers.dev/track';
+window.EDG_ADS_TRACKING_URL = 'https://edg-ad-tracker.zwh19921116.workers.dev/track';
 window.EDG_ADS = [
   {
     id: 'edgeducate-classes',
