@@ -441,10 +441,14 @@ ipcMain.handle('auth:pullBeforeUnlock', async () => {
 ipcMain.handle('git:sync', (event, message) => gitSync(message));
 ipcMain.handle('git:pull', () => runGit(['pull']));
 ipcMain.handle('git:status', async () => {
-  const status = await runGit(['status', '--porcelain']);
-  const files = status.output.split('\n').map((l) => l.trim()).filter(Boolean);
+  const status = await runGit(['status', '--porcelain', '-b']);
+  const lines = status.output.split('\n');
+  const branchLine = lines[0] || '';
+  const aheadMatch = branchLine.match(/ahead (\d+)/);
+  const ahead = aheadMatch ? Number(aheadMatch[1]) : 0;
+  const files = lines.slice(1).map((l) => l.trim()).filter(Boolean);
   const lastCommit = await runGit(['log', '-1', '--format=%ci']);
-  return { ok: status.ok, count: files.length, files, lastCommit: lastCommit.ok ? lastCommit.output.trim() : '' };
+  return { ok: status.ok, count: files.length, ahead, files, lastCommit: lastCommit.ok ? lastCommit.output.trim() : '' };
 });
 ipcMain.handle('app:getPaths', () => ({ standaloneDir: PROJECT_ROOT }));
 ipcMain.handle('settings:get', () => getSettings());
