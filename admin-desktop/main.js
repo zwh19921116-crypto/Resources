@@ -1,5 +1,5 @@
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -378,6 +378,7 @@ ipcMain.handle('fs:writeFile', (event, filePath, content) => {
   return true;
 });
 ipcMain.handle('fs:exists', (event, filePath) => fs.existsSync(filePath));
+ipcMain.handle('fs:openFolder', (event, dirPath) => shell.openPath(dirPath));
 ipcMain.handle('fs:listDir', (event, dirPath) => {
   if (!fs.existsSync(dirPath)) return [];
   return fs.readdirSync(dirPath, { withFileTypes: true }).map((entry) => ({ name: entry.name, isDirectory: entry.isDirectory() }));

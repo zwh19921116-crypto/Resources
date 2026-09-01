@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('desktop', {
   fsReadFile: (filePath) => ipcRenderer.invoke('fs:readFile', filePath),
   fsWriteFile: (filePath, content) => ipcRenderer.invoke('fs:writeFile', filePath, content),
   fsExists: (filePath) => ipcRenderer.invoke('fs:exists', filePath),
+  openFolder: (dirPath) => ipcRenderer.invoke('fs:openFolder', dirPath),
   fsListDir: (dirPath) => ipcRenderer.invoke('fs:listDir', dirPath),
   fsRemoveEntry: (entryPath, recursive) => ipcRenderer.invoke('fs:removeEntry', entryPath, recursive),
   getSettings: () => ipcRenderer.invoke('settings:get'),
