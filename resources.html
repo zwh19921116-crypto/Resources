@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css?v=20260826" />
+<script src="site-menu.js" defer></script>
 </head>
 <body data-page="library">
 
@@ -33,7 +34,24 @@
 
       <nav id="primary-nav" class="primary-nav" aria-label="Primary">
         <a href="#">Pricing</a>
-        <a href="#">VCE Preparation</a>
+        <details class="nav-dropdown">
+          <summary>Our Classes</summary>
+          <div class="nav-dropdown-menu">
+            <a href="#">Primary</a>
+            <a href="#">Secondary</a>
+            <a href="#">Selective School</a>
+          </div>
+        </details>
+        <details class="nav-dropdown">
+          <summary>VCE Preparation</summary>
+          <div class="nav-dropdown-menu">
+            <a href="#">VCE Biology</a>
+            <a href="#">VCE Chemistry</a>
+            <a href="#">VCE Physics</a>
+            <a href="#">VCE General Mathematics</a>
+            <a href="#">VCE Mathematical Methods</a>
+          </div>
+        </details>
         <a href="resources.html" class="is-active" aria-current="page">Resources</a>
         <a href="club.html">Edgeducate Club</a>
         <a href="#">Contact Us</a>

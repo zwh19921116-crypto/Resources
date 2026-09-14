@@ -17,25 +17,64 @@
  *        defines that class below — Cloudflare will detect it automatically as a migration).
  * 4. Worker -> Settings -> Variables -> add an ENCRYPTED variable STATS_SECRET (any long random
  *    string) — required to read /stats from the admin app.
+ * 5. Worker -> Settings -> Variables -> add an ENCRYPTED variable TRACK_SECRET (any long random
+ *    string, different from STATS_SECRET) — used to sign short-lived /track tokens.
+ * ---------------------------------------------------------------------------------------------
+ * CLIENT USAGE (from the static site):
+ *   const { ts, sig } = await fetch(`${WORKER_URL}/token?ad=${adId}`).then(r => r.json());
+ *   fetch(`${WORKER_URL}/track?ad=${adId}&ts=${ts}&sig=${sig}`);
+ * The token is single-purpose and expires in 15s, so it can't be replayed or scripted from
+ * the console without also calling /token first — and /token can't be forged without TRACK_SECRET.
  * ---------------------------------------------------------------------------------------------
  */
 
 const FLUSH_INTERVAL_MS = 60_000; // batch impressions for up to 1 minute before writing to D1
+const TOKEN_MAX_AGE_MS = 15_000; // /track tokens from /token expire after this long
+const TRIP_THRESHOLD = 5_000; // more impressions than this in one flush window looks like abuse, not real traffic
+const TRIP_COOLDOWN_MS = 5 * 60_000; // once tripped, reject everything for this long before trying again
+
+// Only these origins may call /track — update once the production domain is finalized.
+const ALLOWED_ORIGINS = [
+  'https://edgeducate.com.au',
+  'https://resources.edgeducate.com.au',
+  'https://zwh19921116-crypto.pages.dev' // Cloudflare Pages default preview domain
+];
+
+async function signPayload(payload, secret) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  return [...new Uint8Array(sigBuf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 export class ImpressionCounterV2 {
   constructor(state, env) {
     this.state = state;
     this.env = env;
     this.pending = new Map(); // adId -> count since last flush
+    this.totalSinceFlush = 0; // sum of all pending counts — the abuse signal
   }
 
   async fetch(request) {
+    const trippedUntil = (await this.state.storage.get('trippedUntil')) || 0;
+    if (Date.now() < trippedUntil) {
+      console.log(`[ImpressionCounterV2] circuit open, rejecting until ${new Date(trippedUntil).toISOString()}`);
+      return new Response('rate limited', { status: 503 });
+    }
+
     const url = new URL(request.url);
     const adId = url.searchParams.get('ad');
     if (!adId) return new Response('missing ad', { status: 400 });
 
     this.pending.set(adId, (this.pending.get(adId) || 0) + 1);
-    console.log(`[ImpressionCounterV2] queued ${adId}, pending size=${this.pending.size}`);
+    this.totalSinceFlush++;
+    console.log(`[ImpressionCounterV2] queued ${adId}, pending size=${this.pending.size}, total=${this.totalSinceFlush}`);
+
+    if (this.totalSinceFlush > TRIP_THRESHOLD) {
+      const trippedUntil = Date.now() + TRIP_COOLDOWN_MS;
+      await this.state.storage.put('trippedUntil', trippedUntil);
+      console.log(`[ImpressionCounterV2] TRIPPED — over ${TRIP_THRESHOLD} impressions in one window, blocking until ${new Date(trippedUntil).toISOString()}`);
+      return new Response('rate limited', { status: 503 });
+    }
 
     // Schedule (or reuse) a flush alarm so many rapid impressions share one D1 write.
     const current = await this.state.storage.getAlarm();
@@ -52,6 +91,7 @@ export class ImpressionCounterV2 {
     console.log(`[ImpressionCounterV2] ALARM FIRED, flushing ${this.pending.size} ad(s)`);
     const toFlush = this.pending;
     this.pending = new Map();
+    this.totalSinceFlush = 0;
     for (const [adId, n] of toFlush) {
       try {
         await this.env.DB
@@ -69,16 +109,35 @@ export class ImpressionCounterV2 {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const origin = request.headers.get('Origin') || '';
     const cors = {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : 'null',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Authorization'
+      'Access-Control-Allow-Headers': 'Authorization',
+      Vary: 'Origin'
     };
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
 
-    if (url.pathname === '/track' && request.method === 'GET') {
+    if (url.pathname === '/token' && request.method === 'GET') {
+      if (!ALLOWED_ORIGINS.includes(origin)) return new Response('forbidden', { status: 403, headers: cors });
       const adId = url.searchParams.get('ad');
       if (!adId) return new Response('missing ad', { status: 400, headers: cors });
+      const ts = Date.now();
+      const sig = await signPayload(`${adId}.${ts}`, env.TRACK_SECRET);
+      return new Response(JSON.stringify({ ad: adId, ts, sig }), { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } });
+    }
+
+    if (url.pathname === '/track' && request.method === 'GET') {
+      if (!ALLOWED_ORIGINS.includes(origin)) return new Response('forbidden', { status: 403, headers: cors });
+      const adId = url.searchParams.get('ad');
+      if (!adId) return new Response('missing ad', { status: 400, headers: cors });
+      const ts = Number(url.searchParams.get('ts'));
+      const sig = url.searchParams.get('sig') || '';
+      if (!ts || !sig || Date.now() - ts > TOKEN_MAX_AGE_MS || ts > Date.now() + 5000) {
+        return new Response('token expired', { status: 401, headers: cors });
+      }
+      const expectedSig = await signPayload(`${adId}.${ts}`, env.TRACK_SECRET);
+      if (sig !== expectedSig) return new Response('invalid token', { status: 401, headers: cors });
       // One Durable Object instance total, so all impressions batch together.
       const id = env.COUNTER.idFromName('global');
       await env.COUNTER.get(id).fetch(request);

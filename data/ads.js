@@ -3,8 +3,6 @@
  * Managed by admin.html — you shouldn't need to edit this by hand.
  */
 window.EDG_ADS_ENABLED = true;
-window.EDG_ADS_TRACKING_ENABLED = true;
-window.EDG_ADS_TRACKING_URL = 'https://edg-ad-tracker.zwh19921116.workers.dev/track';
 window.EDG_ADS = [
   {
     id: 'edgeducate-classes',
@@ -36,8 +34,8 @@ window.EDG_ADS = [
     revenue: 0,
     startDate: '',
     endDate: '',
-    startTime: '00:00',
-    endTime: '23:59',
+    startTime: '',
+    endTime: '',
     status: 'published'
   },
   {
@@ -73,6 +71,23 @@ window.EDG_ADS = [
     startTime: '15:00',
     endTime: '18:00',
     status: 'published'
+  },
+  {
+    id: 'holiday-program',
+    title: 'School holiday catch-up program',
+    body: 'A head start on next term — small classes covering the topics students find hardest.',
+    ctaLabel: 'See the program',
+    ctaUrl: '#',
+    mediaType: '',
+    image: '',
+    videoUrl: '',
+    duration: 4,
+    revenue: 0,
+    startDate: '',
+    endDate: '',
+    startTime: '',
+    endTime: '',
+    status: 'draft'
   },
   {
     id: 'maths-crash-course',

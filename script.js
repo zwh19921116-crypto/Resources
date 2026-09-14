@@ -18,6 +18,15 @@ toggle.addEventListener('click', () => {
   toggle.setAttribute('aria-expanded', String(open));
 });
 
+document.querySelectorAll('.nav-dropdown').forEach((dropdown) => {
+  dropdown.addEventListener('mouseenter', () => {
+    dropdown.open = true;
+  });
+  dropdown.addEventListener('mouseleave', () => {
+    if (!dropdown.matches(':focus-within')) dropdown.open = false;
+  });
+});
+
 const header = document.querySelector('.site-header');
 const setHeaderState = () => header.classList.toggle('is-scrolled', window.scrollY > 24);
 setHeaderState();
@@ -147,12 +156,21 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ---------- home page ---------- */
+function renderHeroStats() {
+  document.querySelectorAll('[data-stat-type]').forEach((node) => {
+    const count = ALL.filter((r) => r.type === node.dataset.statType).length;
+    const label = node.dataset.statLabel || node.dataset.statType;
+    node.textContent = `${count} ${label}${count === 1 ? '' : 's'}`;
+  });
+}
+
 function renderHome() {
+  renderHeroStats();
   const wrap = el('category-grid');
   Object.entries(CONFIG.types).forEach(([key, t]) => {
     const total = ALL.filter((r) => r.type === key).length;
     const a = document.createElement('a');
-    a.className = 'category-card';
+    a.className = `category-card category-${t.colour}`;
     a.href = `resources.html?type=${encodeURIComponent(key)}`;
     a.innerHTML = `
       <span class="cat-icon ${t.colour}"><svg class="ico"><use href="#i-${t.icon}"/></svg></span>
@@ -166,6 +184,21 @@ function renderHome() {
       </span>`;
     wrap.appendChild(a);
   });
+
+  const studySession = document.createElement('a');
+  studySession.className = 'category-card category-indigo';
+  studySession.href = 'study-builder.html';
+  studySession.innerHTML = `
+    <span class="cat-icon indigo"><svg class="ico"><use href="#i-spark"/></svg></span>
+    <span class="cat-body">
+      <span class="cat-title">Create Study Session</span>
+      <span class="cat-blurb">Build a focused session around your subject, time and goal.</span>
+    </span>
+    <span class="cat-foot">
+      <span class="cat-count">Start now</span>
+      <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
+    </span>`;
+  wrap.appendChild(studySession);
 
   const typeWrap = el('filter-type');
   const chip = (key, label, count) => {
@@ -278,10 +311,11 @@ function createDropdown(container, options) {
   const trigger = container.querySelector('.dropdown-trigger');
   const valueEl = container.querySelector('.dropdown-value');
   const list = container.querySelector('.dropdown-list');
+  let availableOptions = options;
   let value = '';
 
   const renderOptions = () => {
-    list.innerHTML = options
+    list.innerHTML = availableOptions
       .map((opt) => `<li role="option" data-value="${esc(opt.value)}" class="${opt.value === value ? 'is-selected' : ''}">${esc(opt.label)}</li>`)
       .join('');
   };
@@ -309,7 +343,7 @@ function createDropdown(container, options) {
     const item = event.target.closest('li');
     if (!item) return;
     value = item.dataset.value;
-    valueEl.textContent = value ? options.find((o) => o.value === value).label : placeholder;
+    valueEl.textContent = value ? availableOptions.find((o) => o.value === value).label : placeholder;
     list.querySelectorAll('li').forEach((li) => li.classList.toggle('is-selected', li === item));
     close();
     onChange(value);
@@ -322,26 +356,70 @@ function createDropdown(container, options) {
       valueEl.textContent = placeholder;
       list.querySelectorAll('li').forEach((li) => li.classList.remove('is-selected'));
     },
+    setOptions(nextOptions) {
+      availableOptions = nextOptions;
+      this.reset();
+      renderOptions();
+    },
+    get label() {
+      return value ? availableOptions.find((option) => option.value === value)?.label || '' : '';
+    },
     onChange(fn) { onChange = fn; }
   };
 }
 
 function renderStudyBuilder() {
-  const subjectEl = el('session-subject');
-  if (!subjectEl) return;
+  const stageEl = el('session-stage');
+  const topicEl = el('session-topic');
+  if (!stageEl || !topicEl) return;
+  const unitEl = el('session-unit');
+  const unitLabel = el('session-unit-label');
+  const resourceStage = (resource) => resource.stage || (String(resource.year || '').startsWith('VCE') ? 'vce' : 'secondary');
 
-  const subjectDropdown = createDropdown(subjectEl, [
-    { value: '', label: 'Any subject' },
-    ...CONFIG.subjects.map((name) => ({ value: name, label: name }))
-  ]);
+  const availableStages = [
+    { value: 'primary', label: 'Primary School' },
+    { value: 'secondary', label: 'Secondary' },
+    { value: 'vce', label: 'VCE' }
+  ].filter((stageOption) => ALL.some((resource) => resourceStage(resource) === stageOption.value));
+  const stageDropdown = createDropdown(stageEl, availableStages);
+  const topicDropdown = createDropdown(topicEl, [{ value: '', label: 'Select a topic' }]);
+  const unitDropdown = createDropdown(unitEl, [{ value: '', label: 'Any unit' }]);
 
-  const timeGroup = el('session-time');
   const goalGroup = el('session-goal');
+  const timeGroup = el('session-time');
 
+  const topicDefinitions = {
+    primary: [{ value: 'Maths', label: 'Maths', resourceSubject: 'Maths' }],
+    secondary: CONFIG.subjects.map((name) => ({ value: name, label: name, resourceSubject: name })),
+    vce: [
+      { value: 'Biology', label: 'VCE Biology' },
+      { value: 'Chemistry', label: 'VCE Chemistry' },
+      { value: 'Physics', label: 'VCE Physics' },
+      { value: 'Maths-general', label: 'VCE General Mathematics' },
+      { value: 'Maths-methods', label: 'VCE Mathematical Methods' }
+    ]
+  };
+
+  const topicsForStage = (stage) => (topicDefinitions[stage] || [])
+    .filter((topic) => ALL.some((resource) => resourceStage(resource) === stage && resource.subject === (topic.resourceSubject || topic.value.replace(/^Maths-/, 'Maths'))));
+  const unitOptionsFor = (topicValue, topicLabel) => {
+    const resourceSubject = topicValue.startsWith('Maths-') ? 'Maths' : topicValue;
+    const units = [...new Set(ALL
+      .filter((resource) => resourceStage(resource) === 'vce' && resource.subject === resourceSubject)
+      .map((resource) => resource.unit || resource.year)
+      .filter(Boolean))];
+    return [
+      { value: '', label: 'Any unit' },
+      ...units.map((unit) => ({ value: unit, label: `${topicLabel} ${unit.replace(/^VCE /, '')}` }))
+    ];
+  };
+
+  let stage = '';
   let subject = '';
+  let unit = '';
   let minutes = 30;
-  let type = 'practice-questions';
-  const labels = { 'knowledge-sheet': 'understanding', 'practice-questions': 'focused practice', 'practice-exam': 'exam preparation' };
+  let type = 'all';
+  const labels = { all: 'focused study', 'knowledge-sheet': 'understanding', 'practice-questions': 'focused practice', 'practice-exam': 'exam preparation' };
   const details = {
     'knowledge-sheet': 'Read a knowledge sheet, then explain the key idea in your own words.',
     'practice-questions': 'Start with practice questions, then review what you missed.',
@@ -350,37 +428,49 @@ function renderStudyBuilder() {
 
   const formatMinutes = (mins) => {
     if (mins < 60) return `${mins} min`;
-    if (mins >= 120) return 'over 1 hr';
+    if (mins % 60) return `${Math.floor(mins / 60)} hr ${mins % 60} min`;
     return `${mins / 60} hr`;
-  };
-
-  // Recommend the newest published resource matching the goal, preferring the chosen subject.
-  const findMatch = () => {
-    const byType = ALL.filter((r) => r.type === type);
-    const bySubject = subject ? byType.filter((r) => r.subject === subject) : byType;
-    const pool = bySubject.length ? bySubject : byType;
-    if (!pool.length) return null;
-    return [...pool].sort((a, b) => new Date(b.added) - new Date(a.added))[0];
   };
 
   const update = () => {
     el('session-result').textContent = `${formatMinutes(minutes)} of ${labels[type]}`;
-    const match = findMatch();
-    el('session-detail').textContent = match
-      ? `Recommended: “${match.title}”${match.subject ? ` (${match.subject})` : ''}`
-      : details[type];
-    const params = new URLSearchParams({ type });
+    el('session-detail').textContent = details[type];
+    const params = new URLSearchParams();
+    if (type !== 'all') params.set('type', type);
+    if (stage) params.set('stage', stage);
     if (subject) params.set('subject', subject);
+    if (unit) params.set('unit', unit);
     params.set('minutes', minutes);
     el('session-start').href = `study-session.html?${params}`;
   };
 
-  subjectDropdown.onChange((value) => {
-    subject = value;
+  stageDropdown.onChange((value) => {
+    stage = value;
+    subject = '';
+    topicDropdown.setOptions([{ value: '', label: 'Select a topic' }, ...topicsForStage(stage)]);
+    unit = '';
+    unitDropdown.setOptions([{ value: '', label: 'Any unit' }]);
+    unitLabel.hidden = true;
+    unitEl.hidden = true;
+    update();
+  });
+  topicDropdown.onChange((value) => {
+    subject = value.startsWith('Maths-') ? 'Maths' : value;
+    if (stage === 'vce') {
+      const unitOptions = unitOptionsFor(value, topicDropdown.label);
+      unitDropdown.setOptions(unitOptions);
+      const hasUnits = unitOptions.length > 1;
+      unitLabel.hidden = !hasUnits;
+      unitEl.hidden = !hasUnits;
+    }
+    update();
+  });
+  unitDropdown.onChange((value) => {
+    unit = value;
     update();
   });
   timeGroup.querySelectorAll('button').forEach((button) => button.addEventListener('click', () => {
-    minutes = Number(button.dataset.time);
+    minutes = Number(button.dataset.time) || 30;
     timeGroup.querySelectorAll('button').forEach((item) => item.classList.toggle('is-on', item === button));
     update();
   }));

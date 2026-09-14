@@ -4,11 +4,24 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Resources | Edgeducate — Leading Edge in Education</title>
-<meta name="description" content="Access thousands of carefully curated practice questions, exams, knowledge sheets, checklists and interactive apps designed to help students excel." />
+<meta name="description" content="Explore Edgeducate resources for Primary, Secondary, Selective School and VCE students, including practice questions, exams, knowledge sheets, videos and interactive learning tools." />
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
+<meta name="keywords" content="Edgeducate resources, Primary School resources, Secondary School resources, Selective School preparation, VCE resources, practice questions, exam preparation" />
+<link rel="canonical" href="https://resources.edgeducate.com.au/" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Edgeducate Resources | Primary, Secondary, Selective and VCE" />
+<meta property="og:description" content="Find high quality learning resources by school stage, subject and goal. Built to support confident, exam-ready study." />
+<meta property="og:url" content="https://resources.edgeducate.com.au/" />
+<meta property="og:image" content="https://resources.edgeducate.com.au/assets/logo/logo.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Edgeducate Resources | Primary to VCE" />
+<meta name="twitter:description" content="Discover curated resources for Primary, Secondary, Selective and VCE learning pathways." />
+<meta name="twitter:image" content="https://resources.edgeducate.com.au/assets/logo/logo.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css?v=20260826" />
+<script src="site-menu.js" defer></script>
 </head>
 <body data-page="home">
 
@@ -33,7 +46,24 @@
 
       <nav id="primary-nav" class="primary-nav" aria-label="Primary">
         <a href="#">Pricing</a>
-        <a href="#">VCE Preparation</a>
+        <details class="nav-dropdown">
+          <summary>Our Classes</summary>
+          <div class="nav-dropdown-menu">
+            <a href="#">Primary</a>
+            <a href="#">Secondary</a>
+            <a href="#">Selective School</a>
+          </div>
+        </details>
+        <details class="nav-dropdown">
+          <summary>VCE Preparation</summary>
+          <div class="nav-dropdown-menu">
+            <a href="#">VCE Biology</a>
+            <a href="#">VCE Chemistry</a>
+            <a href="#">VCE Physics</a>
+            <a href="#">VCE General Mathematics</a>
+            <a href="#">VCE Mathematical Methods</a>
+          </div>
+        </details>
         <a href="resources.html" class="is-active" aria-current="page">Resources</a>
         <a href="#">Contact Us</a>
       </nav>
@@ -71,24 +101,24 @@
         <span class="dots"></span>
 
         <div class="float-card float-a icon-right">
-          <div class="fc-text"><strong>Practice<br />Questions</strong><small>1,245 questions</small></div>
+          <div class="fc-text"><strong>Practice<br />Questions</strong><small data-stat-type="practice-questions" data-stat-label="question">…</small></div>
           <span class="mini-icon purple"><svg class="ico" aria-hidden="true"><use href="#i-question"/></svg></span>
         </div>
         <div class="float-card float-b icon-right">
-          <div class="fc-text"><strong>Practice<br />Exams</strong><small>56 exams</small></div>
+          <div class="fc-text"><strong>Practice<br />Exams</strong><small data-stat-type="practice-exam" data-stat-label="exam">…</small></div>
           <span class="mini-icon blue"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></span>
         </div>
         <div class="float-card float-c">
           <span class="mini-icon blue"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg></span>
-          <div class="fc-text"><strong>Knowledge<br />Sheets</strong><small>132 sheets</small></div>
+          <div class="fc-text"><strong>Knowledge<br />Sheets</strong><small data-stat-type="knowledge-sheet" data-stat-label="sheet">…</small></div>
         </div>
         <div class="float-card float-d">
           <span class="mini-icon purple"><svg class="ico" aria-hidden="true"><use href="#i-tap"/></svg></span>
-          <div class="fc-text"><strong>Interactive<br />Apps</strong><small>18 apps</small></div>
+          <div class="fc-text"><strong>Interactive<br />Apps</strong><small data-stat-type="interactive-app" data-stat-label="app">…</small></div>
         </div>
         <div class="float-card float-e">
           <span class="mini-icon green"><svg class="ico" aria-hidden="true"><use href="#i-checklist"/></svg></span>
-          <div class="fc-text"><strong>Subject<br />Checklists</strong><small>32 checklists</small></div>
+          <div class="fc-text"><strong>Subject<br />Checklists</strong><small data-stat-type="checklist" data-stat-label="checklist">…</small></div>
         </div>
 
         <div class="laptop">
@@ -175,10 +205,6 @@
     <div class="container">
       <div class="section-head">
         <div>
-          <span class="section-badge">
-            <svg class="ico" aria-hidden="true"><use href="#i-book"/></svg>
-            Browse the library
-          </span>
           <h2 class="section-title">Explore our resource categories</h2>
         </div>
         <p class="section-note">Select a category to see everything in it</p>
@@ -200,18 +226,118 @@
         </figure>
       </div>
       <div class="session-card">
-        <p class="session-label" id="session-subject-label">I am studying</p>
-        <div class="dropdown" id="session-subject" data-placeholder="Any subject" aria-labelledby="session-subject-label"></div>
+        <p class="session-label" id="session-stage-label">I am studying</p>
+        <div class="dropdown" id="session-stage" data-placeholder="Select level" aria-labelledby="session-stage-label"></div>
+        <p class="session-label" id="session-topic-label">Topic to work on</p>
+        <div class="dropdown" id="session-topic" data-placeholder="Select a topic" aria-labelledby="session-topic-label"></div>
+        <p class="session-label" id="session-unit-label" hidden>Unit</p>
+        <div class="dropdown" id="session-unit" data-placeholder="Any unit" aria-labelledby="session-unit-label" hidden></div>
         <p class="session-label">I have</p>
         <div class="session-options" id="session-time" role="group" aria-label="Available study time">
-          <button type="button" data-time="15">15 min</button><button type="button" data-time="30" class="is-on">30 min</button><button type="button" data-time="60">1 hr</button><button type="button" data-time="120">More than 1 hr</button>
+          <button type="button" data-time="15">15 min</button><button type="button" data-time="30" class="is-on">30 min</button><button type="button" data-time="60">1 hr</button>
         </div>
         <p class="session-label">My goal is to</p>
         <div class="session-options session-goals" id="session-goal" role="group" aria-label="Study goal">
-          <button type="button" data-type="knowledge-sheet">Understand</button><button type="button" data-type="practice-questions" class="is-on">Practise</button><button type="button" data-type="practice-exam">Test myself</button>
+          <button type="button" data-type="all" class="is-on">All</button><button type="button" data-type="knowledge-sheet">Understand</button><button type="button" data-type="practice-questions">Practise</button><button type="button" data-type="practice-exam">Test myself</button>
         </div>
         <div class="session-result"><span>YOUR SESSION</span><strong id="session-result">30 min of focused practice</strong><em id="session-detail">Start with practice questions, then review what you missed.</em></div>
         <a class="btn btn-primary btn-block" id="session-start" href="study-session.html?type=practice-questions&minutes=30">Create study session <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section learning-pathways" id="learning-pathways" aria-labelledby="pathways-title">
+    <div class="container">
+      <div class="pathways-head">
+        <div>
+          <span class="section-badge">
+            <svg class="ico" aria-hidden="true"><use href="#i-book"/></svg>
+            Learning pathways
+          </span>
+          <h2 class="section-title" id="pathways-title">Choose the right pathway for your stage</h2>
+        </div>
+        <p class="section-note">A clear overview for students and families choosing the best study direction.</p>
+      </div>
+
+      <div class="pathways-grid" role="list" aria-label="Learning pathways">
+        <article class="pathway-card pathway-primary" role="listitem">
+          <span class="pathway-tag">Foundation stage</span>
+          <span class="pathway-icon"><svg class="ico" aria-hidden="true"><use href="#i-checklist"/></svg></span>
+          <h3>Primary School Resources</h3>
+          <p>Build strong fundamentals with clear explanations and step-by-step practice.</p>
+          <ul class="pathway-points">
+            <li>Core numeracy and literacy foundations</li>
+            <li>Confidence-first progression</li>
+            <li>Simple routines for steady growth</li>
+          </ul>
+          <p class="pathway-focus"><strong>Best for:</strong> Building habits, confidence and core skills.</p>
+        </article>
+
+        <article class="pathway-card pathway-secondary" role="listitem">
+          <span class="pathway-tag">Skills stage</span>
+          <span class="pathway-icon"><svg class="ico" aria-hidden="true"><use href="#i-question"/></svg></span>
+          <h3>Secondary School Resources</h3>
+          <p>Strengthen subject understanding and sharpen exam-ready problem solving.</p>
+          <ul class="pathway-points">
+            <li>Topic-by-topic skill reinforcement</li>
+            <li>Application and reasoning practice</li>
+            <li>Revision patterns that stick</li>
+          </ul>
+          <p class="pathway-focus"><strong>Best for:</strong> Deepening understanding before senior pathways.</p>
+        </article>
+
+        <article class="pathway-card pathway-selective" role="listitem">
+          <span class="pathway-tag">Readiness stage</span>
+          <span class="pathway-icon"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></span>
+          <h3>Selective School Reports</h3>
+          <p>Focused preparation insights to help families understand readiness and next steps.</p>
+          <ul class="pathway-points">
+            <li>Clear strengths and gap visibility</li>
+            <li>Targeted prep direction</li>
+            <li>Structured strategy for improvement</li>
+          </ul>
+          <p class="pathway-focus"><strong>Best for:</strong> Planning targeted selective entry preparation.</p>
+        </article>
+
+        <article class="pathway-card pathway-vce" role="listitem">
+          <span class="pathway-tag">Performance stage</span>
+          <span class="pathway-icon"><svg class="ico" aria-hidden="true"><use href="#i-spark"/></svg></span>
+          <h3>VCE Resources</h3>
+          <p>High-impact support designed for unit outcomes, SAC performance, and exam preparation.</p>
+          <ul class="pathway-points">
+            <li>Unit-aligned depth and structure</li>
+            <li>Exam technique and timing support</li>
+            <li>Smart consolidation before assessments</li>
+          </ul>
+          <p class="pathway-focus"><strong>Best for:</strong> SAC performance and final exam confidence.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section quick-answers" id="quick-answers" aria-labelledby="quick-answers-title">
+    <div class="container">
+      <div class="quick-answers-head">
+        <span class="section-badge"><svg class="ico" aria-hidden="true"><use href="#i-spark"/></svg> Quick answers</span>
+        <h2 class="section-title" id="quick-answers-title">What students and parents usually ask</h2>
+      </div>
+      <div class="answers-grid">
+        <article class="answer-item">
+          <h3>What types of resources are available?</h3>
+          <p>Edgeducate includes practice questions, practice exams, knowledge sheets, subject checklists, videos, and interactive learning tools across core subjects.</p>
+        </article>
+        <article class="answer-item">
+          <h3>How should students choose a pathway?</h3>
+          <p>Start with school stage first, then choose subject and goal. Primary focuses on foundations, Secondary on depth, Selective on readiness, and VCE on performance outcomes.</p>
+        </article>
+        <article class="answer-item">
+          <h3>Are resources suitable for exam preparation?</h3>
+          <p>Yes. Pathways are designed to support structured revision, targeted skill practice, and timed exam strategy, especially for senior students.</p>
+        </article>
+        <article class="answer-item">
+          <h3>Can parents use this page to plan study at home?</h3>
+          <p>Yes. The pathway summaries are intentionally simple so families can quickly identify the right stream and build consistent weekly study routines.</p>
+        </article>
       </div>
     </div>
   </section>
@@ -402,5 +528,67 @@
 <script src="data/quotes.js"></script>
 <script src="art.js"></script>
 <script src="script.js?v=20260826"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "name": "Edgeducate",
+      "url": "https://resources.edgeducate.com.au/",
+      "logo": "https://resources.edgeducate.com.au/assets/logo/logo.png"
+    },
+    {
+      "@type": "WebSite",
+      "name": "Edgeducate Resources",
+      "url": "https://resources.edgeducate.com.au/",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://resources.edgeducate.com.au/resources.html?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "ItemList",
+      "name": "Edgeducate Learning Pathways",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Primary School Resources" },
+        { "@type": "ListItem", "position": 2, "name": "Secondary School Resources" },
+        { "@type": "ListItem", "position": 3, "name": "Selective School Reports" },
+        { "@type": "ListItem", "position": 4, "name": "VCE Resources" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What types of resources are available?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Edgeducate includes practice questions, practice exams, knowledge sheets, subject checklists, videos, and interactive learning tools across core subjects."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How should students choose a pathway?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Start with school stage first, then choose subject and goal. Primary focuses on foundations, Secondary on depth, Selective on readiness, and VCE on performance outcomes."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Are resources suitable for exam preparation?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Pathways are designed to support structured revision, targeted skill practice, and timed exam strategy, especially for senior students."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 </body>
 </html>

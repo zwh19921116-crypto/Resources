@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
+<script src="site-menu.js" defer></script>
 </head>
 <body class="session-page">
 
@@ -59,10 +60,27 @@
           <p class="section-eyebrow">Your study session</p>
           <h1 id="session-summary">Building your session…</h1>
         </div>
-        <a class="btn btn-outline" href="index.html#study-builder">Change settings</a>
+      </div>
+      <div class="session-timer" id="session-timer" hidden>
+        <div class="session-timer-readout"><span>Study timer</span><strong id="timer-display">00:00:00</strong></div>
+        <div class="session-timer-actions"><button class="btn btn-primary" id="timer-start" type="button">Start timer</button><button class="btn btn-outline" id="timer-reset" type="button">Reset</button></div>
+        <label class="session-timer-setting" for="reminder-timing">Reminder timing
+          <select id="reminder-timing"><option value="end" selected>At session end</option><option value="two-hours">After 2 hours</option><option value="hourly">After 2 hours, then hourly</option></select>
+        </label>
       </div>
     </div>
   </section>
+
+  <dialog class="break-dialog" id="break-dialog">
+    <div class="break-dialog-inner">
+      <p class="section-eyebrow">Study break</p>
+      <h2>Time to reset your focus</h2>
+      <p>You have been studying for a while. Take a short break before continuing.</p>
+      <label for="break-snooze">Snooze reminder for</label>
+      <select id="break-snooze"><option value="5">5 minutes</option><option value="10" selected>10 minutes</option><option value="20">20 minutes</option><option value="30">30 minutes</option><option value="60">1 hour</option></select>
+      <div class="break-dialog-actions"><button class="btn btn-outline" id="break-pause" type="button">Take a break</button><button class="btn btn-primary" id="break-snooze-button" type="button">Snooze</button></div>
+    </div>
+  </dialog>
 
   <section class="session-workspace">
     <div class="container session-workspace-grid" id="session-workspace" hidden>

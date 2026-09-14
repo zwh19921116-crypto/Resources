@@ -1,5 +1,5 @@
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -11,8 +11,6 @@ const REPO_URL = 'https://github.com/zwh19921116-crypto/Resources.git';
 const STANDALONE_CLONE_DIR = path.join(app.getPath('userData'), 'repo');
 const LOGIN_HTML_PATH = path.join(__dirname, 'login.html');
 const AUTH_FILE = path.join(app.getPath('userData'), 'auth.json');
-const SESSION_FILE = path.join(app.getPath('userData'), 'session.json');
-const SESSION_TTL_MS = 30 * 60 * 1000; // stay signed in for 30 minutes across app restarts
 
 let PROJECT_ROOT = path.join(__dirname, '..');
 let ADMIN_HTML_PATH = path.join(PROJECT_ROOT, 'admin.html');
@@ -32,22 +30,6 @@ function writeAuth(data) {
 
 function hasAccount() {
   return !!readAuth();
-}
-
-function markSessionUnlocked() {
-  fs.writeFileSync(SESSION_FILE, JSON.stringify({ ts: Date.now() }));
-}
-function hasRecentSession() {
-  if (!fs.existsSync(SESSION_FILE)) return false;
-  try {
-    const { ts } = JSON.parse(fs.readFileSync(SESSION_FILE, 'utf8'));
-    return Date.now() - ts < SESSION_TTL_MS;
-  } catch (e) {
-    return false;
-  }
-}
-function clearSession() {
-  if (fs.existsSync(SESSION_FILE)) fs.unlinkSync(SESSION_FILE);
 }
 
 function setAccount(username, password) {
@@ -317,94 +299,20 @@ async function resolveProjectRoot() {
 
 async function gitSync(message) {
   const status = await runGit(['status', '--porcelain']);
-  if (!status.ok) return { ok: false, pushed: false, log: `git status failed:\n${status.output || status.error}` };
-  if (!status.output.trim()) return { ok: true, pushed: false, log: 'Nothing to sync — no local changes.' };
+  if (!status.ok) return { ok: false, log: `git status failed:\n${status.output || status.error}` };
+  if (!status.output.trim()) return { ok: true, log: 'Nothing to sync — no local changes.' };
 
   const add = await runGit(['add', '-A']);
-  if (!add.ok) return { ok: false, pushed: false, log: `git add failed:\n${add.output || add.error}` };
+  if (!add.ok) return { ok: false, log: `git add failed:\n${add.output || add.error}` };
 
   const commit = await runGit(['commit', '-m', message || 'Update via Edgeducate Admin']);
-  if (!commit.ok) return { ok: false, pushed: false, log: `git commit failed:\n${commit.output || commit.error}` };
+  if (!commit.ok) return { ok: false, log: `git commit failed:\n${commit.output || commit.error}` };
 
   const push = await runGit(['push']);
-  if (!push.ok) return { ok: false, pushed: false, log: `git push failed:\n${push.output || push.error}` };
+  if (!push.ok) return { ok: false, log: `git push failed:\n${push.output || push.error}` };
 
-  const rev = await runGit(['rev-parse', 'HEAD']);
-  return { ok: true, pushed: true, commitSha: rev.ok ? rev.output.trim() : '', log: `${commit.output}\n${push.output}`.trim() };
+  return { ok: true, log: `${commit.output}\n${push.output}`.trim() };
 }
-
-/* ---------- settings (SMTP etc.) stored in .env, editable from the app ---------- */
-const ENV_PATH = path.join(__dirname, '.env');
-const SETTINGS_KEYS = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'ADMIN_EMAIL_TO', 'IMPRESSIONS_STATS_SECRET'];
-
-function readEnvFile() {
-  if (!fs.existsSync(ENV_PATH)) return {};
-  const out = {};
-  for (const line of fs.readFileSync(ENV_PATH, 'utf8').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq === -1) continue;
-    out[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
-  }
-  return out;
-}
-
-function writeEnvFile(updates) {
-  const current = readEnvFile();
-  Object.assign(current, updates);
-  const lines = Object.entries(current).map(([k, v]) => `${k}=${v}`);
-  fs.writeFileSync(ENV_PATH, lines.join('\n') + '\n');
-  for (const [k, v] of Object.entries(updates)) process.env[k] = v;
-}
-
-function getSettings() {
-  const env = { ...process.env, ...readEnvFile() };
-  const out = {};
-  for (const key of SETTINGS_KEYS) out[key] = env[key] || '';
-  return out;
-}
-
-function saveSettings(fields) {
-  const updates = {};
-  for (const key of SETTINGS_KEYS) if (fields[key] !== undefined) updates[key] = String(fields[key]);
-  writeEnvFile(updates);
-  return getSettings();
-}
-
-/* ---------- native filesystem bridge (reliable folder picker + file read/write, avoids the browser
- * File System Access API which can silently hang forever in Electron instead of resolving/rejecting) ---------- */
-ipcMain.handle('fs:pickFolder', async () => {
-  const result = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
-  if (result.canceled || !result.filePaths[0]) return { canceled: true };
-  return { canceled: false, path: result.filePaths[0] };
-});
-ipcMain.handle('fs:ensureDir', (event, dirPath) => {
-  fs.mkdirSync(dirPath, { recursive: true });
-  return true;
-});
-ipcMain.handle('fs:readFile', (event, filePath) => {
-  try {
-    return fs.readFileSync(filePath, 'utf8');
-  } catch (e) {
-    return null;
-  }
-});
-ipcMain.handle('fs:writeFile', (event, filePath, content) => {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, content);
-  return true;
-});
-ipcMain.handle('fs:exists', (event, filePath) => fs.existsSync(filePath));
-ipcMain.handle('fs:openFolder', (event, dirPath) => shell.openPath(dirPath));
-ipcMain.handle('fs:listDir', (event, dirPath) => {
-  if (!fs.existsSync(dirPath)) return [];
-  return fs.readdirSync(dirPath, { withFileTypes: true }).map((entry) => ({ name: entry.name, isDirectory: entry.isDirectory() }));
-});
-ipcMain.handle('fs:removeEntry', (event, entryPath, recursive) => {
-  fs.rmSync(entryPath, { recursive: !!recursive, force: true });
-  return true;
-});
 
 function createWindow(startFile) {
   win = new BrowserWindow({
@@ -445,7 +353,6 @@ ipcMain.handle('auth:verifyResetCode', (event, code) => verifyResetCode(code));
 ipcMain.handle('auth:resetPassword', (event, password) => resetPassword(password));
 ipcMain.handle('auth:reset2faViaEmail', () => reset2faViaEmail());
 ipcMain.handle('auth:unlock', () => {
-  markSessionUnlocked();
   if (!checkAdminFilesPresent(PROJECT_ROOT)) {
     win.loadFile(path.join(__dirname, 'missing-admin.html'));
     return true;
@@ -453,38 +360,13 @@ ipcMain.handle('auth:unlock', () => {
   win.loadFile(ADMIN_HTML_PATH);
   return true;
 });
-ipcMain.handle('auth:hasRecentSession', () => hasRecentSession());
-ipcMain.handle('auth:signOut', () => { clearSession(); return true; });
 ipcMain.handle('auth:pullBeforeUnlock', async () => {
   if (!fs.existsSync(path.join(PROJECT_ROOT, '.git'))) return { ok: true, log: 'Not a git checkout — nothing to pull.' };
   return runGit(['pull']);
 });
 ipcMain.handle('git:sync', (event, message) => gitSync(message));
 ipcMain.handle('git:pull', () => runGit(['pull']));
-ipcMain.handle('git:status', async () => {
-  const status = await runGit(['status', '--porcelain', '-b']);
-  const lines = status.output.split('\n');
-  const branchLine = lines[0] || '';
-  const aheadMatch = branchLine.match(/ahead (\d+)/);
-  const ahead = aheadMatch ? Number(aheadMatch[1]) : 0;
-  const files = lines.slice(1).map((l) => l.trim()).filter(Boolean);
-  const lastCommit = await runGit(['log', '-1', '--format=%ci']);
-  return { ok: status.ok, count: files.length, ahead, files, lastCommit: lastCommit.ok ? lastCommit.output.trim() : '' };
-});
 ipcMain.handle('app:getPaths', () => ({ standaloneDir: PROJECT_ROOT }));
-ipcMain.handle('settings:get', () => getSettings());
-ipcMain.handle('settings:save', (event, fields) => saveSettings(fields));
-ipcMain.handle('impressions:get', async (event, trackUrl) => {
-  try {
-    const secret = readEnvFile().IMPRESSIONS_STATS_SECRET || process.env.IMPRESSIONS_STATS_SECRET || '';
-    const statsUrl = String(trackUrl).replace(/\/track\/?$/, '') + '/stats';
-    const res = await fetch(statsUrl, { headers: { Authorization: `Bearer ${secret}` } });
-    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-    return { ok: true, counts: await res.json() };
-  } catch (e) {
-    return { ok: false, error: e.message };
-  }
-});
 
 app.whenReady().then(async () => {
   const resolved = await resolveProjectRoot();

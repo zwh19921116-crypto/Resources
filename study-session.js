@@ -49,8 +49,75 @@ function ssPreviewMarkup(r) {
 function formatMinutes(mins) {
   if (!mins) return '';
   if (mins < 60) return `${mins} min`;
-  if (mins >= 120) return 'over 1 hr';
+  if (mins % 60) return `${Math.floor(mins / 60)} hr ${mins % 60} min`;
   return `${mins / 60} hr`;
+}
+
+function setupStudyTimer(minutes) {
+  const timer = ss('session-timer');
+  if (!timer || !minutes) return;
+  const display = ss('timer-display');
+  const startButton = ss('timer-start');
+  const resetButton = ss('timer-reset');
+  const dialog = ss('break-dialog');
+  const reminderTiming = ss('reminder-timing');
+  const totalSeconds = minutes * 60;
+  let elapsed = 0;
+  let interval = null;
+  let nextReminder = reminderTiming.value === 'end' ? totalSeconds : Math.min(7200, totalSeconds);
+
+  const clock = (seconds) => [Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60), seconds % 60]
+    .map((value) => String(value).padStart(2, '0')).join(':');
+  const render = () => { display.textContent = clock(elapsed); };
+  const stop = () => {
+    clearInterval(interval);
+    interval = null;
+    startButton.textContent = elapsed >= totalSeconds ? 'Session complete' : 'Start timer';
+  };
+  const remind = () => {
+    stop();
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+  };
+  const tick = () => {
+    elapsed = Math.min(totalSeconds, elapsed + 1);
+    render();
+    if (elapsed >= nextReminder) {
+      if (reminderTiming.value === 'hourly' && elapsed < totalSeconds) nextReminder = elapsed + 3600;
+      else nextReminder = Infinity;
+      remind();
+    }
+  };
+
+  reminderTiming.addEventListener('change', () => {
+    nextReminder = reminderTiming.value === 'end' ? totalSeconds : Math.min(7200, totalSeconds);
+    if (nextReminder <= elapsed) nextReminder = reminderTiming.value === 'hourly' ? elapsed + 3600 : totalSeconds;
+  });
+
+  startButton.addEventListener('click', () => {
+    if (elapsed >= totalSeconds) return;
+    if (interval) {
+      stop();
+      return;
+    }
+    interval = setInterval(tick, 1000);
+    startButton.textContent = 'Pause timer';
+  });
+  resetButton.addEventListener('click', () => {
+    stop();
+    elapsed = 0;
+    nextReminder = reminderTiming.value === 'end' ? totalSeconds : Math.min(7200, totalSeconds);
+    render();
+  });
+  ss('break-pause').addEventListener('click', () => dialog.close());
+  ss('break-snooze-button').addEventListener('click', () => {
+    const snoozeMinutes = Number(ss('break-snooze').value);
+    nextReminder = elapsed + snoozeMinutes * 60;
+    dialog.close();
+    startButton.click();
+  });
+  timer.hidden = false;
+  render();
+  startButton.click();
 }
 
 /** True when now falls inside the ad's date period and daily time slot (blank = no restriction). */
@@ -80,14 +147,6 @@ const SS_DEFAULT_AD = {
   duration: 4
 };
 
-/** Fire-and-forget impression beacon — never blocks or breaks the loading screen if it fails. */
-function trackAdImpression(ad) {
-  if (!window.EDG_ADS_TRACKING_ENABLED || !window.EDG_ADS_TRACKING_URL || !ad || !ad.id) return;
-  try {
-    fetch(`${window.EDG_ADS_TRACKING_URL}?ad=${encodeURIComponent(ad.id)}`, { mode: 'no-cors', keepalive: true }).catch(() => {});
-  } catch (e) { /* ignore — impression tracking must never break the loading screen */ }
-}
-
 /** Shows a random ad eligible right now (or the default Edgeducate ad if nothing is scheduled) and returns how long (ms) it should stay on screen. */
 function renderLoadingAd() {
   const block = ss('session-loading-ad');
@@ -95,7 +154,6 @@ function renderLoadingAd() {
   const now = new Date();
   const eligible = (window.EDG_ADS || []).filter((ad) => ad.status !== 'draft' && ssAdIsEligible(ad, now));
   const ad = eligible.length ? eligible[Math.floor(Math.random() * eligible.length)] : SS_DEFAULT_AD;
-  trackAdImpression(ad);
   const media = ss('session-loading-ad-media');
   const mediaMarkup = ssAdMediaMarkup(ad);
   media.innerHTML = mediaMarkup;
@@ -114,16 +172,25 @@ function renderStudySession() {
   const loadingMs = renderLoadingAd();
   const params = new URLSearchParams(location.search);
   const type = params.get('type') || '';
+  const stage = params.get('stage') || '';
   const subject = params.get('subject') || '';
+  const unit = params.get('unit') || '';
+  const level = params.get('level') || '';
   const minutes = Number(params.get('minutes')) || 0;
+  setupStudyTimer(minutes);
 
   const typeInfo = SS_CONFIG.types[type];
-  const summaryParts = [formatMinutes(minutes), typeInfo ? `of ${typeInfo.label.toLowerCase()}` : null, subject ? `in ${subject}` : null].filter(Boolean);
+  const stageLabel = stage === 'primary' ? 'Primary School' : stage === 'secondary' ? 'Secondary' : stage === 'vce' ? 'VCE' : '';
+  const summaryParts = [formatMinutes(minutes), typeInfo ? `of ${typeInfo.label.toLowerCase()}` : null, subject ? `in ${subject}` : null, stageLabel ? `for ${stageLabel}` : null, unit ? `(${unit})` : null].filter(Boolean);
   ss('session-summary').textContent = summaryParts.length ? `Your session: ${summaryParts.join(' ')}` : 'Your study session';
 
   const byType = type ? SS_ALL.filter((r) => r.type === type) : SS_ALL.slice();
   const bySubject = subject ? byType.filter((r) => r.subject === subject) : byType;
-  const list = (bySubject.length ? bySubject : byType).sort((a, b) => new Date(b.added) - new Date(a.added));
+  const subjectPool = subject ? bySubject : byType;
+  const byStage = stage === 'vce' ? subjectPool.filter((r) => String(r.year).startsWith('VCE')) : subjectPool;
+  const byUnit = unit ? byStage.filter((r) => (r.unit || r.year) === unit) : byStage;
+  const list = (level ? byUnit.filter((r) => r.level === level) : byUnit)
+    .sort((a, b) => new Date(b.added) - new Date(a.added));
 
   // Reveal the matched content only once the mandatory loading screen has finished.
   const reveal = () => {

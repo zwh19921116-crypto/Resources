@@ -63,6 +63,8 @@ window.EDG_CONFIG = {
 
   years: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'VCE Units 1&2', 'VCE Units 3&4'],
 
+  vceUnits: ['VCE Units 1&2', 'VCE Units 3&4'],
+
   levels: ['Easy', 'Medium', 'Hard', 'Reference', 'Fun'],
 
   // Thumbnail illustrations available to choose from.
