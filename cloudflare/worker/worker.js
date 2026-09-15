@@ -79,8 +79,8 @@ export default {
       return new Response(JSON.stringify(out), { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } });
     }
 
-    if (url.pathname === '/Resources' || url.pathname === '/Resources/') {
-      return env.ASSETS.fetch(new Request(new URL('/index.html', request.url), request));
+    if (url.pathname === '/' || url.pathname === '/Resources' || url.pathname === '/Resources/') {
+      return env.ASSETS.fetch(new Request(new URL('/resources.html', request.url), request));
     }
 
     if (url.pathname === '/resources' || url.pathname === '/resources/' || url.pathname === '/resources/all-resources' || url.pathname === '/resources/all-resources/') {
