@@ -45,7 +45,7 @@ function renderResourceDetail() {
   detailElement('resource-badge').textContent = type.label;
   detailElement('resource-title').textContent = resource.title;
   detailElement('resource-description').textContent = resource.desc || type.blurb;
-  detailElement('resource-open').href = resource.url || 'resources.html';
+  detailElement('resource-open').href = resource.url || 'all-resources.html';
   detailElement('resource-open').removeAttribute('target');
   detailElement('resource-open').removeAttribute('rel');
   detailElement('resource-open').textContent = youtubeVideoId(resource.url) ? 'Watch on YouTube' : 'Open resource';

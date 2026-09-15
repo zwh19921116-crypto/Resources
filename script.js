@@ -364,7 +364,7 @@ function renderHome() {
     const total = ALL.filter((r) => r.type === key).length;
     const a = document.createElement('a');
     a.className = `category-card category-${t.colour}`;
-    a.href = `resources.html?type=${encodeURIComponent(key)}`;
+    a.href = `all-resources.html?type=${encodeURIComponent(key)}`;
     a.innerHTML = `
       <span class="cat-art">${edgThumb(categoryArt[key])}</span>
       <span class="cat-body">
@@ -414,14 +414,14 @@ function renderHome() {
   document.querySelectorAll('.finder-choice').forEach((choice) => {
     choice.addEventListener('click', () => {
       const type = choice.dataset.resourceType;
-      location.href = `resources.html?type=${encodeURIComponent(type)}`;
+      location.href = `all-resources.html?type=${encodeURIComponent(type)}`;
     });
   });
 
   el('resource-search').addEventListener('submit', (e) => {
     e.preventDefault();
     const q = searchInput.value.trim();
-    location.href = q ? `resources.html?q=${encodeURIComponent(q)}` : 'resources.html';
+    location.href = q ? `all-resources.html?q=${encodeURIComponent(q)}` : 'all-resources.html';
   });
 
   renderPopular();
@@ -450,7 +450,7 @@ function renderPopular() {
     b.className = 'chip';
     b.textContent = term;
     b.addEventListener('click', () => {
-      location.href = `resources.html?q=${encodeURIComponent(term)}`;
+      location.href = `all-resources.html?q=${encodeURIComponent(term)}`;
     });
     wrap.appendChild(b);
   });

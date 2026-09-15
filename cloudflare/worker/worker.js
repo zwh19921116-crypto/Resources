@@ -80,11 +80,11 @@ export default {
     }
 
     if (url.pathname === '/' || url.pathname === '/Resources' || url.pathname === '/Resources/') {
-      return env.ASSETS.fetch(new Request(new URL('/index.html', request.url), request));
+      return env.ASSETS.fetch(new Request(new URL('/resources.html', request.url), request));
     }
 
     if (url.pathname === '/resources' || url.pathname === '/resources/' || url.pathname === '/resources/all-resources' || url.pathname === '/resources/all-resources/') {
-      return env.ASSETS.fetch(new Request(new URL('/resources.html', request.url), request));
+      return env.ASSETS.fetch(new Request(new URL('/all-resources.html', request.url), request));
     }
 
     return env.ASSETS.fetch(request);
