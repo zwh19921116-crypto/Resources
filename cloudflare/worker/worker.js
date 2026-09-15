@@ -73,6 +73,6 @@ export default {
       return new Response(JSON.stringify(out), { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } });
     }
 
-    return new Response('not found', { status: 404, headers: cors });
+    return env.ASSETS.fetch(request);
   }
 };
