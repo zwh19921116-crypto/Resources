@@ -1,0 +1,16 @@
+name = "edg-ad-tracker"
+main = "cloudflare/worker/worker.js"
+compatibility_date = "2024-11-01"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ImpressionCounterV2"]
+
+[[durable_objects.bindings]]
+name = "COUNTER"
+class_name = "ImpressionCounterV2"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "advertisement"
+database_id = "d3baba12-8fc1-489a-ba42-f4d70332fbaf"
