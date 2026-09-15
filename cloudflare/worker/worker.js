@@ -79,6 +79,10 @@ export default {
       return new Response(JSON.stringify(out), { status: 200, headers: { ...cors, 'Content-Type': 'application/json' } });
     }
 
+    if (url.pathname === '/resources' || url.pathname === '/resources/') {
+      return env.ASSETS.fetch(new Request(new URL('/index.html', request.url), request));
+    }
+
     return env.ASSETS.fetch(request);
   }
 };
