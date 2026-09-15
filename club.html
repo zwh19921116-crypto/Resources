@@ -8,9 +8,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20260830" />
-<link rel="stylesheet" href="club.css?v=20260830" />
-<link rel="stylesheet" href="club-cards.css?v=20260830" />
+<link rel="stylesheet" href="styles.css?v=20260914clubmodal" />
+<link rel="stylesheet" href="club.css?v=20260914clubmodal" />
+<link rel="stylesheet" href="club-cards.css?v=20260914clubmodal" />
 <script src="site-menu.js" defer></script>
 </head>
 <body class="club-page">
@@ -26,7 +26,7 @@
       <button class="nav-toggle" aria-expanded="false" aria-controls="primary-nav" aria-label="Toggle navigation"><span></span><span></span><span></span></button>
       <nav id="primary-nav" class="primary-nav" aria-label="Primary">
         <a href="resources.html">Resources</a>
-        <a href="club.html" class="is-active" aria-current="page">Edgeducate Club</a>
+        <a href="club.html" class="club-nav-link is-active" aria-current="page">Club</a>
         <a href="#">Contact Us</a>
       </nav>
       <a class="btn btn-cta" href="resources.html">Browse resources</a>
@@ -35,20 +35,22 @@
 </header>
 <main id="main">
   <section class="club-offers section">
-    <div class="container">
-      <div class="club-results"><div><p class="club-kicker">Member benefits</p><h2>Explore current offers</h2></div><p id="club-count"></p></div>
+    <div class="container" id="club-offers">
+      <div class="club-results"><div class="club-results-copy"><h2>Explore <em>current offers</em></h2><p class="club-results-lede">Exclusive deals, freebies and perks for our Edgeducate community.</p></div><p class="club-results-note" aria-hidden="true">Rewarding<br />hardworking students <span></span></p></div>
       <div class="club-toolbar">
         <div class="club-search-wrap"><label class="sr-only" for="club-search">Search Club offers</label><input id="club-search" type="search" placeholder="Search offers, partners or codes" autocomplete="off" /><button id="club-search-clear" type="button" hidden>Clear</button></div>
         <div class="club-filters" role="group" aria-label="Filter offers">
           <button type="button" class="is-active" data-filter="all">All offers</button>
+          <button type="button" data-sort="popular">Popular</button>
           <button type="button" data-filter="in-store">In-store</button>
           <button type="button" data-filter="online">Online</button>
           <button type="button" data-filter="birthday">Birthday treats</button>
-          <button type="button" data-filter="nearby">Near me</button>
+          <button type="button" data-filter="nearby" title="Use your location to find nearby offers">Near me</button>
+          <label class="club-sort"><span>Sort by</span><select id="club-sort"><option value="featured">Featured</option><option value="popular">Popular</option><option value="expiry">Ending soon</option><option value="az">A to Z</option></select></label>
         </div>
-        <label class="club-sort"><span>Sort by</span><select id="club-sort"><option value="featured">Featured</option><option value="expiry">Ending soon</option><option value="az">A to Z</option></select></label>
       </div>
       <div class="club-deals" id="club-deals"></div>
+      <button class="club-load-more" id="club-load-more" type="button" hidden>Load more offers</button>
       <p class="club-empty" id="club-empty" hidden>No offers match your search or filter.</p>
     </div>
   </section>

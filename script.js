@@ -164,18 +164,211 @@ function renderHeroStats() {
   });
 }
 
+function renderHeroSessionPreview() {
+  const preview = document.querySelector('.session-preview-head');
+  if (!preview) return;
+
+  const stages = [
+    { label: 'Primary School', topics: ['Maths', 'Reading', 'Science'] },
+    { label: 'Secondary School', topics: ['Algebra', 'Biology', 'Science'] },
+    { label: 'VCE', topics: ['VCE Biology', 'VCE Chemistry', 'VCE Physics'] }
+  ];
+  const goals = {
+    all: 'focused study',
+    'knowledge-sheet': 'Build understanding',
+    'practice-questions': 'focused practice',
+    'practice-exam': 'exam preparation'
+  };
+  const durations = [15, 30, 60];
+  let stageIndex = 1;
+  let topicIndex = -1;
+  let unitIndex = -1;
+  let durationIndex = 1;
+  let goal = 'all';
+
+  const stageField = document.querySelector('[data-preview-field="stage"]');
+  const topicField = document.querySelector('[data-preview-field="topic"]');
+  const unitField = document.querySelector('[data-preview-field="unit"]');
+  const stageButton = stageField.querySelector('button');
+  const topicButton = topicField.querySelector('button');
+  const unitButton = unitField.querySelector('button');
+  const stageMenu = stageField.querySelector('[data-preview-menu], .session-preview-menu');
+  const topicMenu = topicField.querySelector('[data-preview-menu], .session-preview-menu');
+  const unitMenu = unitField.querySelector('[data-preview-menu], .session-preview-menu');
+  const minutesText = document.querySelector('.session-preview-minutes');
+
+  const closeMenus = () => {
+    [stageField, topicField, unitField].forEach((field) => {
+      field.querySelector('.session-preview-menu').hidden = true;
+      field.querySelector('button').setAttribute('aria-expanded', 'false');
+    });
+  };
+  const renderMenu = (menu, options, selectedIndex, searchable = false) => {
+    menu.innerHTML = '';
+    if (searchable) {
+      const searchItem = document.createElement('li');
+      searchItem.className = 'session-preview-search';
+      const searchInput = document.createElement('input');
+      searchInput.type = 'search';
+      searchInput.placeholder = 'Search topics...';
+      searchInput.setAttribute('aria-label', 'Search topics');
+      searchInput.addEventListener('click', (event) => event.stopPropagation());
+      searchInput.addEventListener('input', () => {
+        const query = searchInput.value.trim().toLowerCase();
+        menu.querySelectorAll('li[data-option]').forEach((item) => {
+          item.hidden = query && !item.dataset.option.includes(query);
+        });
+      });
+      searchItem.appendChild(searchInput);
+      menu.appendChild(searchItem);
+    }
+    options.forEach((option, index) => {
+      const item = document.createElement('li');
+      item.dataset.option = option.toLowerCase();
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.role = 'option';
+      button.textContent = option;
+      button.setAttribute('aria-selected', String(index === selectedIndex));
+      item.appendChild(button);
+      menu.appendChild(item);
+    });
+  };
+  const renderMenus = () => {
+    renderMenu(stageMenu, stages.map((stage) => stage.label), stageIndex);
+    renderMenu(topicMenu, ['Select a topic', ...stages[stageIndex].topics], topicIndex + 1, true);
+    const topic = stages[stageIndex].topics[topicIndex] || '';
+    const subject = topic.replace(/^VCE /, '');
+    const units = stageIndex === 2 && topicIndex >= 0
+      ? [...new Set(ALL.filter((resource) => {
+        const resourceStage = resource.stage || (String(resource.year || '').startsWith('VCE') ? 'vce' : 'secondary');
+        return resourceStage === 'vce' && resource.subject === subject;
+      }).map((resource) => resource.unit || resource.year).filter(Boolean))]
+      : [];
+    unitField.hidden = !units.length;
+    if (unitIndex >= units.length) unitIndex = -1;
+    renderMenu(unitMenu, ['Any unit', ...units], unitIndex + 1);
+  };
+
+  const update = () => {
+    const stage = stages[stageIndex];
+    const minutes = durations[durationIndex];
+    if (topicIndex >= stage.topics.length) topicIndex = -1;
+    stageButton.querySelector('b').textContent = stage.label;
+    topicButton.querySelector('b').textContent = topicIndex < 0 ? 'Select a topic' : stage.topics[topicIndex];
+    const topic = stage.topics[topicIndex] || '';
+    const subject = topic.replace(/^VCE /, '');
+    const units = stageIndex === 2 && topicIndex >= 0
+      ? [...new Set(ALL.filter((resource) => {
+        const resourceStage = resource.stage || (String(resource.year || '').startsWith('VCE') ? 'vce' : 'secondary');
+        return resourceStage === 'vce' && resource.subject === subject;
+      }).map((resource) => resource.unit || resource.year).filter(Boolean))]
+      : [];
+    unitField.hidden = !units.length;
+    unitButton.querySelector('b').textContent = unitIndex < 0 ? 'Any unit' : units[unitIndex] || 'Any unit';
+    minutesText.textContent = `${minutes} minutes`;
+    renderMenus();
+  };
+
+  stageButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const open = stageMenu.hidden;
+    closeMenus();
+    stageMenu.hidden = !open;
+    stageButton.setAttribute('aria-expanded', String(open));
+  });
+  topicButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const open = topicMenu.hidden;
+    closeMenus();
+    topicMenu.hidden = !open;
+    topicButton.setAttribute('aria-expanded', String(open));
+  });
+  stageMenu.addEventListener('click', (event) => {
+    const option = event.target.closest('button');
+    if (!option) return;
+    stageIndex = [...stageMenu.querySelectorAll('button')].indexOf(option);
+    topicIndex = -1;
+    unitIndex = -1;
+    closeMenus();
+    update();
+  });
+  topicMenu.addEventListener('click', (event) => {
+    const option = event.target.closest('button');
+    if (!option) return;
+    const index = [...topicMenu.querySelectorAll('button')].indexOf(option);
+    topicIndex = index - 1;
+    unitIndex = -1;
+    closeMenus();
+    update();
+  });
+  unitButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const open = unitMenu.hidden;
+    closeMenus();
+    unitMenu.hidden = !open;
+    unitButton.setAttribute('aria-expanded', String(open));
+  });
+  unitMenu.addEventListener('click', (event) => {
+    const option = event.target.closest('button');
+    if (!option) return;
+    unitIndex = [...unitMenu.querySelectorAll('button')].indexOf(option) - 1;
+    closeMenus();
+    update();
+  });
+  document.addEventListener('click', closeMenus);
+  document.querySelectorAll('[data-preview-duration]').forEach((button) => button.addEventListener('click', () => {
+    durationIndex = durations.indexOf(Number(button.dataset.previewDuration));
+    document.querySelectorAll('[data-preview-duration]').forEach((item) => item.classList.toggle('is-active', item === button));
+    update();
+  }));
+  document.querySelectorAll('[data-preview-type]').forEach((button) => button.addEventListener('click', () => {
+    goal = button.dataset.previewType;
+    document.querySelectorAll('[data-preview-type]').forEach((item) => {
+      item.classList.toggle('is-active', item === button);
+    });
+    update();
+  }));
+  document.querySelector('[data-preview-start]').addEventListener('click', () => {
+    if (topicIndex < 0) return;
+    const stageValues = ['primary', 'secondary', 'vce'];
+    const topic = stages[stageIndex].topics[topicIndex];
+    const params = new URLSearchParams({
+      stage: stageValues[stageIndex],
+      subject: topic.replace(/^VCE /, ''),
+      minutes: String(durations[durationIndex])
+    });
+    if (goal !== 'all') params.set('type', goal);
+    if (unitIndex >= 0) {
+      const selectedUnit = unitMenu.querySelectorAll('button')[unitIndex + 1];
+      if (selectedUnit) params.set('unit', selectedUnit.textContent);
+    }
+    window.location.href = `study-session.html?${params}`;
+  });
+  update();
+}
+
 function renderHome() {
   renderHeroStats();
+  renderHeroSessionPreview();
   const wrap = el('category-grid');
+  const categoryArt = {
+    'practice-questions': 'questions',
+    'practice-exam': 'examCard',
+    checklist: 'checklistCard',
+    'knowledge-sheet': 'knowledge',
+    'interactive-app': 'interactive',
+    video: 'videoCard'
+  };
   Object.entries(CONFIG.types).forEach(([key, t]) => {
     const total = ALL.filter((r) => r.type === key).length;
     const a = document.createElement('a');
     a.className = `category-card category-${t.colour}`;
     a.href = `resources.html?type=${encodeURIComponent(key)}`;
     a.innerHTML = `
-      <span class="cat-icon ${t.colour}"><svg class="ico"><use href="#i-${t.icon}"/></svg></span>
+      <span class="cat-art">${edgThumb(categoryArt[key])}</span>
       <span class="cat-body">
-        <span class="cat-title">${esc(t.label)}</span>
+        <span class="cat-title">${esc(key === 'video' ? 'Video Lessons' : t.label)}</span>
         <span class="cat-blurb">${esc(t.blurb)}</span>
       </span>
       <span class="cat-foot">
@@ -184,21 +377,6 @@ function renderHome() {
       </span>`;
     wrap.appendChild(a);
   });
-
-  const studySession = document.createElement('a');
-  studySession.className = 'category-card category-indigo';
-  studySession.href = 'study-builder.html';
-  studySession.innerHTML = `
-    <span class="cat-icon indigo"><svg class="ico"><use href="#i-spark"/></svg></span>
-    <span class="cat-body">
-      <span class="cat-title">Create Study Session</span>
-      <span class="cat-blurb">Build a focused session around your subject, time and goal.</span>
-    </span>
-    <span class="cat-foot">
-      <span class="cat-count">Start now</span>
-      <svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
-    </span>`;
-  wrap.appendChild(studySession);
 
   const typeWrap = el('filter-type');
   const chip = (key, label, count) => {

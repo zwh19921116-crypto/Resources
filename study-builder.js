@@ -54,10 +54,10 @@ const fill = (select, options, placeholder) => {
 };
 
 const availableStages = [
-  { value: 'primary', label: 'Primary School' },
+  { value: 'primary', label: 'Primary' },
   { value: 'secondary', label: 'Secondary' },
   { value: 'vce', label: 'VCE' }
-].filter((stageOption) => BUILDER_ALL.some((resource) => resourceStage(resource) === stageOption.value));
+];
 fill(stageSelect, availableStages, 'Select level');
 
 let stage = '';
@@ -147,6 +147,11 @@ startButton.addEventListener('click', () => {
   if (type !== 'all') params.set('type', type);
   if (unit) params.set('unit', unit);
   window.location.href = `study-session.html?${params}`;
+});
+
+window.addEventListener('pageshow', () => {
+  if (stageSelect.value) stageSelect.dispatchEvent(new Event('change'));
+  else update();
 });
 
 builderEl('year').textContent = new Date().getFullYear();

@@ -20,10 +20,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css?v=20260826" />
+<link rel="stylesheet" href="styles.css?v=20260914" />
 <script src="site-menu.js" defer></script>
 </head>
-<body data-page="home">
+<body data-page="home" class="study-builder-page">
 
 <script src="icons.js"></script>
 
@@ -65,6 +65,7 @@
           </div>
         </details>
         <a href="resources.html" class="is-active" aria-current="page">Resources</a>
+        <a class="club-nav-link" href="club.html">Club</a>
         <a href="#">Contact Us</a>
       </nav>
 
@@ -95,80 +96,49 @@
         </div>
       </div>
 
-      <div class="hero-visual" aria-hidden="true">
+      <div class="hero-visual" aria-label="Interactive study session preview">
         <span class="blob blob-1"></span>
         <span class="blob blob-2"></span>
         <span class="dots"></span>
-
-        <div class="float-card float-a icon-right">
-          <div class="fc-text"><strong>Practice<br />Questions</strong><small data-stat-type="practice-questions" data-stat-label="question">…</small></div>
-          <span class="mini-icon purple"><svg class="ico" aria-hidden="true"><use href="#i-question"/></svg></span>
-        </div>
-        <div class="float-card float-b icon-right">
-          <div class="fc-text"><strong>Practice<br />Exams</strong><small data-stat-type="practice-exam" data-stat-label="exam">…</small></div>
-          <span class="mini-icon blue"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></span>
-        </div>
-        <div class="float-card float-c">
-          <span class="mini-icon blue"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg></span>
-          <div class="fc-text"><strong>Knowledge<br />Sheets</strong><small data-stat-type="knowledge-sheet" data-stat-label="sheet">…</small></div>
-        </div>
-        <div class="float-card float-d">
-          <span class="mini-icon purple"><svg class="ico" aria-hidden="true"><use href="#i-tap"/></svg></span>
-          <div class="fc-text"><strong>Interactive<br />Apps</strong><small data-stat-type="interactive-app" data-stat-label="app">…</small></div>
-        </div>
-        <div class="float-card float-e">
-          <span class="mini-icon green"><svg class="ico" aria-hidden="true"><use href="#i-checklist"/></svg></span>
-          <div class="fc-text"><strong>Subject<br />Checklists</strong><small data-stat-type="checklist" data-stat-label="checklist">…</small></div>
-        </div>
 
         <div class="laptop">
           <div class="laptop-lid">
             <span class="laptop-cam"></span>
             <div class="laptop-screen">
               <div class="dashboard">
-                <div class="dash-head">
-                  <div class="dash-intro">
-                    <h3>Keep learning, achieve more</h3>
-                    <p>Pick up where you left off or explore something new.</p>
-                    <span class="pill">Continue learning →</span>
+                <div class="session-preview-head">
+                  <div>
+                    <span class="session-preview-kicker">Build your full study session</span>
+                    <h3>Make the next <strong class="session-preview-minutes">30 minutes</strong> count.</h3>
+                    <p>Choose your subject, time and goal.</p>
                   </div>
-                  <svg class="dash-art" viewBox="0 0 130 92" aria-hidden="true">
-                    <defs>
-                      <linearGradient id="peakA" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0" stop-color="#c8d3fb"/><stop offset="1" stop-color="#e7ecff"/>
-                      </linearGradient>
-                      <linearGradient id="peakB" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0" stop-color="#8ea6f5"/><stop offset="1" stop-color="#b9c8fb"/>
-                      </linearGradient>
-                    </defs>
-                    <circle cx="102" cy="20" r="11" fill="#ffd88a"/>
-                    <path d="M0 92L38 30l30 38 22-24 40 48z" fill="url(#peakA)"/>
-                    <path d="M26 92l34-46 26 30 20-14 24 30z" fill="url(#peakB)"/>
-                    <path d="M38 30l12 15-24 12z" fill="#ffffff" opacity=".85"/>
-                    <path d="M60 46l10 12-20 8z" fill="#ffffff" opacity=".7"/>
-                    <path d="M0 92h130" stroke="#aebbf0" stroke-width="1.5"/>
-                  </svg>
                 </div>
-
-                <p class="dash-label">Your progress</p>
-                <div class="progress-row">
-                  <span>Practice Exam – Algebra</span>
-                  <div class="bar"><i style="width:65%"></i></div>
-                  <b>65%</b>
+                <div class="session-preview-form">
+                <div class="session-preview-fields">
+                  <div class="session-preview-dropdown" data-preview-field="stage">
+                    <span>School level</span><button type="button" aria-haspopup="listbox" aria-expanded="false"><b>Secondary School</b><i aria-hidden="true">⌄</i></button>
+                    <ul class="session-preview-menu" role="listbox" hidden></ul>
+                  </div>
+                  <div class="session-preview-dropdown" data-preview-field="topic">
+                    <span>Topic to work on</span><button type="button" aria-haspopup="listbox" aria-expanded="false"><b>Select a topic</b><i aria-hidden="true">⌄</i></button>
+                    <ul class="session-preview-menu" role="listbox" hidden></ul>
+                  </div>
+                  <div class="session-preview-dropdown session-preview-unit" data-preview-field="unit" hidden>
+                    <span>Unit</span><button type="button" aria-haspopup="listbox" aria-expanded="false"><b>Any unit</b><i aria-hidden="true">⌄</i></button>
+                    <ul class="session-preview-menu" role="listbox" hidden></ul>
+                  </div>
                 </div>
-
-                <p class="dash-label">Recent activity</p>
-                <div class="activity">
-                  <div class="act">
-                    <span class="mini-icon blue sm"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></span>
-                    <span class="act-text"><b>Fractions Practice</b><em>Completed</em></span>
-                    <svg class="ico chev" aria-hidden="true"><use href="#i-chevron"/></svg>
-                  </div>
-                  <div class="act">
-                    <span class="mini-icon blue sm"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg></span>
-                    <span class="act-text"><b>Knowledge Sheet – Photosynthesis</b><em>Viewed</em></span>
-                    <svg class="ico chev" aria-hidden="true"><use href="#i-chevron"/></svg>
-                  </div>
+                <span class="session-preview-label">I have</span>
+                <div class="session-preview-time-options">
+                  <button type="button" data-preview-duration="15">15 min</button><button type="button" class="is-active" data-preview-duration="30">30 min</button><button type="button" data-preview-duration="60">1 hr</button>
+                </div>
+                <span class="session-preview-label">My goal is to</span>
+                <div class="session-preview-goals">
+                  <button type="button" class="is-active" data-preview-type="all">All</button><button type="button" data-preview-type="knowledge-sheet">Understand</button><button type="button" data-preview-type="practice-questions">Practise</button><button type="button" data-preview-type="practice-exam">Test myself</button>
+                </div>
+                <div class="session-preview-footer">
+                  <button type="button" class="session-preview-cta" data-preview-start>Create study session <em>→</em></button>
+                </div>
                 </div>
               </div>
             </div>
@@ -176,6 +146,14 @@
           </div>
           <div class="laptop-hinge"></div>
           <div class="laptop-base"><span class="laptop-notch"></span></div>
+        </div>
+        <div class="session-preview-note" aria-hidden="true">
+          <strong>Create your study session</strong>
+          <ol>
+            <li>Pick year and topic</li>
+            <li>Choose your time</li>
+            <li>Set your goal</li>
+          </ol>
         </div>
 
         <svg class="plant" viewBox="0 0 90 120" aria-hidden="true">
@@ -213,35 +191,37 @@
     </div>
   </section>
 
-  <section class="study-builder" id="study-builder" aria-labelledby="study-builder-title">
-    <div class="container study-builder-grid">
-      <div class="study-builder-copy">
+  <section class="study-builder study-builder-full" id="study-builder" aria-labelledby="study-builder-title">
+    <div class="container builder-layout">
+      <div class="study-builder-page-head">
         <span class="section-badge"><svg class="ico" aria-hidden="true"><use href="#i-spark"/></svg> Build your study session</span>
-        <h2 id="study-builder-title">Make the next <span>30 minutes</span> count.</h2>
-        <p>Choose your subject, time and goal. We will point you to the best place to start.</p>
-        <figure class="daily-quote" aria-labelledby="quote-label">
-          <figcaption id="quote-label">A note for today</figcaption>
-          <blockquote id="daily-quote-text"></blockquote>
-          <button class="quote-next" id="quote-next" type="button">Another thought <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
-        </figure>
+        <h1 id="study-builder-title">Create a <span>productive study session</span></h1>
+        <p>Create a focused study session. Choose your stage, topic, optional unit, time and goal, and we will build it from the current resource library.</p>
+        <div class="builder-promises" aria-label="Study session features">
+          <span><b>01</b> Choose your topic</span>
+          <span><b>02</b> Set your study time</span>
+          <span><b>03</b> Pick your goal</span>
+        </div>
       </div>
-      <div class="session-card">
-        <p class="session-label" id="session-stage-label">I am studying</p>
-        <div class="dropdown" id="session-stage" data-placeholder="Select level" aria-labelledby="session-stage-label"></div>
-        <p class="session-label" id="session-topic-label">Topic to work on</p>
-        <div class="dropdown" id="session-topic" data-placeholder="Select a topic" aria-labelledby="session-topic-label"></div>
-        <p class="session-label" id="session-unit-label" hidden>Unit</p>
-        <div class="dropdown" id="session-unit" data-placeholder="Any unit" aria-labelledby="session-unit-label" hidden></div>
-        <p class="session-label">I have</p>
-        <div class="session-options" id="session-time" role="group" aria-label="Available study time">
-          <button type="button" data-time="15">15 min</button><button type="button" data-time="30" class="is-on">30 min</button><button type="button" data-time="60">1 hr</button>
+      <div class="session-card study-builder-card" aria-labelledby="builder-card-title">
+        <div class="study-builder-card-head">
+          <div><span class="builder-card-kicker">Session planner</span><h2 id="builder-card-title">Set your focus</h2></div>
+          <span class="builder-resource-status" id="builder-resource-status">Choose a topic</span>
         </div>
+        <div class="study-builder-fields">
+          <div class="builder-field"><label for="builder-stage">School level</label><select id="builder-stage"><option value="">Select level</option></select></div>
+          <div class="builder-field"><label for="builder-topic">Topic to work on</label><select id="builder-topic" disabled><option value="">Select a topic</option></select></div>
+          <div class="builder-field" id="builder-unit-field" hidden><label for="builder-unit">Unit</label><select id="builder-unit"><option value="">Any unit</option></select></div>
+        </div>
+        <p class="session-label">Time</p>
+        <select class="time-select" id="builder-time" aria-label="Available study time"><option value="30" selected>30 min</option><option value="60">1 hr</option><option value="90">1 hr 30 min</option><option value="120">2 hr</option></select>
         <p class="session-label">My goal is to</p>
-        <div class="session-options session-goals" id="session-goal" role="group" aria-label="Study goal">
-          <button type="button" data-type="all" class="is-on">All</button><button type="button" data-type="knowledge-sheet">Understand</button><button type="button" data-type="practice-questions">Practise</button><button type="button" data-type="practice-exam">Test myself</button>
+        <div class="session-options session-goals" id="builder-goal" role="group" aria-label="Study goal">
+          <button type="button" data-type="all" class="is-on">Study</button><button type="button" data-type="knowledge-sheet">Understand</button><button type="button" data-type="practice-questions">Practise</button><button type="button" data-type="practice-exam">Test myself</button>
         </div>
-        <div class="session-result"><span>YOUR SESSION</span><strong id="session-result">30 min of focused practice</strong><em id="session-detail">Start with practice questions, then review what you missed.</em></div>
-        <a class="btn btn-primary btn-block" id="session-start" href="study-session.html?type=practice-questions&minutes=30">Create study session <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <p class="builder-goal-purpose" id="builder-goal-purpose" aria-live="polite">Mix resource types for a balanced study session.</p>
+        <div class="session-result"><span>YOUR SESSION</span><strong id="builder-result">30 min of focused study</strong><em id="builder-detail"></em></div>
+        <button class="btn btn-primary btn-block" id="builder-start" type="button" disabled>Create productive study session <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></button>
       </div>
     </div>
   </section>
@@ -318,25 +298,34 @@
   <section class="section quick-answers" id="quick-answers" aria-labelledby="quick-answers-title">
     <div class="container">
       <div class="quick-answers-head">
-        <span class="section-badge"><svg class="ico" aria-hidden="true"><use href="#i-spark"/></svg> Quick answers</span>
-        <h2 class="section-title" id="quick-answers-title">What students and parents usually ask</h2>
+        <span class="section-badge"><svg class="ico" aria-hidden="true"><use href="#i-spark"/></svg> Learn <b>·</b> Practise <b>·</b> Improve</span>
+        <h2 class="section-title" id="quick-answers-title">Other resources <span>and support</span></h2>
+        <p class="quick-answers-subtitle">Helpful materials to guide your learning journey.</p>
       </div>
       <div class="answers-grid">
         <article class="answer-item">
+          <span class="answer-icon answer-icon-blue"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg></span>
           <h3>What types of resources are available?</h3>
           <p>Edgeducate includes practice questions, practice exams, knowledge sheets, subject checklists, videos, and interactive learning tools across core subjects.</p>
+          <span class="answer-arrow" aria-hidden="true"><svg class="ico"><use href="#i-arrow"/></svg></span>
         </article>
         <article class="answer-item">
+          <span class="answer-icon answer-icon-green"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg></span>
           <h3>How should students choose a pathway?</h3>
           <p>Start with school stage first, then choose subject and goal. Primary focuses on foundations, Secondary on depth, Selective on readiness, and VCE on performance outcomes.</p>
+          <span class="answer-arrow" aria-hidden="true"><svg class="ico"><use href="#i-arrow"/></svg></span>
         </article>
         <article class="answer-item">
+          <span class="answer-icon answer-icon-purple"><svg class="ico" aria-hidden="true"><use href="#i-spark"/></svg></span>
           <h3>Are resources suitable for exam preparation?</h3>
           <p>Yes. Pathways are designed to support structured revision, targeted skill practice, and timed exam strategy, especially for senior students.</p>
+          <span class="answer-arrow" aria-hidden="true"><svg class="ico"><use href="#i-arrow"/></svg></span>
         </article>
         <article class="answer-item">
+          <span class="answer-icon answer-icon-amber"><svg class="ico" aria-hidden="true"><use href="#i-checklist"/></svg></span>
           <h3>Can parents use this page to plan study at home?</h3>
           <p>Yes. The pathway summaries are intentionally simple so families can quickly identify the right stream and build consistent weekly study routines.</p>
+          <span class="answer-arrow" aria-hidden="true"><svg class="ico"><use href="#i-arrow"/></svg></span>
         </article>
       </div>
     </div>
@@ -526,7 +515,8 @@
 <script src="data/config.js"></script>
 <script src="data/resources.js"></script>
 <script src="data/quotes.js"></script>
-<script src="art.js"></script>
+<script src="art.js?v=20260914"></script>
+<script src="study-builder.js"></script>
 <script src="script.js?v=20260826"></script>
 <script type="application/ld+json">
 {

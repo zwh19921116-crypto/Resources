@@ -177,7 +177,6 @@ function renderStudySession() {
   const unit = params.get('unit') || '';
   const level = params.get('level') || '';
   const minutes = Number(params.get('minutes')) || 0;
-  setupStudyTimer(minutes);
 
   const typeInfo = SS_CONFIG.types[type];
   const stageLabel = stage === 'primary' ? 'Primary School' : stage === 'secondary' ? 'Secondary' : stage === 'vce' ? 'VCE' : '';
@@ -197,6 +196,7 @@ function renderStudySession() {
     const loading = ss('session-loading');
     loading.classList.add('is-done');
     loading.addEventListener('transitionend', () => loading.remove(), { once: true });
+    setupStudyTimer(minutes);
 
     if (!list.length) {
       ss('session-empty').hidden = false;

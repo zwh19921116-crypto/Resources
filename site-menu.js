@@ -21,6 +21,7 @@
       </div>
     </details>
     <a href="${prefix}resources.html">Resources</a>
+    <a class="club-nav-link" href="${prefix}club.html">Club</a>
     <a href="#">Contact Us</a>`;
 
   document.querySelectorAll('.site-header .navbar').forEach((navbar) => {

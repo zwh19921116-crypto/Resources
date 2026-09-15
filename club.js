@@ -2,14 +2,17 @@
   const deals = Array.isArray(window.EDG_CLUB_DEALS) ? window.EDG_CLUB_DEALS : [];
   const grid = document.getElementById('club-deals');
   const empty = document.getElementById('club-empty');
-  const count = document.getElementById('club-count');
   const search = document.getElementById('club-search');
   const clearSearch = document.getElementById('club-search-clear');
+  const sortSelect = document.getElementById('club-sort');
   const filterButtons = [...document.querySelectorAll('[data-filter]')];
+  const popularButton = document.querySelector('[data-sort="popular"]');
   const detailDialog = document.getElementById('club-detail-dialog');
   const today = new Date().toISOString().slice(0, 10);
   let activeFilter = 'all';
   let userLocation = null;
+  let renderLimit = 9;
+  let loadObserver = null;
 
   document.getElementById('year').textContent = new Date().getFullYear();
   const navToggle = document.querySelector('.nav-toggle');
@@ -24,7 +27,7 @@
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
   }[character]));
 
-  const publishedDeals = deals.filter((deal) => deal.status === 'published' && (!deal.expires || deal.expires >= today));
+  const publishedDeals = deals.filter((deal) => deal.status === 'published' && (!deal.starts || deal.starts <= today) && (!deal.expires || deal.expires >= today));
   const hasCoordinates = (deal) => Number.isFinite(Number(deal.latitude)) && Number.isFinite(Number(deal.longitude)) && deal.latitude !== '' && deal.longitude !== '';
   const sampleImages = [
     'https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=700&q=80',
@@ -55,13 +58,18 @@
         || (activeFilter === 'nearby' && hasCoordinates(deal));
       return matchesSearch && matchesFilter;
     }).sort((first, second) => {
-      if (activeFilter !== 'nearby' || !userLocation) return 0;
-      return distanceInKm(userLocation.latitude, userLocation.longitude, Number(first.latitude), Number(first.longitude)) - distanceInKm(userLocation.latitude, userLocation.longitude, Number(second.latitude), Number(second.longitude));
+      if (activeFilter === 'nearby' && userLocation) {
+        return distanceInKm(userLocation.latitude, userLocation.longitude, Number(first.latitude), Number(first.longitude)) - distanceInKm(userLocation.latitude, userLocation.longitude, Number(second.latitude), Number(second.longitude));
+      }
+      if (sortSelect.value === 'popular') return Number(second.popularity || 0) - Number(first.popularity || 0);
+      if (sortSelect.value === 'expiry') return String(first.expires || '9999-12-31').localeCompare(String(second.expires || '9999-12-31'));
+      if (sortSelect.value === 'az') return String(first.title || '').localeCompare(String(second.title || ''));
+      return 0;
     });
-    count.textContent = `${visibleDeals.length} of ${publishedDeals.length} offer${publishedDeals.length === 1 ? '' : 's'}`;
+    const renderedDeals = visibleDeals.slice(0, renderLimit);
     clearSearch.hidden = !query;
     empty.hidden = visibleDeals.length > 0;
-    grid.innerHTML = visibleDeals.map((deal, index) => {
+    grid.innerHTML = renderedDeals.map((deal, index) => {
     const expiry = deal.expires ? `<p class="club-expiry">Ends ${new Date(`${deal.expires}T00:00:00`).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}</p>` : '<p class="club-expiry">Available for a limited time</p>';
     const locationLink = hasCoordinates(deal)
       ? `geo:${Number(deal.latitude)},${Number(deal.longitude)}?q=${encodeURIComponent(`${deal.latitude},${deal.longitude} (${deal.partner || deal.title})`)}`
@@ -73,10 +81,13 @@
     const highlight = `<span class="club-offer-highlight">${escapeHtml(deal.highlight || inferredHighlight)}</span>`;
     const marker = escapeHtml((deal.partner || 'E').trim().slice(0, 1).toUpperCase());
     const category = deal.category || (deal.birthday ? 'Birthday' : sampleCategories[index % sampleCategories.length]);
-    const dealKind = deal.birthday ? 'Birthday perk' : isInStore(deal) ? 'In-store' : 'Online';
+    const dealKind = deal.badge || (deal.birthday ? 'Birthday perk' : isInStore(deal) ? 'In-store' : 'Online');
     const place = deal.locationName || deal.address || (isInStore(deal) ? 'In-store location' : 'Online');
     const image = deal.image || sampleImages[index % sampleImages.length];
-    return `<article class="club-deal club-deal--${index % 5}" data-deal-id="${escapeHtml(deal.id)}" tabindex="0">
+    const tone = ['blue', 'orange', 'purple', 'green'][index % 4];
+    const popularSash = sortSelect.value === 'popular' ? '<span class="club-popular-sash">Popular</span>' : '';
+    return `<article class="club-deal club-deal--${index % 5}" data-tone="${tone}" data-deal-id="${escapeHtml(deal.id)}" tabindex="0">
+      ${popularSash}
       <div class="club-deal-banner"><span class="club-kind">${escapeHtml(dealKind)}</span><span class="club-deal-marker">${marker}</span></div>
       <div class="club-deal-content"><div class="club-deal-top"><span class="club-deal-tags">${highlight}${sample}</span></div>
       <h2>${escapeHtml(deal.title)}</h2>
@@ -88,11 +99,36 @@
       <div class="club-card-image"><img src="${escapeHtml(image)}" alt="" loading="lazy" /></div>
     </article>`;
     }).join('');
+    const loadMore = document.getElementById('club-load-more');
+    loadMore.hidden = renderedDeals.length >= visibleDeals.length;
+    loadMore.textContent = `Load more offers (${visibleDeals.length - renderedDeals.length} left)`;
+    if (loadObserver) loadObserver.disconnect();
+    if (renderedDeals.length < visibleDeals.length) {
+      loadObserver = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          renderLimit += 9;
+          renderDeals();
+        }
+      }, { rootMargin: '0px 0px 80px' });
+      loadObserver.observe(loadMore);
+    }
   }
 
   renderDeals();
-  search.addEventListener('input', renderDeals);
-  clearSearch.addEventListener('click', () => { search.value = ''; search.focus(); renderDeals(); });
+  search.addEventListener('input', () => { renderLimit = 9; renderDeals(); });
+  sortSelect.addEventListener('change', () => {
+    popularButton.classList.toggle('is-active', sortSelect.value === 'popular');
+    renderLimit = 9;
+    renderDeals();
+  });
+  popularButton.addEventListener('click', () => {
+    sortSelect.value = 'popular';
+    popularButton.classList.add('is-active');
+    renderLimit = 9;
+    renderDeals();
+  });
+  clearSearch.addEventListener('click', () => { search.value = ''; search.focus(); renderLimit = 9; renderDeals(); });
+  document.getElementById('club-load-more').addEventListener('click', () => { renderLimit += 9; renderDeals(); });
   filterButtons.forEach((button) => button.addEventListener('click', () => {
     if (button.dataset.filter === 'nearby' && !userLocation) {
       if (!navigator.geolocation) return;
@@ -112,6 +148,7 @@
       return;
     }
     activeFilter = button.dataset.filter;
+    renderLimit = 9;
     filterButtons.forEach((item) => item.classList.toggle('is-active', item === button));
     renderDeals();
   }));
@@ -119,12 +156,12 @@
   grid.addEventListener('click', async (event) => {
     const openButton = event.target.closest('[data-open]');
     if (openButton) {
-      openOffer(openButton.dataset.open);
+      openOffer(openButton.dataset.open, openButton.closest('.club-deal')?.dataset.tone);
       return;
     }
     const card = event.target.closest('.club-deal');
     if (card && !event.target.closest('a, button')) {
-      openOffer(card.dataset.dealId);
+      openOffer(card.dataset.dealId, card.dataset.tone);
       return;
     }
     const button = event.target.closest('[data-copy]');
@@ -141,13 +178,16 @@
   grid.addEventListener('keydown', (event) => {
     if ((event.key === 'Enter' || event.key === ' ') && event.target.classList.contains('club-deal')) {
       event.preventDefault();
-      openOffer(event.target.dataset.dealId);
+      openOffer(event.target.dataset.dealId, event.target.dataset.tone);
     }
   });
 
-  function openOffer(id) {
+  function openOffer(id, tone) {
     const deal = publishedDeals.find((item) => item.id === id);
     if (!deal) return;
+    const detailTone = tone || 'blue';
+    detailDialog.classList.remove('club-detail-dialog--blue', 'club-detail-dialog--orange', 'club-detail-dialog--purple', 'club-detail-dialog--green');
+    detailDialog.classList.add(`club-detail-dialog--${detailTone}`);
     const inferredHighlight = /^free\b/i.test(deal.title) ? 'FREE' : (deal.title.match(/^\d+/) || [])[0] ? `${(deal.title.match(/^\d+/) || [])[0]}% OFF` : 'CLUB DEAL';
     const locationLink = hasCoordinates(deal) ? `geo:${Number(deal.latitude)},${Number(deal.longitude)}?q=${encodeURIComponent(`${deal.latitude},${deal.longitude} (${deal.partner || deal.title})`)}` : deal.mapUrl;
     const offerType = deal.birthday ? 'Birthday perk' : (deal.locationName || deal.address || deal.mapUrl || hasCoordinates(deal)) ? 'In-store offer' : 'Online offer';
@@ -169,14 +209,31 @@
     disclaimer.hidden = !deal.disclaimer;
     const codeBox = document.getElementById('club-detail-code');
     codeBox.hidden = !deal.code;
-    codeBox.innerHTML = deal.code ? `<p>Show this voucher code at checkout.</p><span>${escapeHtml(deal.code)}</span><button type="button" data-copy="${escapeHtml(deal.code)}">Copy code</button>` : '';
-    document.getElementById('club-detail-actions').innerHTML = locationLink ? `<a class="btn btn-primary" href="${escapeHtml(locationLink)}"${hasCoordinates(deal) ? '' : ' target="_blank" rel="noopener noreferrer"'}>Open location</a>` : '';
+    codeBox.innerHTML = deal.code ? `<p>Show this voucher code at checkout.</p><span>${escapeHtml(deal.code)}</span><div class="club-code-actions"><button type="button" data-copy="${escapeHtml(deal.code)}">Copy code</button><button type="button" data-qr="${escapeHtml(deal.code)}">Show QR code</button></div>` : '';
+    const actionLink = deal.actionEnabled === false ? '' : deal.url || locationLink;
+    document.getElementById('club-detail-actions').innerHTML = actionLink ? `<a class="btn btn-primary" href="${escapeHtml(actionLink)}"${hasCoordinates(deal) ? '' : ' target="_blank" rel="noopener noreferrer"'}>${deal.url ? 'View deal' : 'Open location'} <span aria-hidden="true">&rarr;</span></a>` : '';
     detailDialog.showModal();
   }
 
   document.getElementById('club-detail-close').addEventListener('click', () => detailDialog.close());
   document.getElementById('club-detail-code').addEventListener('click', async (event) => {
     const button = event.target.closest('[data-copy]');
+    const qrButton = event.target.closest('[data-qr]');
+    if (qrButton) {
+      let qr = document.getElementById('club-detail-qr');
+      if (!qr) {
+        qr = document.createElement('img');
+        qr.id = 'club-detail-qr';
+        qr.className = 'club-detail-qr';
+        qr.alt = `QR code for voucher ${qrButton.dataset.qr}`;
+        qr.hidden = true;
+        document.getElementById('club-detail-code').appendChild(qr);
+      }
+      qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrButton.dataset.qr)}`;
+      qr.hidden = !qr.hidden;
+      qrButton.textContent = qr.hidden ? 'Show QR code' : 'Hide QR code';
+      return;
+    }
     if (!button) return;
     try { await navigator.clipboard.writeText(button.dataset.copy); button.textContent = 'Copied'; } catch (error) { window.prompt('Copy this voucher code:', button.dataset.copy); }
   });
