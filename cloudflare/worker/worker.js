@@ -29,6 +29,10 @@ export class ImpressionCounterV2 {
 
   async alarm() {
     const all = await this.state.storage.list({ prefix: 'pending:' });
+    if (this.env.ANALYTICS_ENABLED !== 'true') {
+      for (const key of all.keys()) await this.state.storage.delete(key);
+      return;
+    }
     console.log(`[ImpressionCounterV2] ALARM FIRED, flushing ${all.size} ad(s)`);
     for (const [key, n] of all) {
       const adId = key.slice('pending:'.length);
@@ -57,6 +61,7 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
 
     if (url.pathname === '/track' && request.method === 'GET') {
+      if (env.ANALYTICS_ENABLED !== 'true') return new Response(null, { status: 204, headers: cors });
       const adId = url.searchParams.get('ad');
       if (!adId) return new Response('missing ad', { status: 400, headers: cors });
       const id = env.COUNTER.idFromName('global');
@@ -65,6 +70,7 @@ export default {
     }
 
     if (url.pathname === '/stats' && request.method === 'GET') {
+      if (env.ANALYTICS_ENABLED !== 'true') return new Response(JSON.stringify({ enabled: false }), { status: 503, headers: { ...cors, 'Content-Type': 'application/json' } });
       const auth = request.headers.get('Authorization') || '';
       if (auth !== `Bearer ${env.STATS_SECRET}`) return new Response('unauthorized', { status: 401, headers: cors });
       const { results } = await env.DB.prepare('SELECT ad_id, count FROM impressions').all();
