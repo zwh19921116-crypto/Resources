@@ -3,4 +3,3 @@ backups/
 node_modules/
 .git/
 cloudflare/
-index.html
