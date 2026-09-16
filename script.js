@@ -339,9 +339,13 @@ function renderHeroSessionPreview() {
     update();
   }));
   document.querySelector('[data-preview-start]').addEventListener('click', () => {
-    if (topicIndex < 0) return;
     const stageValues = ['primary', 'secondary', 'vce'];
-    const topic = topicsForStage(stages[stageIndex])[topicIndex];
+    const topics = topicsForStage(stages[stageIndex]);
+    const topic = topics[topicIndex] || (stages[stageIndex].value === 'secondary' ? 'Maths' : topics[0]);
+    if (!topic) {
+      window.location.href = 'study-builder.html';
+      return;
+    }
     const params = new URLSearchParams({
       stage: stageValues[stageIndex],
       subject: topic.replace(/^VCE /, ''),
