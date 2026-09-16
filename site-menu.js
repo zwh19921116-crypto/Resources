@@ -15,7 +15,7 @@
   const showResourceLoading = (destination) => {
     const ad = eligibleAd();
     const overlay = document.createElement('div');
-    overlay.className = 'session-loading';
+    overlay.className = 'session-loading resource-navigation-loading';
     overlay.innerHTML = `<div class="session-loading-inner" role="status" aria-live="polite">
       <span class="session-loading-brand"><strong>Edge</strong>ducate</span>
       <div class="session-loading-spinner" aria-hidden="true"></div>
@@ -30,6 +30,9 @@
     const duration = Math.max(2, Number(ad.duration) || loadingAd.duration) * 1000;
     window.setTimeout(() => { window.location.href = destination; }, duration);
   };
+  window.addEventListener('pageshow', () => {
+    document.querySelectorAll('.resource-navigation-loading').forEach((overlay) => overlay.remove());
+  });
   document.addEventListener('click', (event) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const link = event.target.closest('a[href]');
