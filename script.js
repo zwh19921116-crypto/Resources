@@ -169,10 +169,17 @@ function renderHeroSessionPreview() {
   if (!preview) return;
 
   const stages = [
-    { label: 'Primary School', topics: ['Maths', 'Reading', 'Science'] },
-    { label: 'Secondary School', topics: ['Algebra', 'Biology', 'Science'] },
-    { label: 'VCE', topics: ['VCE Biology', 'VCE Chemistry', 'VCE Physics'] }
+    { value: 'primary', label: 'Primary School' },
+    { value: 'secondary', label: 'Secondary School' },
+    { value: 'vce', label: 'VCE' }
   ];
+  const topicsForStage = (stage) => [...new Set(ALL
+    .filter((resource) => {
+      const resourceStage = resource.stage || (String(resource.year || '').startsWith('VCE') ? 'vce' : 'secondary');
+      return resourceStage === stage.value;
+    })
+    .map((resource) => stage.value === 'vce' ? `VCE ${resource.subject}` : resource.subject)
+    .filter(Boolean))];
   const goals = {
     all: 'focused study',
     'knowledge-sheet': 'Build understanding',
@@ -181,7 +188,7 @@ function renderHeroSessionPreview() {
   };
   const durations = [15, 30, 60];
   let stageIndex = 1;
-  let topicIndex = -1;
+  let topicIndex = 0;
   let unitIndex = -1;
   let durationIndex = 1;
   let goal = 'all';
@@ -235,9 +242,10 @@ function renderHeroSessionPreview() {
     });
   };
   const renderMenus = () => {
+    const topics = topicsForStage(stages[stageIndex]);
     renderMenu(stageMenu, stages.map((stage) => stage.label), stageIndex);
-    renderMenu(topicMenu, ['Select a topic', ...stages[stageIndex].topics], topicIndex + 1, true);
-    const topic = stages[stageIndex].topics[topicIndex] || '';
+    renderMenu(topicMenu, ['Select a topic', ...topics], topicIndex + 1, true);
+    const topic = topics[topicIndex] || '';
     const subject = topic.replace(/^VCE /, '');
     const units = stageIndex === 2 && topicIndex >= 0
       ? [...new Set(ALL.filter((resource) => {
@@ -252,11 +260,12 @@ function renderHeroSessionPreview() {
 
   const update = () => {
     const stage = stages[stageIndex];
+    const topics = topicsForStage(stage);
     const minutes = durations[durationIndex];
-    if (topicIndex >= stage.topics.length) topicIndex = -1;
+    if (topicIndex >= topics.length) topicIndex = -1;
     stageButton.querySelector('b').textContent = stage.label;
-    topicButton.querySelector('b').textContent = topicIndex < 0 ? 'Select a topic' : stage.topics[topicIndex];
-    const topic = stage.topics[topicIndex] || '';
+    topicButton.querySelector('b').textContent = topicIndex < 0 ? 'Select a topic' : topics[topicIndex];
+    const topic = topics[topicIndex] || '';
     const subject = topic.replace(/^VCE /, '');
     const units = stageIndex === 2 && topicIndex >= 0
       ? [...new Set(ALL.filter((resource) => {
@@ -288,7 +297,7 @@ function renderHeroSessionPreview() {
     const option = event.target.closest('button');
     if (!option) return;
     stageIndex = [...stageMenu.querySelectorAll('button')].indexOf(option);
-    topicIndex = -1;
+    topicIndex = 0;
     unitIndex = -1;
     closeMenus();
     update();
@@ -332,7 +341,7 @@ function renderHeroSessionPreview() {
   document.querySelector('[data-preview-start]').addEventListener('click', () => {
     if (topicIndex < 0) return;
     const stageValues = ['primary', 'secondary', 'vce'];
-    const topic = stages[stageIndex].topics[topicIndex];
+    const topic = topicsForStage(stages[stageIndex])[topicIndex];
     const params = new URLSearchParams({
       stage: stageValues[stageIndex],
       subject: topic.replace(/^VCE /, ''),
