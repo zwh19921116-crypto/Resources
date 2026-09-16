@@ -125,3 +125,18 @@
 @media (max-width:1050px){.club-toolbar{grid-template-columns:1fr}.club-filters{order:2;overflow-x:auto;padding-bottom:.15rem}.club-sort{justify-self:start;order:3}}
 @media (max-width:900px){.club-results-note{right:.4rem}.club-deals{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:600px){.club-offers{padding-top:1.25rem}.club-results{display:block}.club-results-note{display:none}.club-results>#club-count{margin-top:.65rem}.club-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem;overflow:visible;padding-bottom:0}.club-filters button{width:100%}.club-sort{justify-content:flex-start;margin-left:0!important;border-left:0;padding-left:0}.club-sort select{min-width:0;max-width:100%}.club-deals{grid-template-columns:1fr}.club-deal-content{padding-top:3.25rem}.club-offer-highlight{font-size:1.45rem!important}}
+
+@media (max-width:600px){
+	.club-deal{min-height:214px!important;border-radius:14px!important}
+	.club-deal-content{width:60%;min-height:214px!important;padding:3.15rem .8rem .7rem;overflow:hidden}
+	.club-deal-banner{top:.7rem;left:.75rem}
+	.club-offer-highlight{font-size:1.6rem!important;line-height:1.02}
+	.club-deal h2{font-size:.9rem;line-height:1.16;margin:.38rem 0 .2rem;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+	.club-partner{font-size:.64rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+	.club-tile-place{font-size:.62rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+	.club-card-image{width:40%;top:0;bottom:0;border-radius:0 14px 14px 0;background:#e1edff!important}
+	.club-card-image img{width:100%;height:100%;padding:0!important;object-fit:cover;filter:saturate(1.05)!important}
+	.club-deal-foot{bottom:.55rem}
+	.club-view-deal{padding:.48rem .62rem;font-size:.6rem}
+}
+

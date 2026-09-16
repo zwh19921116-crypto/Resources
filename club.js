@@ -194,7 +194,7 @@
     const visual = document.getElementById('club-detail-image');
     visual.src = deal.image || 'https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=700&q=80';
     visual.hidden = false;
-    document.getElementById('club-detail-kind').textContent = offerType;
+    document.getElementById('club-detail-kind').innerHTML = `<svg class="ico" aria-hidden="true"><use href="#i-${deal.birthday ? 'gift' : 'tag'}"/></svg>${escapeHtml(offerType)}`;
     document.getElementById('club-detail-type').textContent = offerType;
     document.getElementById('club-detail-partner').textContent = deal.partner || 'Edgeducate Club';
     document.getElementById('club-detail-highlight').textContent = deal.highlight || inferredHighlight;
@@ -202,16 +202,17 @@
     document.getElementById('club-detail-description').textContent = deal.description || '';
     const formatDate = (value) => new Date(`${value}T00:00:00`).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
     document.getElementById('club-detail-location').textContent = deal.locationName || (locationLink ? 'Location details available' : 'Online offer');
-    document.getElementById('club-detail-address').textContent = deal.address || (locationLink ? 'Open location for directions' : 'Not applicable');
+    document.getElementById('club-detail-address').textContent = deal.address || (locationLink ? 'Open location for directions' : deal.birthday ? 'Online only' : 'Not applicable');
     document.getElementById('club-detail-validity').textContent = deal.starts && deal.expires ? `${formatDate(deal.starts)} to ${formatDate(deal.expires)}` : deal.expires ? `Until ${formatDate(deal.expires)}` : deal.starts ? `From ${formatDate(deal.starts)}` : 'Available for a limited time';
     const disclaimer = document.getElementById('club-detail-disclaimer');
     disclaimer.textContent = deal.disclaimer || '';
     disclaimer.hidden = !deal.disclaimer;
     const codeBox = document.getElementById('club-detail-code');
     codeBox.hidden = !deal.code;
-    codeBox.innerHTML = deal.code ? `<p>Show this voucher code at checkout.</p><span>${escapeHtml(deal.code)}</span><div class="club-code-actions"><button type="button" data-copy="${escapeHtml(deal.code)}">Copy code</button><button type="button" data-qr="${escapeHtml(deal.code)}">Show QR code</button></div>` : '';
+    codeBox.innerHTML = deal.code ? `<p>Show this voucher code at checkout.</p><span>${escapeHtml(deal.code)}</span><div class="club-code-actions"><button type="button" data-copy="${escapeHtml(deal.code)}"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg>Copy code</button><button type="button" data-qr="${escapeHtml(deal.code)}"><svg class="ico" aria-hidden="true"><use href="#i-qr"/></svg>Show QR code</button></div>` : '';
     const actionLink = deal.actionEnabled === false ? '' : deal.url || locationLink;
-    document.getElementById('club-detail-actions').innerHTML = actionLink ? `<a class="btn btn-primary" href="${escapeHtml(actionLink)}"${hasCoordinates(deal) ? '' : ' target="_blank" rel="noopener noreferrer"'}>${deal.url ? 'View deal' : 'Open location'} <span aria-hidden="true">&rarr;</span></a>` : '';
+    const actionLabel = deal.birthday ? 'Access Free Notes' : deal.url ? 'View deal' : 'Open location';
+    document.getElementById('club-detail-actions').innerHTML = actionLink ? `<a class="btn btn-primary" href="${escapeHtml(actionLink)}"${hasCoordinates(deal) ? '' : ' target="_blank" rel="noopener noreferrer"'}>${actionLabel} <span aria-hidden="true">&rarr;</span></a>` : '';
     detailDialog.showModal();
   }
 

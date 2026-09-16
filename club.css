@@ -64,3 +64,135 @@
 .club-detail-dialog--green .club-detail-hero{background:linear-gradient(110deg,#e3f8ef,#f8fffb 52%,#bcebd5)}
 .club-detail-dialog--green .club-detail-hero #club-detail-kind{background:#15976b}.club-detail-dialog--green .club-detail-hero #club-detail-highlight{color:#12895f}.club-detail-dialog--green .club-redeem>#club-detail-code{border-color:#b9e6d1;background:#effbf5}
 @media (max-width:600px){.club-detail-dialog{width:calc(100vw - 8px);max-height:calc(100vh - 8px);border-radius:12px}.club-detail-hero{min-height:245px;padding:1.1rem}.club-detail-hero>div{max-width:62%}.club-detail-hero #club-detail-image{right:0;width:43%;height:87%}.club-detail-body{padding:0 .85rem 1rem}.club-detail-body .club-detail-meta div{padding:.55rem .45rem}.club-detail-meta dd{font-size:.62rem}.club-redeem{grid-template-columns:1fr;gap:.5rem}.club-redeem h3,.club-redeem>p,.club-redeem>#club-detail-code{grid-column:1}.club-redeem>#club-detail-code{grid-row:auto;margin-top:2rem}.club-redeem>#club-detail-code::before{transform:translateY(-2rem)}}
+
+@media (max-width:600px){
+	.club-detail-hero{min-height:250px;padding:1.05rem;background:#102d67}
+	.club-detail-hero>div{z-index:3;width:54%;max-width:54%;overflow:hidden}
+	.club-detail-hero #club-detail-image{z-index:1;right:.65rem;width:43%;height:86%;object-fit:cover;border-radius:3px}
+	.club-detail-hero #club-detail-highlight{font-size:2.2rem;line-height:1.02;white-space:normal}
+	.club-detail-hero h2{max-width:100%;font-size:.95rem;line-height:1.18;overflow-wrap:anywhere}
+	.club-detail-hero #club-detail-partner,.club-detail-hero #club-detail-location{max-width:100%;font-size:.72rem;overflow-wrap:anywhere}
+	.club-detail-body .club-detail-meta{margin:.85rem 0 1rem}
+	.club-detail-meta div{position:relative;padding:.62rem .45rem .62rem 2.35rem!important}
+	.club-detail-meta div::before{content:'\25C7';position:absolute;left:.65rem;top:.65rem;display:grid;place-items:center;width:1.25rem;height:1.25rem;border-radius:50%;background:#f0ebff;color:#7045dd;font-size:.85rem;font-weight:900}
+	.club-detail-meta div:nth-child(2)::before{content:'\25A3'}
+	.club-detail-meta div:nth-child(3)::before{content:'\2316'}
+	.club-detail-body .club-detail-meta dt{font-size:.54rem}
+	.club-detail-body .club-detail-meta dd{font-size:.62rem}
+	.club-redeem{padding:.85rem .75rem}
+	.club-redeem>#club-detail-code{margin-top:1.1rem}
+	.club-redeem>#club-detail-code::before{top:.6rem;transform:none;text-align:center;left:0;width:100%;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:#8a79bd}
+	.club-redeem>#club-detail-code{padding:2rem .7rem .7rem}
+	.club-redeem>#club-detail-code span{font-size:1.35rem}
+	.club-redeem>#club-detail-code .club-code-actions{gap:.35rem}
+	.club-redeem>#club-detail-code button{padding:.65rem .62rem;font-size:.65rem}
+}
+
+@media (min-width:601px) and (max-width:900px){
+	.club-detail-dialog{width:100vw!important;max-width:none}
+	.club-detail-hero{width:auto;margin:.4rem 1rem 0;height:clamp(340px,51.5vw,395px);min-height:0;padding:1.5rem 2rem;border:2px solid #bfd6f3;border-radius:18px;box-sizing:border-box;overflow:hidden}
+	.club-detail-hero>div{width:49%;max-width:49%;overflow:visible!important}
+	.club-detail-hero #club-detail-image{right:.65rem!important;top:2rem;width:44%!important;height:clamp(290px,44vw,337px);object-fit:cover;border-radius:16px}
+	.club-detail-hero #club-detail-kind{padding:.5rem .9rem;font-size:1rem}
+	.club-detail-hero #club-detail-kind .ico{width:1.5rem;height:1.5rem}
+	.club-detail-hero #club-detail-highlight{font-size:clamp(4rem,7vw,5.3rem)}
+	.club-detail-hero h2{font-size:clamp(2rem,4.8vw,3rem);line-height:1.08}
+	.club-detail-hero #club-detail-partner,.club-detail-hero #club-detail-location{font-size:1.25rem}
+}
+
+@media (max-width:600px){
+	.club-detail-hero{align-items:flex-start;min-height:250px;padding:1.05rem;background:#f0eaff}
+	.club-detail-dialog--blue .club-detail-hero{background:#eaf3ff}
+	.club-detail-dialog--orange .club-detail-hero{background:#fff2d8}
+	.club-detail-dialog--purple .club-detail-hero{background:#f0eaff}
+	.club-detail-dialog--green .club-detail-hero{background:#e3f8ef}
+	.club-detail-hero>div{width:53%;max-width:53%;margin-top:0}
+	.club-detail-hero #club-detail-image{right:.65rem;top:1.05rem;bottom:auto;width:44%;height:calc(100% - 2.1rem);object-fit:cover;border-radius:3px;mix-blend-mode:normal}
+	.club-detail-hero #club-detail-kind{margin-top:.05rem}
+	.club-detail-hero #club-detail-highlight{margin:.72rem 0 .3rem;font-size:2.25rem}
+	.club-detail-hero h2{font-size:1rem;line-height:1.16}
+	.club-detail-dialog--blue .club-detail-hero #club-detail-highlight{color:#1769dd}
+	.club-detail-dialog--orange .club-detail-hero #club-detail-highlight{color:#df8512}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight{color:#7147cf}
+	.club-detail-dialog--green .club-detail-hero #club-detail-highlight{color:#12895f}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-kind{background:#7950d5}
+	.club-detail-dialog--orange .club-detail-hero #club-detail-kind{background:#ed8f1d}
+	.club-detail-dialog--green .club-detail-hero #club-detail-kind{background:#15976b}
+}
+
+@media (min-width:601px) and (max-width:900px){
+	.club-detail-image-note{display:none}
+	.club-detail-dialog{box-sizing:border-box;width:calc(100vw - 28px)!important;min-height:calc(100vh - 28px);max-height:calc(100vh - 28px);margin:auto;border:0!important;outline:0!important;border-radius:18px;background:#fff!important;box-shadow:0 12px 36px rgba(9,22,66,.12)!important}
+	.club-detail-hero{align-items:flex-start;height:clamp(340px,51.5vw,395px);min-height:0;padding:1.5rem 2rem;background:#f0eaff;border:2px solid #bfd6f3;border-radius:18px;box-sizing:border-box}
+	.club-detail-dialog--blue .club-detail-hero{background:#eaf3ff}
+	.club-detail-dialog--orange .club-detail-hero{background:#fff2d8}
+	.club-detail-dialog--purple .club-detail-hero{background:#f0eaff}
+	.club-detail-dialog--green .club-detail-hero{background:#e3f8ef}
+	.club-detail-hero::after{content:'';position:absolute;right:-65px;bottom:-145px;width:500px;height:275px;border-radius:50%;background:#d8eaff;inset:auto -65px -145px auto;transform:rotate(-12deg);z-index:0}
+	.club-detail-hero>div{width:52%;max-width:52%;margin-top:0;overflow:visible!important}
+	.club-detail-hero #club-detail-image{right:.65rem!important;top:1.25rem;bottom:auto;width:44%!important;height:clamp(290px,44vw,338px);object-fit:cover;border-radius:16px;mix-blend-mode:normal}
+	.club-detail-dialog--purple .club-detail-image-note{display:block;position:absolute;z-index:3;right:3.1rem;top:9.4rem;color:#102d67;font-family:Georgia,serif;font-size:1.65rem;font-style:italic;font-weight:700;line-height:.9;transform:rotate(-8deg);text-align:center;text-shadow:0 1px 0 rgba(255,255,255,.35)}
+	.club-detail-hero #club-detail-kind{padding:.7rem 1rem;font-size:1.15rem}
+	.club-detail-hero #club-detail-kind .ico{width:1.7rem;height:1.7rem;stroke-width:2.2}
+	.club-detail-hero #club-detail-highlight{margin:1.35rem 0 .45rem 1rem;color:#7147cf;font-family:Inter,sans-serif;font-size:clamp(4.5rem,8vw,5.3rem);font-style:italic;font-weight:900;line-height:.98}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight{transform:translateY(1.4rem) skewX(-7deg) rotate(-2deg);transform-origin:left center}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight{position:relative;display:block;width:max-content}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::before,.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::after{content:'';position:absolute;width:1.5rem;height:.28rem;border-radius:999px;top:42%;background:#f4b52b;box-shadow:0 1.35rem 0 #f4b52b,0 2.7rem 0 #f4b52b}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::before{left:-2.1rem;transform:rotate(25deg)}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::after{right:-2rem;transform:rotate(-25deg);background:#e168bb;box-shadow:0 1.35rem 0 #e168bb,0 2.7rem 0 #e168bb}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight{font-family:Inter,sans-serif;font-style:italic;font-weight:900}
+	.club-detail-hero h2{margin-top:2.1rem;font-size:clamp(2.25rem,5.4vw,3.25rem);line-height:1.08}
+	.club-detail-hero #club-detail-partner,.club-detail-hero #club-detail-location{font-size:1.35rem;line-height:1.35}
+	.club-detail-body{padding:0 1rem 1.5rem}
+	.club-detail-body .club-detail-meta{margin:1.15rem 0 1.4rem;border-radius:16px}
+	.club-detail-body .club-detail-meta div{min-height:108px;padding:1.1rem 1.15rem 1.1rem 4.4rem!important}
+	.club-detail-meta div::before{display:none}
+	.club-detail-meta dt{position:relative;display:flex;align-items:center;gap:.55rem}
+	.club-detail-meta dt .ico{position:absolute;left:-3.4rem;top:-.35rem;width:2.5rem;height:2.5rem;padding:.55rem;border-radius:50%;background:#f0ebff;color:#7162c5;stroke-width:1.8}
+	.club-detail-body .club-detail-meta dt{font-size:1rem}
+	.club-detail-body .club-detail-meta dd{font-size:1.2rem;line-height:1.25}
+	.club-redeem{grid-template-columns:1fr;gap:.5rem;padding:1.5rem 1.5rem 1.35rem;border-radius:16px}
+	.club-redeem h3{font-size:2rem}
+	.club-redeem>p{font-size:1.35rem;line-height:1.35;margin:.45rem 0 1rem}
+	.club-redeem>#club-detail-code{grid-column:1;grid-row:auto;display:grid;grid-template-columns:1fr 1fr;min-height:250px;margin:0;padding:2.5rem 1.2rem 1.2rem;border-radius:14px}
+	.club-redeem>#club-detail-code::before{content:'Voucher code';top:.95rem;left:0;width:100%;text-align:center;font-size:1rem;letter-spacing:.12em;text-transform:uppercase;color:#8a79bd}
+	.club-redeem>#club-detail-code span{grid-column:1/-1;justify-self:center;font-size:3.6rem;line-height:1.1}
+	.club-redeem>#club-detail-code .club-code-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-self:end}
+	.club-redeem>#club-detail-code button{padding:1rem;font-size:1rem}
+	.club-redeem>#club-detail-code button .ico{width:1.35rem;height:1.35rem;margin-right:.45rem;vertical-align:middle;stroke-width:2.2}
+	.club-detail-body>#club-detail-actions{margin-top:1.4rem}
+	.club-detail-body>#club-detail-actions .btn{padding:1.15rem;font-size:1.15rem}
+	.club-detail-hero button{width:3.5rem;height:3.5rem;right:1.25rem;top:1.25rem}
+	.club-detail-body>#club-detail-actions .btn span{display:inline-block;margin-left:.45rem}
+}
+
+/* Three individually angled rays around the FREE highlight. */
+@media (min-width:601px) and (max-width:900px){
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::before,.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::after{width:2.1rem;height:4rem;top:32%;background:linear-gradient(35deg,transparent 38%,#f4b52b 39% 61%,transparent 62%) top left/1.5rem .95rem no-repeat,linear-gradient(0deg,transparent 38%,#f4b52b 39% 61%,transparent 62%) center/1.65rem .95rem no-repeat,linear-gradient(-35deg,transparent 38%,#f4b52b 39% 61%,transparent 62%) bottom left/1.5rem .95rem no-repeat;box-shadow:none;transform:translateY(-1.4rem)}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::before{left:-2.65rem}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::after{right:-3.4rem;background:linear-gradient(-35deg,transparent 38%,#e168bb 39% 61%,transparent 62%) top left/1.5rem .95rem no-repeat,linear-gradient(0deg,transparent 38%,#e168bb 39% 61%,transparent 62%) center/1.65rem .95rem no-repeat,linear-gradient(35deg,transparent 38%,#e168bb 39% 61%,transparent 62%) bottom left/1.5rem .95rem no-repeat}
+}
+
+@media (max-width:600px){
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::before,.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::after{width:1.6rem;height:2.5rem;top:34%;background:linear-gradient(35deg,transparent 38%,#f4b52b 39% 61%,transparent 62%) top left/1.05rem .6rem no-repeat,linear-gradient(0deg,transparent 38%,#f4b52b 39% 61%,transparent 62%) center/1.2rem .6rem no-repeat,linear-gradient(-35deg,transparent 38%,#f4b52b 39% 61%,transparent 62%) bottom left/1.05rem .6rem no-repeat;box-shadow:none;transform:translateY(-1.4rem)}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::before{left:-1.75rem}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::after{right:-2.2rem;background:linear-gradient(-35deg,transparent 38%,#e168bb 39% 61%,transparent 62%) top left/1.05rem .6rem no-repeat,linear-gradient(0deg,transparent 38%,#e168bb 39% 61%,transparent 62%) center/1.2rem .6rem no-repeat,linear-gradient(35deg,transparent 38%,#e168bb 39% 61%,transparent 62%) bottom left/1.05rem .6rem no-repeat}
+}
+
+@media (max-width:600px){
+	.club-detail-dialog{width:100vw!important;max-width:none;max-height:calc(100vh - 12px);border:0!important;outline:0!important;background:#fff!important;box-shadow:0 10px 28px rgba(9,22,66,.12)!important}
+	.club-detail-hero{width:auto;margin:.4rem 1rem 0;height:226px;min-height:226px;padding:1rem .875rem;border:2px solid #bfd6f3;border-radius:16px;box-sizing:border-box;overflow:hidden}
+	.club-detail-hero>div{width:52%;max-width:52%;margin-top:0;overflow:visible!important}
+	.club-detail-hero #club-detail-image{right:1.25rem!important;top:1rem;bottom:auto;width:44%!important;height:calc(100% - 2rem)!important;object-fit:cover;border-radius:12px;mix-blend-mode:normal}
+	.club-detail-hero #club-detail-kind{padding:.35rem .7rem;font-size:1rem}
+	.club-detail-hero #club-detail-kind .ico{width:1.3rem;height:1.3rem;stroke-width:2.2}
+	.club-detail-hero #club-detail-highlight{margin:.7rem 0 .3rem;font-family:Inter,sans-serif;font-size:4rem;font-style:italic;font-weight:900;line-height:.8}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight{display:block;width:max-content;font-family:Inter,sans-serif;font-style:italic;font-weight:900}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight{transform:skewX(-7deg) rotate(-2deg);transform-origin:left center}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::before,.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::after{content:'';position:absolute;width:1.05rem;height:.2rem;border-radius:999px;top:40%;background:#f4b52b;box-shadow:0 .62rem 0 #f4b52b,0 1.24rem 0 #f4b52b}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::before{left:-1.75rem;transform:rotate(25deg)}
+	.club-detail-dialog--purple .club-detail-hero #club-detail-highlight::after{right:-1.75rem;transform:rotate(-25deg);background:#e168bb;box-shadow:0 .62rem 0 #e168bb,0 1.24rem 0 #e168bb}
+	.club-detail-hero h2{font-size:1.55rem!important;line-height:1.05}
+	.club-detail-hero #club-detail-partner,.club-detail-hero #club-detail-location{margin:.15rem 0 0;font-size:.95rem!important;line-height:1.3}
+	.club-detail-hero button{width:2.5rem;height:2.5rem;right:.75rem;top:.75rem}
+}
