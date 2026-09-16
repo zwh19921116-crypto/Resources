@@ -62,27 +62,28 @@ function setupStudyTimer(minutes) {
   const dialog = ss('break-dialog');
   const reminderTiming = ss('reminder-timing');
   const totalSeconds = minutes * 60;
-  let elapsed = 0;
+  let remaining = totalSeconds;
   let interval = null;
   let nextReminder = reminderTiming.value === 'end' ? totalSeconds : Math.min(7200, totalSeconds);
 
   const clock = (seconds) => [Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60), seconds % 60]
     .map((value) => String(value).padStart(2, '0')).join(':');
-  const render = () => { display.textContent = clock(elapsed); };
+  const elapsed = () => totalSeconds - remaining;
+  const render = () => { display.textContent = clock(remaining); };
   const stop = () => {
     clearInterval(interval);
     interval = null;
-    startButton.textContent = elapsed >= totalSeconds ? 'Session complete' : 'Start timer';
+    startButton.textContent = remaining <= 0 ? 'Session complete' : 'Start timer';
   };
   const remind = () => {
     stop();
     if (typeof dialog.showModal === 'function') dialog.showModal();
   };
   const tick = () => {
-    elapsed = Math.min(totalSeconds, elapsed + 1);
+    remaining = Math.max(0, remaining - 1);
     render();
-    if (elapsed >= nextReminder) {
-      if (reminderTiming.value === 'hourly' && elapsed < totalSeconds) nextReminder = elapsed + 3600;
+    if (elapsed() >= nextReminder || remaining <= 0) {
+      if (reminderTiming.value === 'hourly' && remaining > 0) nextReminder = elapsed() + 3600;
       else nextReminder = Infinity;
       remind();
     }
@@ -90,11 +91,11 @@ function setupStudyTimer(minutes) {
 
   reminderTiming.addEventListener('change', () => {
     nextReminder = reminderTiming.value === 'end' ? totalSeconds : Math.min(7200, totalSeconds);
-    if (nextReminder <= elapsed) nextReminder = reminderTiming.value === 'hourly' ? elapsed + 3600 : totalSeconds;
+    if (nextReminder <= elapsed()) nextReminder = reminderTiming.value === 'hourly' ? elapsed() + 3600 : totalSeconds;
   });
 
   startButton.addEventListener('click', () => {
-    if (elapsed >= totalSeconds) return;
+    if (remaining <= 0) return;
     if (interval) {
       stop();
       return;
@@ -104,14 +105,14 @@ function setupStudyTimer(minutes) {
   });
   resetButton.addEventListener('click', () => {
     stop();
-    elapsed = 0;
+    remaining = totalSeconds;
     nextReminder = reminderTiming.value === 'end' ? totalSeconds : Math.min(7200, totalSeconds);
     render();
   });
   ss('break-pause').addEventListener('click', () => dialog.close());
   ss('break-snooze-button').addEventListener('click', () => {
     const snoozeMinutes = Number(ss('break-snooze').value);
-    nextReminder = elapsed + snoozeMinutes * 60;
+    nextReminder = elapsed() + snoozeMinutes * 60;
     dialog.close();
     startButton.click();
   });
