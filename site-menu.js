@@ -4,12 +4,30 @@
     body: 'Small-group VCE and secondary tuition led by top-performing tutors. Book a free consultation to find your class.',
     duration: 4
   };
+
+  const isAdEligibleNow = (ad, now) => {
+    const today = now.toISOString().slice(0, 10);
+    if (ad.startDate && today < ad.startDate) return false;
+    if (ad.endDate && today > ad.endDate) return false;
+
+    if (ad.startTime || ad.endTime) {
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const [sh, sm] = (ad.startTime || '00:00').split(':').map(Number);
+      const [eh, em] = (ad.endTime || '23:59').split(':').map(Number);
+      const start = sh * 60 + sm;
+      const end = eh * 60 + em;
+      return start <= end
+        ? nowMinutes >= start && nowMinutes <= end
+        : nowMinutes >= start || nowMinutes <= end;
+    }
+
+    return true;
+  };
+
   const eligibleAd = () => {
     if (window.EDG_ADS_ENABLED === false) return loadingAd;
-    const today = new Date().toISOString().slice(0, 10);
-    const ads = (window.EDG_ADS || []).filter((ad) => ad.status !== 'draft'
-      && (!ad.startDate || today >= ad.startDate)
-      && (!ad.endDate || today <= ad.endDate));
+    const now = new Date();
+    const ads = (window.EDG_ADS || []).filter((ad) => ad.status !== 'draft' && isAdEligibleNow(ad, now));
     return ads[Math.floor(Math.random() * ads.length)] || loadingAd;
   };
   const showResourceLoading = (destination) => {
