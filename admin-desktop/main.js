@@ -390,7 +390,8 @@ async function gitSync(message) {
   const commit = await runGit(['commit', '-m', message || 'Update via Edgeducate Admin']);
   if (!commit.ok) return { ok: false, log: `git commit failed:\n${commit.output || commit.error}` };
 
-  const push = await runGit(['push']);
+  // Publish to main explicitly so Cloudflare/Workers serves the latest admin changes.
+  const push = await runGit(['push', 'origin', 'HEAD:main']);
   if (!push.ok) return { ok: false, log: `git push failed:\n${push.output || push.error}` };
 
   return { ok: true, log: `${commit.output}\n${push.output}`.trim() };
