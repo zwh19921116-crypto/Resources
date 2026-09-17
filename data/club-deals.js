@@ -4,15 +4,6 @@
  */
 window.EDG_CLUB_DEALS = [
   {
-    id: 'testtest',
-    title: 'testtest',
-    highlight: 'testtest',
-    actionEnabled: false,
-    status: 'published',
-    birthday: false,
-    popularity: 0
-  },
-  {
     id: 'sample-study-starter',
     title: '20% off a study starter pack',
     partner: 'Sample Education Store',
