@@ -27,6 +27,8 @@
     font-size:.9rem;margin-bottom:1rem;letter-spacing:.02em;
   }
   input:focus{outline:none;border-color:#93b4ff;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+  .remember{display:flex;align-items:center;gap:.5rem;margin:-.25rem 0 1rem;font-size:.78rem;font-weight:600;color:#475569;cursor:pointer}
+  .remember input{width:auto;margin:0;accent-color:#2563eb}
   button{
     width:100%;padding:.75rem;border:0;border-radius:10px;background:#2563eb;color:#fff;
     font-size:.9rem;font-weight:700;cursor:pointer;
@@ -63,6 +65,10 @@
       <input id="username" autocomplete="username" required />
       <label for="password" id="password-label">Password</label>
       <input id="password" type="password" autocomplete="current-password" required />
+      <label class="remember" for="remember-username">
+        <input id="remember-username" type="checkbox" />
+        Remember username
+      </label>
       <button type="submit" id="account-submit">Continue</button>
     </form>
     <button type="button" class="ghost" id="forgot-password">Forgot password?</button>
@@ -138,6 +144,11 @@
   const $ = (id) => document.getElementById(id);
   let isSetup = false;
   let username = '';
+  const rememberedUsername = localStorage.getItem('edgeducate-admin-username') || '';
+  if (rememberedUsername) {
+    $('username').value = rememberedUsername;
+    $('remember-username').checked = true;
+  }
 
   function setStep(n) {
     $('step-account').hidden = n !== 1;
@@ -167,6 +178,9 @@
     username = $('username').value.trim();
     const password = $('password').value;
 
+    if ($('remember-username').checked) localStorage.setItem('edgeducate-admin-username', username);
+    else localStorage.removeItem('edgeducate-admin-username');
+
     if (isSetup) {
       if (username.length < 3) return (err.textContent = 'Username must be at least 3 characters.');
       if (password.length < 6) return (err.textContent = 'Use a password with at least 6 characters.');
@@ -182,6 +196,11 @@
     }
     if (!result.ok) {
       err.textContent = 'Incorrect username or password.';
+      return;
+    }
+    if (await window.desktop.hasValidSession()) {
+      await window.desktop.pullBeforeUnlock();
+      await window.desktop.unlock();
       return;
     }
     if (await window.desktop.has2fa()) {

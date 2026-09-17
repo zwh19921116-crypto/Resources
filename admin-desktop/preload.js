@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('desktop', {
   hasAccount: () => ipcRenderer.invoke('auth:hasAccount'),
   setAccount: (username, password) => ipcRenderer.invoke('auth:setAccount', { username, password }),
   verifyAccount: (username, password) => ipcRenderer.invoke('auth:verifyAccount', { username, password }),
+  hasValidSession: () => ipcRenderer.invoke('auth:hasValidSession'),
   has2fa: () => ipcRenderer.invoke('auth:has2fa'),
   setup2fa: () => ipcRenderer.invoke('auth:setup2fa'),
   verifyTotp: (code) => ipcRenderer.invoke('auth:verifyTotp', code),
@@ -14,9 +15,15 @@ contextBridge.exposeInMainWorld('desktop', {
   verifyResetCode: (code) => ipcRenderer.invoke('auth:verifyResetCode', code),
   resetPassword: (password) => ipcRenderer.invoke('auth:resetPassword', password),
   reset2faViaEmail: () => ipcRenderer.invoke('auth:reset2faViaEmail'),
+  isUnlocked: () => ipcRenderer.invoke('auth:isUnlocked'),
   unlock: () => ipcRenderer.invoke('auth:unlock'),
   pullBeforeUnlock: () => ipcRenderer.invoke('auth:pullBeforeUnlock'),
   gitSync: (message) => ipcRenderer.invoke('git:sync', message),
   gitPull: () => ipcRenderer.invoke('git:pull'),
-  getPaths: () => ipcRenderer.invoke('app:getPaths')
+  projectConnect: () => ipcRenderer.invoke('project:connect'),
+  projectWrite: (relativePath, content) => ipcRenderer.invoke('project:write', { relativePath, content }),
+  projectList: (relativePath) => ipcRenderer.invoke('project:list', relativePath),
+  projectRemove: (relativePath, recursive) => ipcRenderer.invoke('project:remove', { relativePath, recursive }),
+  getPaths: () => ipcRenderer.invoke('app:getPaths'),
+  writeLog: (message, level) => ipcRenderer.invoke('app:writeLog', { message, level })
 });

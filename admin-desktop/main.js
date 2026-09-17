@@ -11,10 +11,13 @@ const REPO_URL = 'https://github.com/zwh19921116-crypto/Resources.git';
 const STANDALONE_CLONE_DIR = path.join(app.getPath('userData'), 'repo');
 const LOGIN_HTML_PATH = path.join(__dirname, 'login.html');
 const AUTH_FILE = path.join(app.getPath('userData'), 'auth.json');
+const SESSION_DURATION_MS = 30 * 60 * 1000;
+const LOG_FILE = path.join(app.getPath('userData'), 'logs', 'admin.log');
 
 let PROJECT_ROOT = path.join(__dirname, '..');
 let ADMIN_HTML_PATH = path.join(PROJECT_ROOT, 'admin.html');
 let win;
+let adminUnlocked = false;
 let pendingEmailCode = null; // { code, expiresAt }
 let failedAttempts = 0;
 let lockoutUntil = 0;
@@ -28,8 +31,28 @@ function writeAuth(data) {
   fs.writeFileSync(AUTH_FILE, JSON.stringify(data, null, 2));
 }
 
+function writeAppLog(message, level = 'info') {
+  try {
+    fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
+    fs.appendFileSync(LOG_FILE, `${new Date().toISOString()} [${level.toUpperCase()}] ${String(message)}\n`, 'utf8');
+  } catch (e) {
+    console.error('Could not write admin log:', e.message);
+  }
+}
+
 function hasAccount() {
   return !!readAuth();
+}
+
+function hasValidSession() {
+  const auth = readAuth();
+  return !!(auth && Number(auth.sessionExpiresAt) > Date.now());
+}
+
+function rememberSession() {
+  const auth = readAuth();
+  if (!auth) return;
+  writeAuth({ ...auth, sessionExpiresAt: Date.now() + SESSION_DURATION_MS });
 }
 
 function setAccount(username, password) {
@@ -152,27 +175,55 @@ function mailer() {
 
 async function sendEmailCode() {
   const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
-  pendingEmailCode = { code, expiresAt: Date.now() + 10 * 60 * 1000 };
+  const expiresAt = Date.now() + 10 * 60 * 1000;
+  const auth = readAuth();
+  const loginRecipient = process.env.ADMIN_EMAIL_TO;
+  pendingEmailCode = { code, expiresAt };
+  writeAppLog(`Sending sign-in code to ${loginRecipient}`);
   try {
-    await mailer().sendMail({
+    const info = await mailer().sendMail({
       from: `"Edgeducate Admin" <${process.env.SMTP_USER}>`,
-      to: process.env.ADMIN_EMAIL_TO,
+      to: loginRecipient,
       subject: 'Edgeducate Admin — sign-in code',
       text: `Your sign-in code is ${code}. It expires in 10 minutes. If you did not request this, ignore this email.`,
       html: `<p>Your sign-in code is <b style="font-size:1.3em">${code}</b>.</p><p>It expires in 10 minutes. If you did not request this, ignore this email.</p>`
     });
+    writeAppLog(`Sign-in email accepted by SMTP for ${loginRecipient}; rejected recipients: ${(info.rejected || []).join(', ') || 'none'}`);
+    if (auth) {
+      const now = Date.now();
+      const validCodes = Array.isArray(auth.emailCodes)
+        ? auth.emailCodes.filter((entry) => entry.expiresAt > now)
+        : [];
+      validCodes.push({ hash: crypto.createHash('sha256').update(code).digest('hex'), expiresAt });
+      auth.emailCodes = validCodes.slice(-5);
+      delete auth.emailCodeHash;
+      delete auth.emailCodeExpiresAt;
+      writeAuth(auth);
+    }
     return { ok: true };
   } catch (e) {
     pendingEmailCode = null;
+    writeAppLog(`Sign-in email failed: ${e.message}`, 'error');
     return { ok: false, error: e.message };
   }
 }
 
 function verifyEmailCode(code) {
-  if (!pendingEmailCode) return false;
-  if (Date.now() > pendingEmailCode.expiresAt) return false;
-  const ok = String(code).trim() === pendingEmailCode.code;
-  if (ok) pendingEmailCode = null;
+  const auth = readAuth();
+  const submitted = crypto.createHash('sha256').update(String(code).trim()).digest('hex');
+  const now = Date.now();
+  const validCodes = auth && Array.isArray(auth.emailCodes)
+    ? auth.emailCodes.filter((entry) => entry.expiresAt > now)
+    : [];
+  const ok = validCodes.some((entry) => entry.hash === submitted);
+  if (ok) {
+    delete auth.emailCodes;
+    delete auth.emailCodeHash;
+    delete auth.emailCodeExpiresAt;
+    writeAuth(auth);
+    pendingEmailCode = null;
+  }
+  writeAppLog(`Sign-in email code verification ${ok ? 'succeeded' : 'failed'}`);
   return ok;
 }
 
@@ -183,31 +234,55 @@ const RESET_CONFIRM_EMAIL = 'williamc@edgeducate.com.au';
 
 async function sendResetCode() {
   const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
-  pendingResetCode = { code, expiresAt: Date.now() + 10 * 60 * 1000 };
+  const expiresAt = Date.now() + 10 * 60 * 1000;
+  pendingResetCode = { code, expiresAt };
   resetCodeVerified = false;
+  writeAppLog(`Sending password-reset code to ${RESET_CONFIRM_EMAIL}`);
   try {
-    await mailer().sendMail({
+    const info = await mailer().sendMail({
       from: `"Edgeducate Admin" <${process.env.SMTP_USER}>`,
       to: RESET_CONFIRM_EMAIL,
       subject: 'Edgeducate Admin — password reset confirmation',
       text: `A password reset was requested for the Edgeducate Admin app. Confirmation code: ${code}. It expires in 10 minutes. If you did not request this, ignore this email — your password will not change.`,
       html: `<p>A password/2FA reset was requested for the Edgeducate Admin app.</p><p>Confirmation code: <b style="font-size:1.3em">${code}</b></p><p>It expires in 10 minutes. If you did not request this, ignore this email — nothing will change.</p>`
     });
+    writeAppLog(`Password-reset email accepted by SMTP for ${RESET_CONFIRM_EMAIL}; rejected recipients: ${(info.rejected || []).join(', ') || 'none'}`);
+    const auth = readAuth();
+    if (auth) {
+      const now = Date.now();
+      const validCodes = Array.isArray(auth.resetCodes)
+        ? auth.resetCodes.filter((entry) => entry.expiresAt > now)
+        : [];
+      validCodes.push({ hash: crypto.createHash('sha256').update(code).digest('hex'), expiresAt });
+      auth.resetCodes = validCodes.slice(-5);
+      delete auth.resetCodeHash;
+      delete auth.resetCodeExpiresAt;
+      writeAuth(auth);
+    }
     return { ok: true };
   } catch (e) {
     pendingResetCode = null;
+    writeAppLog(`Password-reset email failed: ${e.message}`, 'error');
     return { ok: false, error: e.message };
   }
 }
 
 function verifyResetCode(code) {
-  if (!pendingResetCode) return false;
-  if (Date.now() > pendingResetCode.expiresAt) return false;
-  const ok = String(code).trim() === pendingResetCode.code;
+  const auth = readAuth();
+  const submitted = crypto.createHash('sha256').update(String(code).trim()).digest('hex');
+  const now = Date.now();
+  const validCodes = auth && Array.isArray(auth.resetCodes)
+    ? auth.resetCodes.filter((entry) => entry.expiresAt > now)
+    : [];
+  const ok = validCodes.some((entry) => entry.hash === submitted);
   if (ok) {
     resetCodeVerified = true;
-    pendingResetCode = null;
+    delete auth.resetCodes;
+    delete auth.resetCodeHash;
+    delete auth.resetCodeExpiresAt;
+    writeAuth(auth);
   }
+  writeAppLog(`Password-reset code verification ${ok ? 'succeeded' : 'failed'}`);
   return ok;
 }
 
@@ -217,7 +292,7 @@ function resetPassword(newPassword) {
   if (!auth) return false;
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.scryptSync(newPassword, salt, 64).toString('hex');
-  writeAuth({ ...auth, salt, hash });
+  writeAuth({ ...auth, salt, hash, sessionExpiresAt: 0 });
   resetCodeVerified = false;
   registerSuccess();
   return true;
@@ -242,6 +317,13 @@ function runGitIn(cwd, args) {
 }
 function runGit(args) {
   return runGitIn(PROJECT_ROOT, args);
+}
+
+function projectFilePath(relativePath) {
+  const root = path.resolve(PROJECT_ROOT);
+  const target = path.resolve(root, String(relativePath || ''));
+  if (target !== root && !target.startsWith(`${root}${path.sep}`)) throw new Error('Invalid project path');
+  return target;
 }
 
 /**
@@ -342,6 +424,7 @@ ipcMain.handle('auth:verifyAccount', (event, { username, password }) => {
   else registerFailure();
   return { ok };
 });
+ipcMain.handle('auth:hasValidSession', () => hasValidSession());
 ipcMain.handle('auth:has2fa', () => has2fa());
 ipcMain.handle('auth:setup2fa', () => setup2fa());
 ipcMain.handle('auth:verifyTotp', (event, code) => verifyTotp(code));
@@ -352,11 +435,15 @@ ipcMain.handle('auth:sendResetCode', () => sendResetCode());
 ipcMain.handle('auth:verifyResetCode', (event, code) => verifyResetCode(code));
 ipcMain.handle('auth:resetPassword', (event, password) => resetPassword(password));
 ipcMain.handle('auth:reset2faViaEmail', () => reset2faViaEmail());
+ipcMain.handle('auth:isUnlocked', () => adminUnlocked);
 ipcMain.handle('auth:unlock', () => {
   if (!checkAdminFilesPresent(PROJECT_ROOT)) {
+    adminUnlocked = false;
     win.loadFile(path.join(__dirname, 'missing-admin.html'));
     return true;
   }
+  rememberSession();
+  adminUnlocked = true;
   win.loadFile(ADMIN_HTML_PATH);
   return true;
 });
@@ -366,13 +453,42 @@ ipcMain.handle('auth:pullBeforeUnlock', async () => {
 });
 ipcMain.handle('git:sync', (event, message) => gitSync(message));
 ipcMain.handle('git:pull', () => runGit(['pull']));
-ipcMain.handle('app:getPaths', () => ({ standaloneDir: PROJECT_ROOT }));
+ipcMain.handle('project:connect', () => {
+  const required = ['data/resources.js', 'data/ads.js', 'data/club-deals.js'];
+  const missing = required.filter((file) => !fs.existsSync(projectFilePath(file)));
+  return { ok: missing.length === 0, missing };
+});
+ipcMain.handle('project:write', async (event, { relativePath, content }) => {
+  const target = projectFilePath(relativePath);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  const data = content && typeof content.arrayBuffer === 'function'
+    ? Buffer.from(await content.arrayBuffer())
+    : Buffer.from(content);
+  fs.writeFileSync(target, data);
+  return true;
+});
+ipcMain.handle('project:list', (event, relativePath) => {
+  const target = projectFilePath(relativePath);
+  if (!fs.existsSync(target)) return [];
+  return fs.readdirSync(target, { withFileTypes: true }).map((entry) => [entry.name, entry.isDirectory() ? 'directory' : 'file']);
+});
+ipcMain.handle('project:remove', (event, { relativePath, recursive }) => {
+  const target = projectFilePath(relativePath);
+  if (fs.existsSync(target)) fs.rmSync(target, { recursive: Boolean(recursive), force: true });
+  return true;
+});
+ipcMain.handle('app:getPaths', () => ({ standaloneDir: PROJECT_ROOT, logFile: LOG_FILE }));
+ipcMain.handle('app:writeLog', (event, { message, level }) => {
+  writeAppLog(message, level);
+  return true;
+});
 
 app.whenReady().then(async () => {
   const resolved = await resolveProjectRoot();
   PROJECT_ROOT = resolved.root;
   ADMIN_HTML_PATH = path.join(PROJECT_ROOT, 'admin.html');
   console.log(resolved.log);
+  writeAppLog(resolved.log);
 
   createWindow(LOGIN_HTML_PATH);
 
