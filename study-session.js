@@ -3,6 +3,28 @@ const SS_ALL = (window.EDG_RESOURCES || []).filter((r) => r.status !== 'draft');
 const SS_LOADING_MS = 2600;
 const ss = (id) => document.getElementById(id);
 const ssEsc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const EDG_TIMEZONE = 'Australia/Melbourne';
+const edgTimezoneFormatter = new Intl.DateTimeFormat('en-AU', {
+  timeZone: EDG_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false
+});
+
+function edgTimezoneParts(date) {
+  const pieces = edgTimezoneFormatter.formatToParts(date);
+  const out = {};
+  pieces.forEach((piece) => {
+    if (piece.type !== 'literal') out[piece.type] = piece.value;
+  });
+  return {
+    ymd: `${out.year}-${out.month}-${out.day}`,
+    minutes: (Number(out.hour) * 60) + Number(out.minute)
+  };
+}
 
 function ssYoutubeId(url) {
   const m = String(url).match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/);
@@ -123,12 +145,13 @@ function setupStudyTimer(minutes) {
 
 /** True when now falls inside the ad's date period and daily time slot (blank = no restriction). */
 function ssAdIsEligible(ad, now) {
-  const today = now.toISOString().slice(0, 10);
+  const zonedNow = edgTimezoneParts(now);
+  const today = zonedNow.ymd;
   if (ad.startDate && today < ad.startDate) return false;
   if (ad.endDate && today > ad.endDate) return false;
 
   if (ad.startTime || ad.endTime) {
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const nowMinutes = zonedNow.minutes;
     const [sh, sm] = (ad.startTime || '00:00').split(':').map(Number);
     const [eh, em] = (ad.endTime || '23:59').split(':').map(Number);
     const start = sh * 60 + sm;

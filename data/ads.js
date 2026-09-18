@@ -17,8 +17,8 @@ window.EDG_ADS = [
     revenue: 0,
     startDate: '',
     endDate: '',
-    startTime: '',
-    endTime: '',
+    startTime: '07:30',
+    endTime: '19:30',
     status: 'published'
   },
   {

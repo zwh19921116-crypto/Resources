@@ -310,11 +310,15 @@ async function reset2faViaEmail() {
 /* ---------- git sync (uses your machine's own git + credentials) ---------- */
 function runGitIn(cwd, args) {
   return new Promise((resolve) => {
-    execFile('git', args, { cwd }, (error, stdout, stderr) => {
+    execFile('git', args, {
+      cwd,
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'auto' }
+    }, (error, stdout, stderr) => {
       resolve({ ok: !error, output: (stdout || '') + (stderr || ''), error: error ? error.message : '' });
     });
   });
 }
+
 function runGit(args) {
   return runGitIn(PROJECT_ROOT, args);
 }

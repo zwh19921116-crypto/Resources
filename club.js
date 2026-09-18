@@ -1,4 +1,20 @@
 (() => {
+  const EDG_TIMEZONE = 'Australia/Melbourne';
+  const edgDateFormatter = new Intl.DateTimeFormat('en-AU', {
+    timeZone: EDG_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const edgYmdToday = () => {
+    const parts = edgDateFormatter.formatToParts(new Date());
+    const out = {};
+    parts.forEach((part) => {
+      if (part.type !== 'literal') out[part.type] = part.value;
+    });
+    return `${out.year}-${out.month}-${out.day}`;
+  };
+
   const deals = Array.isArray(window.EDG_CLUB_DEALS) ? window.EDG_CLUB_DEALS : [];
   const grid = document.getElementById('club-deals');
   const empty = document.getElementById('club-empty');
@@ -8,7 +24,7 @@
   const filterButtons = [...document.querySelectorAll('[data-filter]')];
   const popularButton = document.querySelector('[data-sort="popular"]');
   const detailDialog = document.getElementById('club-detail-dialog');
-  const today = new Date().toISOString().slice(0, 10);
+  const today = edgYmdToday();
   let activeFilter = 'all';
   let userLocation = null;
   let renderLimit = 9;

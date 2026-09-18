@@ -1,4 +1,27 @@
 (() => {
+  const EDG_TIMEZONE = 'Australia/Melbourne';
+  const edgTimezoneFormatter = new Intl.DateTimeFormat('en-AU', {
+    timeZone: EDG_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+
+  const edgTimezoneParts = (date) => {
+    const pieces = edgTimezoneFormatter.formatToParts(date);
+    const out = {};
+    pieces.forEach((piece) => {
+      if (piece.type !== 'literal') out[piece.type] = piece.value;
+    });
+    return {
+      ymd: `${out.year}-${out.month}-${out.day}`,
+      minutes: (Number(out.hour) * 60) + Number(out.minute)
+    };
+  };
+
   const loadingAd = {
     title: 'Get exam-ready with Edgeducate classes',
     body: 'Small-group VCE and secondary tuition led by top-performing tutors. Book a free consultation to find your class.',
@@ -6,12 +29,13 @@
   };
 
   const isAdEligibleNow = (ad, now) => {
-    const today = now.toISOString().slice(0, 10);
+    const zonedNow = edgTimezoneParts(now);
+    const today = zonedNow.ymd;
     if (ad.startDate && today < ad.startDate) return false;
     if (ad.endDate && today > ad.endDate) return false;
 
     if (ad.startTime || ad.endTime) {
-      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const nowMinutes = zonedNow.minutes;
       const [sh, sm] = (ad.startTime || '00:00').split(':').map(Number);
       const [eh, em] = (ad.endTime || '23:59').split(':').map(Number);
       const start = sh * 60 + sm;
@@ -127,7 +151,8 @@
       cta.className = 'btn btn-cta';
       navbar.appendChild(cta);
     }
-    cta.href = '#';
-    cta.textContent = 'Book Free Consultation';
+    const hrefAttr = cta.getAttribute('href');
+    if (!hrefAttr || !hrefAttr.trim()) cta.href = '#';
+    if (!cta.textContent || !cta.textContent.trim()) cta.textContent = 'Book Free Consultation';
   });
 })();
