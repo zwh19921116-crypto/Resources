@@ -65,19 +65,20 @@ let subject = '';
 let unit = '';
 let minutes = 30;
 let type = 'all';
+let isStarting = false;
 
 const labels = {
   all: 'focused study',
-  'knowledge-sheet': 'understanding',
-  'practice-questions': 'focused practice',
-  'practice-exam': 'exam preparation'
+  'knowledge-sheet': 'learning',
+  'practice-questions': 'practice',
+  'practice-exam': 'test preparation'
 };
 
 const goalPurposes = {
   all: 'Mix resource types for a balanced study session.',
-  'knowledge-sheet': 'Build understanding with concise notes and key ideas.',
-  'practice-questions': 'Strengthen skills by working through targeted questions.',
-  'practice-exam': 'Test your readiness with exam-style tasks under time pressure.'
+  'knowledge-sheet': 'Watch a focused learning video for this topic.',
+  'practice-questions': 'Watch the learning video, then complete targeted questions.',
+  'practice-exam': 'Complete an actual exam-style test under time pressure.'
 };
 
 const formatMinutes = (value) => value < 60 ? `${value} min` : value % 60 ? `${Math.floor(value / 60)} hr ${value % 60} min` : `${value / 60} hr`;
@@ -89,7 +90,7 @@ function update() {
     return type === 'all' || resource.type === type;
   });
   const ready = Boolean(stage && subject && matches.length);
-  startButton.disabled = !ready;
+  startButton.disabled = isStarting || !ready;
   result.textContent = `${formatMinutes(minutes)} of ${labels[type]}`;
   if (goalPurpose) goalPurpose.textContent = goalPurposes[type] || '';
   if (!stage || !subject) {
@@ -105,6 +106,24 @@ function update() {
     resourceStatus.textContent = `${matches.length} resource${matches.length === 1 ? '' : 's'} ready`;
     resourceStatus.className = 'builder-resource-status is-ready';
   }
+}
+
+function setStartLoadingState() {
+  if (isStarting) return;
+  isStarting = true;
+  startButton.dataset.defaultLabel = startButton.textContent.trim();
+  startButton.textContent = 'Creating study session...';
+  startButton.classList.add('is-loading');
+  startButton.setAttribute('aria-busy', 'true');
+  startButton.disabled = true;
+}
+
+function clearStartLoadingState() {
+  if (!isStarting) return;
+  isStarting = false;
+  startButton.classList.remove('is-loading');
+  startButton.removeAttribute('aria-busy');
+  startButton.textContent = startButton.dataset.defaultLabel || 'Create productive study session';
 }
 
 stageSelect.addEventListener('change', () => {
@@ -143,16 +162,21 @@ document.querySelectorAll('#builder-goal button').forEach((button) => button.add
 
 startButton.addEventListener('click', () => {
   if (startButton.disabled) return;
+  setStartLoadingState();
   const params = new URLSearchParams({ stage, subject, minutes });
   if (type !== 'all') params.set('type', type);
   if (unit) params.set('unit', unit);
-  window.location.href = `study-session.html?${params}`;
+  window.setTimeout(() => {
+    window.location.href = `study-session.html?${params}`;
+  }, 280);
 });
 
 window.addEventListener('pageshow', () => {
+  clearStartLoadingState();
   if (stageSelect.value) stageSelect.dispatchEvent(new Event('change'));
   else update();
 });
 
-builderEl('year').textContent = new Date().getFullYear();
+const yearNode = builderEl('year');
+if (yearNode) yearNode.textContent = new Date().getFullYear();
 update();

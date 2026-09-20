@@ -192,10 +192,12 @@ function renderLoadingAd() {
 }
 
 function renderStudySession() {
-  ss('year').textContent = new Date().getFullYear();
+  const yearNode = ss('year');
+  if (yearNode) yearNode.textContent = new Date().getFullYear();
   const loadingMs = renderLoadingAd();
   const params = new URLSearchParams(location.search);
-  const type = params.get('type') || '';
+  const requestedType = params.get('type') || '';
+  const type = ({ learn: 'knowledge-sheet', practice: 'practice-questions', test: 'practice-exam' })[requestedType] || requestedType;
   const stage = params.get('stage') || '';
   const subject = params.get('subject') || '';
   const unit = params.get('unit') || '';
@@ -204,15 +206,47 @@ function renderStudySession() {
 
   const typeInfo = SS_CONFIG.types[type];
   const stageLabel = stage === 'primary' ? 'Primary School' : stage === 'secondary' ? 'Secondary' : stage === 'vce' ? 'VCE' : '';
-  const summaryParts = [formatMinutes(minutes), typeInfo ? `of ${typeInfo.label.toLowerCase()}` : null, subject ? `in ${subject}` : null, stageLabel ? `for ${stageLabel}` : null, unit ? `(${unit})` : null].filter(Boolean);
+  const goalLabel = type === 'knowledge-sheet'
+    ? 'learning videos'
+    : type === 'practice-questions'
+      ? 'video lessons and questions'
+      : type === 'practice-exam'
+        ? 'test practice'
+        : typeInfo ? typeInfo.label.toLowerCase() : null;
+  const summaryParts = [formatMinutes(minutes), goalLabel ? `of ${goalLabel}` : null, subject ? `in ${subject}` : null, stageLabel ? `for ${stageLabel}` : null, unit ? `(${unit})` : null].filter(Boolean);
   ss('session-summary').textContent = summaryParts.length ? `Your session: ${summaryParts.join(' ')}` : 'Your study session';
 
-  const byType = type ? SS_ALL.filter((r) => r.type === type) : SS_ALL.slice();
+  const byType = SS_ALL;
   const bySubject = subject ? byType.filter((r) => r.subject === subject) : byType;
   const subjectPool = subject ? bySubject : byType;
   const byStage = stage === 'vce' ? subjectPool.filter((r) => String(r.year).startsWith('VCE')) : subjectPool;
   const byUnit = unit ? byStage.filter((r) => (r.unit || r.year) === unit) : byStage;
-  const list = (level ? byUnit.filter((r) => r.level === level) : byUnit)
+  const practiceCandidates = byUnit.filter((r) => r.type === 'video' || r.type === 'practice-questions');
+  const hasPracticeLinks = practiceCandidates.some((resource) =>
+    Array.isArray(resource.relatedIds) && resource.relatedIds.some((id) =>
+      practiceCandidates.some((candidate) => candidate.id === id && candidate.type !== resource.type))
+  );
+  const linkedPractice = hasPracticeLinks
+    ? practiceCandidates.filter((resource) => practiceCandidates.some((candidate) =>
+      candidate.id !== resource.id
+      && candidate.type !== resource.type
+      && ((Array.isArray(resource.relatedIds) && resource.relatedIds.includes(candidate.id))
+        || (Array.isArray(candidate.relatedIds) && candidate.relatedIds.includes(resource.id)))
+    ))
+    : practiceCandidates;
+  const goalPool = type === 'knowledge-sheet'
+    ? byUnit.filter((r) => r.type === 'video')
+    : type === 'practice-questions'
+      ? linkedPractice
+      : type === 'practice-exam'
+        ? byUnit.filter((r) => r.type === 'practice-exam')
+        : byUnit;
+  const fallbackPool = type === 'knowledge-sheet'
+    ? byUnit.filter((r) => r.type === 'knowledge-sheet')
+    : type === 'practice-questions'
+      ? byUnit.filter((r) => r.type === 'practice-questions')
+      : goalPool;
+  const list = (level ? (goalPool.length ? goalPool : fallbackPool).filter((r) => r.level === level) : (goalPool.length ? goalPool : fallbackPool))
     .sort((a, b) => new Date(b.added) - new Date(a.added));
 
   // Reveal the matched content only once the mandatory loading screen has finished.

@@ -8,24 +8,10 @@ const searchInput = el('q');
 
 const state = { q: '', type: '', subject: '', year: '', sort: 'newest', shown: CONFIG.pageSize };
 
-el('year').textContent = new Date().getFullYear();
+const footerYearNode = el('year');
+if (footerYearNode) footerYearNode.textContent = new Date().getFullYear();
 
 /* ---------- header ---------- */
-const toggle = document.querySelector('.nav-toggle');
-const nav = el('primary-nav');
-toggle.addEventListener('click', () => {
-  const open = nav.classList.toggle('is-open');
-  toggle.setAttribute('aria-expanded', String(open));
-});
-
-document.querySelectorAll('.nav-dropdown').forEach((dropdown) => {
-  dropdown.addEventListener('mouseenter', () => {
-    dropdown.open = true;
-  });
-  dropdown.addEventListener('mouseleave', () => {
-    if (!dropdown.matches(':focus-within')) dropdown.open = false;
-  });
-});
 
 const header = document.querySelector('.site-header');
 const setHeaderState = () => header.classList.toggle('is-scrolled', window.scrollY > 24);
@@ -379,7 +365,7 @@ function renderHome() {
     a.className = `category-card category-${t.colour}`;
     a.href = `all-resources.html?type=${encodeURIComponent(key)}`;
     a.innerHTML = `
-      <span class="cat-art">${edgThumb(categoryArt[key])}</span>
+      <span class="cat-art">${window.edgThumb(categoryArt[key])}</span>
       <span class="cat-body">
         <span class="cat-title">${esc(key === 'video' ? 'Video Lessons' : t.label)}</span>
         <span class="cat-blurb">${esc(t.blurb)}</span>

@@ -6,6 +6,11 @@
     month: '2-digit',
     day: '2-digit'
   });
+  const edgDisplayDateFormatter = new Intl.DateTimeFormat('en-AU', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
   const edgYmdToday = () => {
     const parts = edgDateFormatter.formatToParts(new Date());
     const out = {};
@@ -30,14 +35,8 @@
   let renderLimit = 9;
   let loadObserver = null;
 
-  document.getElementById('year').textContent = new Date().getFullYear();
-  const navToggle = document.querySelector('.nav-toggle');
-  const nav = document.getElementById('primary-nav');
-  navToggle.addEventListener('click', () => {
-    const expanded = navToggle.getAttribute('aria-expanded') === 'true';
-    navToggle.setAttribute('aria-expanded', String(!expanded));
-    nav.classList.toggle('is-open', !expanded);
-  });
+  const yearNode = document.getElementById('year');
+  if (yearNode) yearNode.textContent = new Date().getFullYear();
 
   const escapeHtml = (value) => String(value || '').replace(/[&<>'"]/g, (character) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
@@ -95,6 +94,7 @@
     const distance = userLocation && hasCoordinates(deal) ? `<p class="club-distance">${distanceInKm(userLocation.latitude, userLocation.longitude, Number(deal.latitude), Number(deal.longitude)).toFixed(1)} km away</p>` : '';
     const inferredHighlight = /^free\b/i.test(deal.title) ? 'FREE' : (deal.title.match(/^\d+%/) || [])[0] ? `${(deal.title.match(/^\d+/) || [])[0]}% OFF` : 'CLUB DEAL';
     const highlight = `<span class="club-offer-highlight">${escapeHtml(deal.highlight || inferredHighlight)}</span>`;
+    const secondaryTags = sample ? `<span class="club-secondary-tags">${sample}</span>` : '';
     const marker = escapeHtml((deal.partner || 'E').trim().slice(0, 1).toUpperCase());
     const category = deal.category || (deal.birthday ? 'Birthday' : sampleCategories[index % sampleCategories.length]);
     const dealKind = deal.badge || (deal.birthday ? 'Birthday perk' : isInStore(deal) ? 'In-store' : 'Online');
@@ -105,13 +105,13 @@
     return `<article class="club-deal club-deal--${index % 5}" data-tone="${tone}" data-deal-id="${escapeHtml(deal.id)}" tabindex="0">
       ${popularSash}
       <div class="club-deal-banner"><span class="club-kind">${escapeHtml(dealKind)}</span><span class="club-deal-marker">${marker}</span></div>
-      <div class="club-deal-content"><div class="club-deal-top"><span class="club-deal-tags">${highlight}${sample}</span></div>
+      <div class="club-deal-content"><div class="club-deal-top"><span class="club-deal-tags"><span class="club-main-tag">${highlight}</span>${secondaryTags}</span></div>
       <h2>${escapeHtml(deal.title)}</h2>
       <p class="club-partner">${escapeHtml(deal.partner || 'Edgeducate Club')}</p>
       <p class="club-tile-place">${escapeHtml(place)}</p>
       <p class="club-description">${escapeHtml(deal.description)}</p>
       ${distance}
-      <div class="club-deal-foot">${expiry}<span class="club-tile-label">${deal.birthday ? 'Birthday treat' : 'Club offer'}</span><button class="club-view-deal" type="button" data-open="${escapeHtml(deal.id)}">View deal</button></div>${disclaimer}</div>
+      <div class="club-deal-foot">${expiry}<span class="club-tile-label">${deal.birthday ? 'Birthday treat' : 'Club offer'}</span></div>${disclaimer}</div>
       <div class="club-card-image"><img src="${escapeHtml(image)}" alt="" loading="lazy" /></div>
     </article>`;
     }).join('');
@@ -216,10 +216,10 @@
     document.getElementById('club-detail-highlight').textContent = deal.highlight || inferredHighlight;
     document.getElementById('club-detail-title').textContent = deal.title;
     document.getElementById('club-detail-description').textContent = deal.description || '';
-    const formatDate = (value) => new Date(`${value}T00:00:00`).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+    const formatDate = (value) => edgDisplayDateFormatter.format(new Date(`${value}T00:00:00`));
     document.getElementById('club-detail-location').textContent = deal.locationName || (locationLink ? 'Location details available' : 'Online offer');
     document.getElementById('club-detail-address').textContent = deal.address || (locationLink ? 'Open location for directions' : deal.birthday ? 'Online only' : 'Not applicable');
-    document.getElementById('club-detail-validity').textContent = deal.starts && deal.expires ? `${formatDate(deal.starts)} to ${formatDate(deal.expires)}` : deal.expires ? `Until ${formatDate(deal.expires)}` : deal.starts ? `From ${formatDate(deal.starts)}` : 'Available for a limited time';
+    document.getElementById('club-detail-validity').textContent = deal.starts && deal.expires ? `${formatDate(deal.starts)} to ${formatDate(deal.expires)}` : deal.expires ? `${formatDate(deal.expires)}` : deal.starts ? `From ${formatDate(deal.starts)}` : 'Available for a limited time';
     const disclaimer = document.getElementById('club-detail-disclaimer');
     disclaimer.textContent = deal.disclaimer || '';
     disclaimer.hidden = !deal.disclaimer;

@@ -401,6 +401,24 @@ async function gitSync(message) {
   return { ok: true, log: `${commit.output}\n${push.output}`.trim() };
 }
 
+async function gitPullData() {
+  const mainPull = await runGit(['pull', 'origin', 'main']);
+  if (mainPull.ok) return mainPull;
+
+  const upstreamPull = await runGit(['pull']);
+  if (upstreamPull.ok) {
+    return {
+      ok: true,
+      output: `Pull from origin/main failed, pulled current upstream instead.\n\norigin/main:\n${mainPull.output || mainPull.error}\n\nupstream:\n${upstreamPull.output || upstreamPull.error}`
+    };
+  }
+
+  return {
+    ok: false,
+    output: `git pull origin main failed:\n${mainPull.output || mainPull.error}\n\nFallback git pull also failed:\n${upstreamPull.output || upstreamPull.error}`
+  };
+}
+
 function createWindow(startFile) {
   win = new BrowserWindow({
     width: 1400,
@@ -454,12 +472,12 @@ ipcMain.handle('auth:unlock', () => {
 });
 ipcMain.handle('auth:pullBeforeUnlock', async () => {
   if (!fs.existsSync(path.join(PROJECT_ROOT, '.git'))) return { ok: true, log: 'Not a git checkout — nothing to pull.' };
-  return runGit(['pull']);
+  return gitPullData();
 });
 ipcMain.handle('git:sync', (event, message) => gitSync(message));
-ipcMain.handle('git:pull', () => runGit(['pull']));
+ipcMain.handle('git:pull', () => gitPullData());
 ipcMain.handle('project:connect', () => {
-  const required = ['data/resources.js', 'data/ads.js', 'data/club-deals.js'];
+  const required = ['data/resources.js', 'data/ads.js', 'data/club-deals.js', 'data/packages.js'];
   const missing = required.filter((file) => !fs.existsSync(projectFilePath(file)));
   return { ok: missing.length === 0, missing };
 });

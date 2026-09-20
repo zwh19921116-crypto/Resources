@@ -134,7 +134,7 @@
                 </div>
                 <span class="session-preview-label">My goal is to</span>
                 <div class="session-preview-goals">
-                  <button type="button" class="is-active" data-preview-type="all">All</button><button type="button" data-preview-type="knowledge-sheet">Understand</button><button type="button" data-preview-type="practice-questions">Practise</button><button type="button" data-preview-type="practice-exam">Test myself</button>
+                  <button type="button" class="is-active" data-preview-type="all">All</button><button type="button" data-preview-type="knowledge-sheet">Learn</button><button type="button" data-preview-type="practice-questions">Practise</button><button type="button" data-preview-type="practice-exam">Test myself</button>
                 </div>
                 <div class="session-preview-footer">
                   <button type="button" class="session-preview-cta" data-preview-start>Create study session <em>→</em></button>
@@ -217,7 +217,7 @@
         <select class="time-select" id="builder-time" aria-label="Available study time"><option value="30" selected>30 min</option><option value="60">1 hr</option><option value="90">1 hr 30 min</option><option value="120">2 hr</option></select>
         <p class="session-label">My goal is to</p>
         <div class="session-options session-goals" id="builder-goal" role="group" aria-label="Study goal">
-          <button type="button" data-type="knowledge-sheet">Understand</button><button type="button" data-type="practice-questions">Practise</button><button type="button" data-type="practice-exam">Test myself</button><button type="button" data-type="all" class="is-on">All</button>
+          <button type="button" data-type="knowledge-sheet">Learn</button><button type="button" data-type="practice-questions">Practise</button><button type="button" data-type="practice-exam">Test myself</button><button type="button" data-type="all" class="is-on">All</button>
         </div>
         <p class="builder-goal-purpose" id="builder-goal-purpose" aria-live="polite">Mix resource types for a balanced study session.</p>
         <div class="session-result"><span>YOUR SESSION</span><strong id="builder-result">30 min of focused study</strong><em id="builder-detail"></em></div>
@@ -471,44 +471,37 @@
 
 <footer class="site-footer">
   <div class="container footer-grid">
-    <div class="footer-social">
-      <span class="brand-name light"><strong>Edge</strong>ducate</span>
-      <p>Leading Edge in Education</p>
-      <div class="social-links" aria-label="Social media">
-        <a href="https://www.facebook.com/" aria-label="Facebook" target="_blank" rel="noopener">f</a>
-        <a href="https://www.instagram.com/" aria-label="Instagram" target="_blank" rel="noopener">◎</a>
-        <a href="https://www.linkedin.com/" aria-label="LinkedIn" target="_blank" rel="noopener">in</a>
-        <a href="https://www.youtube.com/" aria-label="YouTube" target="_blank" rel="noopener">▶</a>
-      </div>
-    </div>
     <nav class="footer-column" aria-label="Site links">
       <h2>Links</h2>
       <a href="https://edgeducate.com.au/">Home</a>
-      <a href="#categories">Categories</a>
+      <a href="#">VCE Preparation</a>
       <a href="resources.html">Resources</a>
-      <a href="#exam-tips">Exam preparation</a>
+      <a href="#">Blogs</a>
+      <a href="#">FAQ</a>
+      <a href="#">Contact Us</a>
     </nav>
     <nav class="footer-column" aria-label="Resource links">
       <h2>Resources</h2>
-      <a href="all-resources.html?type=interactive-app">Interactive learning</a>
-      <a href="all-resources.html?type=knowledge-sheet">Knowledge sheets</a>
-      <a href="all-resources.html?type=practice-questions">Practice questions</a>
-      <a href="all-resources.html?type=practice-exam">Practice exams</a>
-      <a href="all-resources.html?type=video">Videos</a>
+      <a href="all-resources.html?type=interactive-app">Interactive Learning</a>
+      <a href="all-resources.html?type=knowledge-sheet">VCE Study Tools</a>
+      <a href="all-resources.html?type=practice-questions">VCE Practice Questions</a>
+      <a href="all-resources.html?type=practice-exam">VCE Practice Exams</a>
     </nav>
     <nav class="footer-column" aria-label="Subject links">
       <h2>Subjects</h2>
-      <a href="all-resources.html?q=Biology">Biology</a>
-      <a href="all-resources.html?q=Chemistry">Chemistry</a>
-      <a href="all-resources.html?q=Maths">Mathematics</a>
-      <a href="all-resources.html?q=Physics">Physics</a>
-      <a href="all-resources.html?q=English">English</a>
+      <a href="all-resources.html?q=VCE+Biology">VCE Biology</a>
+      <a href="all-resources.html?q=VCE+Chemistry">VCE Chemistry</a>
+      <a href="all-resources.html?q=VCE+Further+Mathematics">VCE Further Mathematics</a>
+      <a href="all-resources.html?q=VCE+Mathematical+Methods">VCE Mathematical Methods</a>
+      <a href="all-resources.html?q=VCE+Physics">VCE Physics</a>
     </nav>
-    <div class="footer-column footer-about">
-      <h2>About</h2>
-      <p>A practical library for students to find, use and revisit quality learning resources.</p>
-      <p class="copyright">&copy; <span id="year"></span> Edgeducate</p>
-    </div>
+    <nav class="footer-column" aria-label="Legal links">
+      <h2>Legal</h2>
+      <a href="#">Terms and Conditions</a>
+      <a href="#">Payment and Refund</a>
+      <a href="#">Privacy Policy</a>
+      <a href="#">Child Safety</a>
+    </nav>
   </div>
 </footer>
 
@@ -518,7 +511,7 @@
 <script src="data/quotes.js"></script>
 <script src="art.js?v=20260914"></script>
 <script src="study-builder.js?v=20260916builder"></script>
-<script src="script.js?v=20260916study-preview-2"></script>
+<script src="script.js?v=20260920homefix-2"></script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",

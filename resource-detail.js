@@ -21,8 +21,18 @@ function buildRelatedCard(resource) {
   return `<article class="resource-card"><a class="thumb" href="${url}"><span class="badge badge-${type.colour}">${escapeHtml(type.label)}</span>${window.edgThumb(resource.art, resource.image)}</a><a class="card-link" href="${url}"><h3>${escapeHtml(resource.title)}</h3><p class="meta">${escapeHtml(resource.year || '')}</p></a></article>`;
 }
 
+function relatedResourcesFor(resource) {
+  const explicitIds = Array.isArray(resource.relatedIds) ? resource.relatedIds : [];
+  const explicitlyLinked = DETAIL_ALL.filter((item) => item.id !== resource.id
+    && (explicitIds.includes(item.id) || (Array.isArray(item.relatedIds) && item.relatedIds.includes(resource.id))));
+  if (Array.isArray(resource.relatedIds)) return explicitlyLinked.slice(0, 6);
+  return DETAIL_ALL.filter((item) => item.id !== resource.id
+    && (item.subject === resource.subject || item.type === resource.type)).slice(0, 3);
+}
+
 function renderResourceDetail() {
-  detailElement('year').textContent = new Date().getFullYear();
+  const yearNode = detailElement('year');
+  if (yearNode) yearNode.textContent = new Date().getFullYear();
   const id = document.body.dataset.resourceId || new URLSearchParams(location.search).get('id');
   const resource = DETAIL_ALL.find((item) => item.id === id);
   if (!resource) {
@@ -50,10 +60,17 @@ function renderResourceDetail() {
   detailElement('resource-open').removeAttribute('rel');
   detailElement('resource-open').textContent = youtubeVideoId(resource.url) ? 'Watch on YouTube' : 'Open resource';
 
+  const solutions = detailElement('resource-solutions');
+  if (solutions) {
+    solutions.hidden = !resource.solutions;
+    if (resource.solutions) solutions.href = resource.solutions;
+    solutions.innerHTML = 'View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>';
+  }
+
   const metadata = [['Subject', resource.subject], ['Year level', resource.year], ['Difficulty', resource.level], ['Details', resource.details]].filter(([, value]) => value);
   detailElement('resource-meta').innerHTML = metadata.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
 
-  const related = DETAIL_ALL.filter((item) => item.id !== resource.id && (item.subject === resource.subject || item.type === resource.type)).slice(0, 3);
+  const related = relatedResourcesFor(resource);
   detailElement('related-grid').innerHTML = related.map(buildRelatedCard).join('');
 
   const schema = document.createElement('script');

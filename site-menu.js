@@ -133,16 +133,35 @@
       navbar.insertBefore(toggle, nav);
     }
 
-    toggle.addEventListener('click', () => {
-      const open = nav.classList.toggle('is-open');
-      toggle.setAttribute('aria-expanded', String(open));
-    });
+    if (!toggle.dataset.menuBound) {
+      toggle.addEventListener('click', () => {
+        const detailDialog = document.getElementById('club-detail-dialog');
+        if (detailDialog && detailDialog.open) detailDialog.close();
+        const open = nav.classList.toggle('is-open');
+        toggle.setAttribute('aria-expanded', String(open));
+        document.body.classList.toggle('nav-open', open);
+        if (!open) {
+          nav.querySelectorAll('.nav-dropdown[open]').forEach((dropdown) => { dropdown.open = false; });
+        }
+      });
+      toggle.dataset.menuBound = '1';
+    }
 
     nav.querySelectorAll('.nav-dropdown').forEach((dropdown) => {
-      dropdown.addEventListener('mouseenter', () => { dropdown.open = true; });
-      dropdown.addEventListener('mouseleave', () => {
-        if (!dropdown.matches(':focus-within')) dropdown.open = false;
-      });
+      const summary = dropdown.querySelector('summary');
+
+      if (summary && !summary.dataset.mobileAccordionBound) {
+        summary.addEventListener('click', (event) => {
+          if (!window.matchMedia('(max-width: 1100px)').matches) return;
+          event.preventDefault();
+          const willOpen = !dropdown.open;
+          nav.querySelectorAll('.nav-dropdown[open]').forEach((item) => {
+            if (item !== dropdown) item.open = false;
+          });
+          dropdown.open = willOpen;
+        });
+        summary.dataset.mobileAccordionBound = '1';
+      }
     });
 
     let cta = navbar.querySelector('.btn-cta');
@@ -151,8 +170,7 @@
       cta.className = 'btn btn-cta';
       navbar.appendChild(cta);
     }
-    const hrefAttr = cta.getAttribute('href');
-    if (!hrefAttr || !hrefAttr.trim()) cta.href = '#';
-    if (!cta.textContent || !cta.textContent.trim()) cta.textContent = 'Book Free Consultation';
+    cta.href = '#';
+    cta.textContent = 'Book Free Consultation';
   });
 })();
