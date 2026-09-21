@@ -38,7 +38,7 @@ window.EDG_RESOURCES = [
     art: 'exam',
     image: '',
     tags: ['moles', 'stoichiometry'],
-    relatedIds: ['algebra-balance-lab-app'],
+    relatedIds: [],
     url: 'https://example.com/resources/chemistry-mole-concepts-qs',
     solutions: '',
     added: '2026-09-20',
@@ -603,5 +603,215 @@ window.EDG_RESOURCES = [
     solutions: '',
     added: '2026-09-09',
     status: 'published'
+  },
+  {
+    id: 'fractions-decimals-qs',
+    title: 'Fractions and Decimals Practice',
+    type: 'practice-questions',
+    stage: 'secondary', unit: '', subject: 'Maths', year: 'Year 7', level: 'Easy',
+    desc: 'Convert, compare and calculate with fractions and decimals.', details: '20 questions', art: 'maths', image: '', tags: ['fractions', 'decimals'], relatedIds: [], url: 'https://example.com/resources/fractions-decimals-qs', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'linear-graphs-qs',
+    title: 'Linear Graphs Skills Questions',
+    type: 'practice-questions',
+    stage: 'secondary', unit: '', subject: 'Maths', year: 'Year 9', level: 'Medium',
+    desc: 'Read, plot and interpret straight-line graphs.', details: '18 questions', art: 'maths', image: '', tags: ['graphs', 'linear'], relatedIds: [], url: 'https://example.com/resources/linear-graphs-qs', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'chemical-reactions-qs',
+    title: 'Chemical Reactions Practice Questions',
+    type: 'practice-questions',
+    stage: 'secondary', unit: '', subject: 'Chemistry', year: 'Year 9', level: 'Medium',
+    desc: 'Identify reaction types and interpret chemical changes.', details: '20 questions', art: 'exam', image: '', tags: ['reactions', 'chemistry'], relatedIds: [], url: 'https://example.com/resources/chemical-reactions-qs', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'ecosystems-qs',
+    title: 'Ecosystems and Food Webs Questions',
+    type: 'practice-questions',
+    stage: 'secondary', unit: '', subject: 'Biology', year: 'Year 8', level: 'Easy',
+    desc: 'Apply food chains, food webs and population concepts.', details: '16 questions', art: 'leaf', image: '', tags: ['ecosystems', 'food webs'], relatedIds: [], url: 'https://example.com/resources/ecosystems-qs', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'essay-structure-qs',
+    title: 'Essay Structure Practice Set',
+    type: 'practice-questions',
+    stage: 'secondary', unit: '', subject: 'English', year: 'Year 9', level: 'Medium',
+    desc: 'Practise building clear paragraphs and evidence-based responses.', details: '12 questions', art: 'checklist', image: '', tags: ['essay', 'paragraphs'], relatedIds: [], url: 'https://example.com/resources/essay-structure-qs', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'year7-maths-practice-exam-2',
+    title: 'Year 7 Mathematics Practice Exam 2',
+    type: 'practice-exam',
+    stage: 'secondary', unit: '', subject: 'Maths', year: 'Year 7', level: 'Easy',
+    desc: 'Mixed-topic Year 7 assessment practice.', details: '45 marks', art: 'exam', image: '', tags: ['maths', 'exam'], relatedIds: [], url: 'https://example.com/resources/year7-maths-practice-exam-2', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'year8-science-practice-exam-2',
+    title: 'Year 8 Science Practice Exam 2',
+    type: 'practice-exam',
+    stage: 'secondary', unit: '', subject: 'General', year: 'Year 8', level: 'Medium',
+    desc: 'Science assessment covering key Year 8 concepts.', details: '45 questions', art: 'exam', image: '', tags: ['science', 'exam'], relatedIds: [], url: 'https://example.com/resources/year8-science-practice-exam-2', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'year9-chemistry-practice-exam-2',
+    title: 'Year 9 Chemistry Practice Exam 2',
+    type: 'practice-exam',
+    stage: 'secondary', unit: '', subject: 'Chemistry', year: 'Year 9', level: 'Medium',
+    desc: 'Reactions, particles and materials in exam format.', details: '50 marks', art: 'exam', image: '', tags: ['chemistry', 'exam'], relatedIds: [], url: 'https://example.com/resources/year9-chemistry-practice-exam-2', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'year10-english-practice-exam-2',
+    title: 'Year 10 English Practice Exam 2',
+    type: 'practice-exam',
+    stage: 'secondary', unit: '', subject: 'English', year: 'Year 10', level: 'Hard',
+    desc: 'Reading analysis and extended writing exam practice.', details: '90 minutes', art: 'exam', image: '', tags: ['english', 'exam'], relatedIds: [], url: 'https://example.com/resources/year10-english-practice-exam-2', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'vce-physics-practice-exam-u12',
+    title: 'VCE Physics Practice Exam Units 1&2',
+    type: 'practice-exam',
+    stage: 'vce', unit: 'VCE Units 1&2', subject: 'Physics', year: 'VCE Units 1&2', level: 'Hard',
+    desc: 'VCE Physics Units 1&2 exam-style questions.', details: '2 papers', art: 'exam', image: '', tags: ['vce', 'physics', 'exam'], relatedIds: [], url: 'https://example.com/resources/vce-physics-practice-exam-u12', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'year7-science-checklist',
+    title: 'Year 7 Science Learning Checklist',
+    type: 'checklist',
+    stage: 'secondary', unit: '', subject: 'General', year: 'Year 7', level: 'Reference',
+    desc: 'Track core science knowledge and practical skills.', details: 'Term checklist', art: 'checklist', image: '', tags: ['science', 'planning'], relatedIds: [], url: 'https://example.com/resources/year7-science-checklist', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'year8-maths-checklist',
+    title: 'Year 8 Maths Revision Checklist',
+    type: 'checklist',
+    stage: 'secondary', unit: '', subject: 'Maths', year: 'Year 8', level: 'Reference',
+    desc: 'Plan revision across the main Year 8 Maths topics.', details: 'Topic checklist', art: 'checklist', image: '', tags: ['maths', 'revision'], relatedIds: [], url: 'https://example.com/resources/year8-maths-checklist', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'year9-english-checklist',
+    title: 'Year 9 English Skills Checklist',
+    type: 'checklist',
+    stage: 'secondary', unit: '', subject: 'English', year: 'Year 9', level: 'Reference',
+    desc: 'Review reading, writing and language skills for Year 9.', details: 'Skills checklist', art: 'checklist', image: '', tags: ['english', 'skills'], relatedIds: [], url: 'https://example.com/resources/year9-english-checklist', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'year10-chemistry-checklist',
+    title: 'Year 10 Chemistry Revision Checklist',
+    type: 'checklist',
+    stage: 'secondary', unit: '', subject: 'Chemistry', year: 'Year 10', level: 'Reference',
+    desc: 'Track Year 10 Chemistry concepts and practical skills.', details: 'Topic checklist', art: 'checklist', image: '', tags: ['chemistry', 'revision'], relatedIds: [], url: 'https://example.com/resources/year10-chemistry-checklist', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'vce-maths-checklist-u12',
+    title: 'VCE Maths Units 1&2 Checklist',
+    type: 'checklist',
+    stage: 'vce', unit: 'VCE Units 1&2', subject: 'Maths', year: 'VCE Units 1&2', level: 'Reference',
+    desc: 'Track VCE Maths Units 1&2 knowledge and skills.', details: 'Units 1 & 2', art: 'checklist', image: '', tags: ['vce', 'maths', 'revision'], relatedIds: [], url: 'https://example.com/resources/vce-maths-checklist-u12', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'cell-division-knowledge-sheet',
+    title: 'Cell Division Knowledge Sheet',
+    type: 'knowledge-sheet',
+    stage: 'secondary', unit: '', subject: 'Biology', year: 'Year 9', level: 'Reference',
+    desc: 'Summarise mitosis, meiosis and chromosome behaviour.', details: '2 pages', art: 'leaf', image: '', tags: ['cells', 'mitosis'], relatedIds: [], url: 'https://example.com/resources/cell-division-knowledge-sheet', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'probability-knowledge-sheet',
+    title: 'Probability Quick Reference Sheet',
+    type: 'knowledge-sheet',
+    stage: 'secondary', unit: '', subject: 'Maths', year: 'Year 9', level: 'Reference',
+    desc: 'Review probability rules, tables and tree diagrams.', details: '2 pages', art: 'maths', image: '', tags: ['probability', 'maths'], relatedIds: [], url: 'https://example.com/resources/probability-knowledge-sheet', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'forces-knowledge-sheet',
+    title: 'Forces and Motion Knowledge Sheet',
+    type: 'knowledge-sheet',
+    stage: 'secondary', unit: '', subject: 'Physics', year: 'Year 9', level: 'Reference',
+    desc: 'Summarise force, mass, acceleration and motion.', details: '2 pages', art: 'space', image: '', tags: ['forces', 'motion'], relatedIds: [], url: 'https://example.com/resources/forces-knowledge-sheet', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'organic-chemistry-knowledge-sheet',
+    title: 'Organic Chemistry Foundations Sheet',
+    type: 'knowledge-sheet',
+    stage: 'vce', unit: 'VCE Units 1&2', subject: 'Chemistry', year: 'VCE Units 1&2', level: 'Reference',
+    desc: 'Reference common organic structures, groups and reactions.', details: '3 pages', art: 'leaf', image: '', tags: ['organic', 'chemistry'], relatedIds: [], url: 'https://example.com/resources/organic-chemistry-knowledge-sheet', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'argument-techniques-knowledge-sheet',
+    title: 'Argument Techniques Knowledge Sheet',
+    type: 'knowledge-sheet',
+    stage: 'secondary', unit: '', subject: 'English', year: 'Year 10', level: 'Reference',
+    desc: 'Identify persuasive techniques and explain their effects.', details: '2 pages', art: 'checklist', image: '', tags: ['persuasive', 'english'], relatedIds: [], url: 'https://example.com/resources/argument-techniques-knowledge-sheet', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'fraction-wall-app',
+    title: 'Fraction Wall Explorer',
+    type: 'interactive-app',
+    stage: 'secondary', unit: '', subject: 'Maths', year: 'Year 7', level: 'Fun',
+    desc: 'Explore equivalent fractions with an interactive fraction wall.', details: 'Interactive', art: 'maths', image: '', tags: ['fractions', 'interactive'], relatedIds: [], url: 'https://example.com/resources/fraction-wall-app', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'ecosystem-builder-app',
+    title: 'Ecosystem Builder',
+    type: 'interactive-app',
+    stage: 'secondary', unit: '', subject: 'Biology', year: 'Year 8', level: 'Fun',
+    desc: 'Build a food web and observe how populations change.', details: 'Interactive', art: 'leaf', image: '', tags: ['ecosystems', 'interactive'], relatedIds: [], url: 'https://example.com/resources/ecosystem-builder-app', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'molecule-builder-app',
+    title: 'Molecule Builder',
+    type: 'interactive-app',
+    stage: 'secondary', unit: '', subject: 'Chemistry', year: 'Year 9', level: 'Fun',
+    desc: 'Construct simple molecules and inspect their structures.', details: 'Interactive', art: 'leaf', image: '', tags: ['molecules', 'interactive'], relatedIds: [], url: 'https://example.com/resources/molecule-builder-app', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'circuit-builder-app',
+    title: 'Circuit Builder',
+    type: 'interactive-app',
+    stage: 'secondary', unit: '', subject: 'Physics', year: 'Year 9', level: 'Medium',
+    desc: 'Build simple circuits and test current and voltage changes.', details: 'Interactive', art: 'space', image: '', tags: ['circuits', 'interactive'], relatedIds: [], url: 'https://example.com/resources/circuit-builder-app', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'sentence-builder-app',
+    title: 'Sentence Builder',
+    type: 'interactive-app',
+    stage: 'secondary', unit: '', subject: 'English', year: 'Year 8', level: 'Fun',
+    desc: 'Arrange clauses and phrases to practise sentence control.', details: 'Interactive', art: 'checklist', image: '', tags: ['grammar', 'sentences'], relatedIds: [], url: 'https://example.com/resources/sentence-builder-app', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'photosynthesis-video',
+    title: 'Photosynthesis Step by Step',
+    type: 'video',
+    stage: 'secondary', unit: '', subject: 'Biology', year: 'Year 8', level: 'Easy',
+    desc: 'Follow the inputs, outputs and stages of photosynthesis.', details: '9 min', art: 'video', image: '', tags: ['photosynthesis', 'biology'], relatedIds: [], url: 'https://www.youtube.com/watch?v=photosynthesis01', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'fractions-video',
+    title: 'Understanding Fractions',
+    type: 'video',
+    stage: 'secondary', unit: '', subject: 'Maths', year: 'Year 7', level: 'Easy',
+    desc: 'Build a visual understanding of fractions and equivalence.', details: '7 min', art: 'video', image: '', tags: ['fractions', 'maths'], relatedIds: [], url: 'https://www.youtube.com/watch?v=fractions01', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'atoms-and-elements-video',
+    title: 'Atoms and Elements Explained',
+    type: 'video',
+    stage: 'secondary', unit: '', subject: 'Chemistry', year: 'Year 8', level: 'Easy',
+    desc: 'Understand atoms, elements and the periodic table basics.', details: '8 min', art: 'video', image: '', tags: ['atoms', 'elements'], relatedIds: [], url: 'https://www.youtube.com/watch?v=atoms-elements01', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'energy-transfers-video',
+    title: 'Energy Transfers and Efficiency',
+    type: 'video',
+    stage: 'secondary', unit: '', subject: 'Physics', year: 'Year 9', level: 'Medium',
+    desc: 'Trace energy transfers and calculate simple efficiency.', details: '11 min', art: 'video', image: '', tags: ['energy', 'physics'], relatedIds: [], url: 'https://www.youtube.com/watch?v=energy-transfers01', solutions: '', added: '2026-09-21', status: 'published'
+  },
+  {
+    id: 'close-reading-video',
+    title: 'Close Reading Techniques',
+    type: 'video',
+    stage: 'secondary', unit: '', subject: 'English', year: 'Year 10', level: 'Medium',
+    desc: 'Use evidence and language analysis to strengthen close reading.', details: '10 min', art: 'video', image: '', tags: ['close reading', 'english'], relatedIds: [], url: 'https://www.youtube.com/watch?v=close-reading01', solutions: '', added: '2026-09-21', status: 'published'
   }
 ];
