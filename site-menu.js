@@ -164,13 +164,5 @@
       }
     });
 
-    let cta = navbar.querySelector('.btn-cta');
-    if (!cta) {
-      cta = document.createElement('a');
-      cta.className = 'btn btn-cta';
-      navbar.appendChild(cta);
-    }
-    cta.href = '#';
-    cta.textContent = 'Book Free Consultation';
   });
 })();
