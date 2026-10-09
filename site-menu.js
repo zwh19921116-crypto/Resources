@@ -92,8 +92,8 @@
         <h2>Links</h2>
         <a href="https://edgeducate.com.au/">Home</a>
         <a href="https://edgeducate.com.au/pricing">Pricing</a>
-        <a href="https://edgeducate.com.au/vce-preparation-program">VCE Preparation</a>
-        <a href="https://edgeducate.com.au/faq">FAQ</a>
+        <a href="https://edgeducate.com.au/vce-preparation">VCE Preparation</a>
+        <a href="https://edgeducate.com.au/FAQ">FAQ</a>
         <a href="https://edgeducate.com.au/contact-us">Contact Us</a>
       </nav>
       <nav class="footer-column" aria-label="Resource links">
@@ -102,24 +102,24 @@
         <a href="${prefix}all-resources.html?type=video">Videos</a>
         <a href="${prefix}all-resources.html?type=practice-questions">Practice Questions</a>
         <a href="${prefix}all-resources.html?type=practice-exam">Practice Exams</a>
-        <a href="${prefix}all-resources.html?type=knowledge-sheet">Knowledge Sheets</a>
+        <a href="${prefix}all-resources.html?type=knowledge-sheet">Knowledge Sheet</a>
         <a href="${prefix}all-resources.html?q=Formula+Sheets">Formula Sheets</a>
       </nav>
       <nav class="footer-column" aria-label="Subject links">
         <h2>Subjects</h2>
-        <a href="${prefix}all-resources.html?q=VCE+Biology">VCE Biology</a>
-        <a href="${prefix}all-resources.html?q=VCE+Chemistry">VCE Chemistry</a>
-        <a href="${prefix}all-resources.html?q=VCE+General+Mathematics">VCE General Mathematics</a>
-        <a href="${prefix}all-resources.html?q=VCE+Mathematical+Methods">VCE Mathematical Methods</a>
-        <a href="${prefix}all-resources.html?q=VCE+Physics">VCE Physics</a>
+        <a href="https://edgeducate.com.au/vce-biology">VCE Biology</a>
+        <a href="https://edgeducate.com.au/vce-chemistry">VCE Chemistry</a>
+        <a href="https://edgeducate.com.au/vce-general-mathematics">VCE General Mathematics</a>
+        <a href="https://edgeducate.com.au/vce-mathematical-methods">VCE Mathematical Methods</a>
+        <a href="https://edgeducate.com.au/vce-physics">VCE Physics</a>
       </nav>
       <nav class="footer-column" aria-label="Legal links">
         <h2>Legal</h2>
-        <a href="#">Code of Conduct</a>
-        <a href="#">Terms and Conditions</a>
-        <a href="#">Payment and Refund</a>
-        <a href="#">Privacy Policy</a>
-        <a href="#">Child Safety</a>
+        <a href="https://edgeducate.com.au/code-of-conduct">Code of Conduct</a>
+        <a href="https://edgeducate.com.au/terms-and-conditions">Terms and Conditions</a>
+        <a href="https://edgeducate.com.au/payment-and-refund-policy">Payment and Refund</a>
+        <a href="https://edgeducate.com.au/privacy-policy">Privacy Policy</a>
+        <a href="https://edgeducate.com.au/child-safety-statement">Child Safety</a>
       </nav>
     </div>`;
 
