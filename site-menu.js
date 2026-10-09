@@ -86,6 +86,47 @@
   });
 
   const prefix = location.pathname.includes('/resource-pages/') ? '../../' : '';
+  const footerMarkup = `
+    <div class="container footer-grid">
+      <nav class="footer-column" aria-label="Site links">
+        <h2>Links</h2>
+        <a href="https://edgeducate.com.au/">Home</a>
+        <a href="https://edgeducate.com.au/pricing">Pricing</a>
+        <a href="https://edgeducate.com.au/vce-preparation-program">VCE Preparation</a>
+        <a href="https://edgeducate.com.au/faq">FAQ</a>
+        <a href="https://edgeducate.com.au/contact-us">Contact Us</a>
+      </nav>
+      <nav class="footer-column" aria-label="Resource links">
+        <h2>Resources</h2>
+        <a href="${prefix}all-resources.html?type=interactive-app">Interactive Learning</a>
+        <a href="${prefix}all-resources.html?type=video">Videos</a>
+        <a href="${prefix}all-resources.html?type=practice-questions">Practice Questions</a>
+        <a href="${prefix}all-resources.html?type=practice-exam">Practice Exams</a>
+        <a href="${prefix}all-resources.html?type=knowledge-sheet">Knowledge Sheets</a>
+        <a href="${prefix}all-resources.html?q=Formula+Sheets">Formula Sheets</a>
+      </nav>
+      <nav class="footer-column" aria-label="Subject links">
+        <h2>Subjects</h2>
+        <a href="${prefix}all-resources.html?q=VCE+Biology">VCE Biology</a>
+        <a href="${prefix}all-resources.html?q=VCE+Chemistry">VCE Chemistry</a>
+        <a href="${prefix}all-resources.html?q=VCE+General+Mathematics">VCE General Mathematics</a>
+        <a href="${prefix}all-resources.html?q=VCE+Mathematical+Methods">VCE Mathematical Methods</a>
+        <a href="${prefix}all-resources.html?q=VCE+Physics">VCE Physics</a>
+      </nav>
+      <nav class="footer-column" aria-label="Legal links">
+        <h2>Legal</h2>
+        <a href="#">Code of Conduct</a>
+        <a href="#">Terms and Conditions</a>
+        <a href="#">Payment and Refund</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Child Safety</a>
+      </nav>
+    </div>`;
+
+  document.querySelectorAll('.site-footer').forEach((footer) => {
+    footer.innerHTML = footerMarkup;
+  });
+
   const menuMarkup = `
     <a href="https://edgeducate.com.au/pricing">Pricing</a>
     <details class="nav-dropdown">
