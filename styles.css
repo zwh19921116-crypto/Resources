@@ -98,11 +98,24 @@ button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
 .nav-dropdown summary{display:flex;align-items:center;height:100%;color:var(--navy);cursor:pointer;list-style:none;margin:-.7rem 0;padding:.7rem 1rem;text-transform:uppercase;letter-spacing:.05em;transition:color .15s ease,background .15s ease}
 .nav-dropdown summary::-webkit-details-marker{display:none}
 .nav-dropdown[open] summary{color:var(--navy);background:#ffd21c}
-.nav-dropdown::after{content:'';position:absolute;top:100%;left:0;right:0;height:1.25rem}
-.nav-dropdown-menu{position:absolute;top:calc(100% + 1.25rem);left:0;z-index:5;display:none;min-width:235px;padding:.75rem;background:#fff;border:0;border-radius:18px;box-shadow:0 14px 30px rgba(15,23,42,.18)}
+.nav-dropdown::after{content:'';position:absolute;top:100%;left:0;right:0;height:1rem}
+.nav-dropdown-menu{position:absolute;top:calc(100% + 1rem);left:0;z-index:5;display:none;min-width:235px;padding:.75rem;background:#fff;border:0;border-radius:18px;box-shadow:0 14px 30px rgba(15,23,42,.18)}
 .nav-dropdown-menu a{display:flex;align-items:center;min-height:54px;padding:.8rem 1rem!important;color:var(--navy);font-size:.88rem;font-weight:500;text-transform:none;letter-spacing:0;white-space:nowrap}
 .nav-dropdown-menu a:hover{background:#f1f5f9;border-radius:8px}
 .nav-dropdown[open] > .nav-dropdown-menu{display:grid!important}
+@media (min-width:1101px){
+  .navbar{height:80px;padding:.8rem 0;box-sizing:border-box}
+  .primary-nav{font-size:calc(.82rem + 2px)}
+  .site-header.is-scrolled .navbar{height:84px;min-height:84px}
+  .site-header.is-scrolled .primary-nav{font-size:calc(.82rem + 3px)}
+  .primary-nav > a{display:flex;align-items:center;height:75px;margin:-.7rem 0;padding:.7rem 1.2rem;box-sizing:border-box}
+  .primary-nav > a.club-nav-link{line-height:normal}
+  .nav-dropdown > summary{height:75px;box-sizing:border-box}
+  .nav-dropdown > summary > a{padding:0}
+  .primary-nav > a:hover,.primary-nav > a:focus-visible{color:var(--navy);background:#ffd21c}
+  .nav-dropdown:hover summary,.nav-dropdown:focus-within summary{color:var(--navy);background:#ffd21c}
+  .nav-dropdown:hover > .nav-dropdown-menu,.nav-dropdown:focus-within > .nav-dropdown-menu{display:grid!important}
+}
 
 .btn{
   display:inline-flex;align-items:center;justify-content:center;

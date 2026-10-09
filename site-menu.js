@@ -87,7 +87,7 @@
 
   const prefix = location.pathname.includes('/resource-pages/') ? '../../' : '';
   const menuMarkup = `
-    <a href="#">Pricing</a>
+    <a href="https://edgeducate.com.au/pricing">Pricing</a>
     <details class="nav-dropdown">
       <summary>Our Classes</summary>
       <div class="nav-dropdown-menu">
@@ -97,18 +97,18 @@
       </div>
     </details>
     <details class="nav-dropdown">
-      <summary>VCE Preparation</summary>
+      <summary><a href="https://edgeducate.com.au/vce-preparation-program">VCE Preparation</a></summary>
       <div class="nav-dropdown-menu">
-        <a href="#">VCE Biology</a>
-        <a href="#">VCE Chemistry</a>
-        <a href="#">VCE Physics</a>
-        <a href="#">VCE General Mathematics</a>
-        <a href="#">VCE Mathematical Methods</a>
+        <a href="https://edgeducate.com.au/vce-biology">VCE Biology</a>
+        <a href="https://edgeducate.com.au/vce-chemistry">VCE Chemistry</a>
+        <a href="https://edgeducate.com.au/vce-physics">VCE Physics</a>
+        <a href="https://edgeducate.com.au/vce-general-mathematics">VCE General Mathematics</a>
+        <a href="https://edgeducate.com.au/vce-mathematical-methods">VCE Mathematical Methods</a>
       </div>
     </details>
     <a href="${prefix}resources.html">Resources</a>
     <a class="club-nav-link" href="${prefix}club.html">Club</a>
-    <a href="#">Contact Us</a>`;
+    <a href="https://edgeducate.com.au/contact-us">Contact Us</a>`;
 
   document.querySelectorAll('.site-header .navbar').forEach((navbar) => {
     let nav = navbar.querySelector('.primary-nav');
@@ -150,9 +150,20 @@
     nav.querySelectorAll('.nav-dropdown').forEach((dropdown) => {
       const summary = dropdown.querySelector('summary');
 
+      if (!dropdown.dataset.hoverBound) {
+        dropdown.addEventListener('mouseenter', () => {
+          if (window.matchMedia('(min-width: 1101px)').matches) dropdown.open = true;
+        });
+        dropdown.addEventListener('mouseleave', () => {
+          if (window.matchMedia('(min-width: 1101px)').matches) dropdown.open = false;
+        });
+        dropdown.dataset.hoverBound = '1';
+      }
+
       if (summary && !summary.dataset.mobileAccordionBound) {
         summary.addEventListener('click', (event) => {
           if (!window.matchMedia('(max-width: 1100px)').matches) return;
+          if (event.target.closest('a')) return;
           event.preventDefault();
           const willOpen = !dropdown.open;
           nav.querySelectorAll('.nav-dropdown[open]').forEach((item) => {
