@@ -93,7 +93,7 @@
         <a href="https://edgeducate.com.au/">Home</a>
         <a href="https://edgeducate.com.au/pricing">Pricing</a>
         <a href="https://edgeducate.com.au/vce-preparation">VCE Preparation</a>
-        <a href="https://edgeducate.com.au/FAQ">FAQ</a>
+        <a href="https://edgeducate.com.au/faqs">FAQ</a>
         <a href="https://edgeducate.com.au/contact-us">Contact Us</a>
       </nav>
       <nav class="footer-column" aria-label="Resource links">
