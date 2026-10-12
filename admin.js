@@ -2643,6 +2643,8 @@ function showWarn(el, msg) {
 function syncSolutionFields() {
   const solutionsEnabled = $('f-solutions-enabled').checked;
   const solutionsVideoEnabled = $('f-solutions-video-enabled').checked;
+  $('f-solutions-field').hidden = !solutionsEnabled;
+  $('f-solutions-video-field').hidden = !solutionsVideoEnabled;
   $('f-solutions').disabled = !solutionsEnabled;
   $('f-solutions-video').disabled = !solutionsVideoEnabled;
   if (!solutionsEnabled) $('f-solutions').value = '';
