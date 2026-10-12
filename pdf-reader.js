@@ -24,6 +24,17 @@ async function mountPdfReader(reader) {
     status.textContent = '';
   };
 
+  if (new URL(url, location.href).origin !== location.origin) {
+    const frame = document.createElement('iframe');
+    frame.src = url;
+    frame.title = reader.querySelector('.pdf-reader-name')?.textContent || 'PDF document';
+    frame.loading = 'eager';
+    frame.setAttribute('allow', 'fullscreen');
+    frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff';
+    reader.replaceChildren(frame);
+    return;
+  }
+
   const render = async () => {
     if (rendering || !documentProxy) return;
     rendering = true;
