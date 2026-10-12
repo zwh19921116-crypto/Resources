@@ -1104,6 +1104,14 @@ body.modal-open{overflow:hidden}
 .session-loading.is-done{opacity:0;pointer-events:none}
 .session-loading-inner{width:min(92%,460px);text-align:center;color:#fff}
 
+/* Give inline PDFs enough height to read a full page comfortably. */
+.resource-detail.has-inline-preview .resource-detail-preview{min-height:1100px}
+.resource-detail.has-inline-preview .related-resources{max-height:1100px}
+@media (max-width:900px){
+  .resource-detail.has-inline-preview .resource-detail-preview{min-height:720px}
+  .resource-detail.has-inline-preview .related-resources{max-height:none}
+}
+
 /* Keep solution actions available beside inline document previews. */
 .resource-detail.has-inline-preview .resource-detail-copy{display:flex}
 .session-loading-brand{display:block;font-size:1.5rem;letter-spacing:0;margin-bottom:1.75rem}
