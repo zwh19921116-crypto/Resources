@@ -2966,6 +2966,8 @@ function resourcePageMarkup(resource) {
   <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}reader-layout.js"></script><script src="${rootPrefix}carousel.js"></script><script type="module" src="${rootPrefix}pdf-reader.js?v=20261012native"></script><script src="${rootPrefix}site-menu.js"></script></body></html>`.replace('</div></div><section class="resource-faq"', `</div></div>${questionPaperSection}<section class="resource-faq"`).replace('<a class="resource-back"', `${solutionsButton}<a class="resource-back"`);
 }
 
+const removeHeaderLibraryButton = (markup) => markup.replace(/<a class="btn btn-cta" href="[^"]*">Browse library<\/a>/g, '');
+
 async function writeStaticPages() {
   if (!projectHandle) return false;
   const pagesDirectory = await projectHandle.getDirectoryHandle('resource-pages', { create: true });
@@ -2975,13 +2977,13 @@ async function writeStaticPages() {
     for (const segment of resourcePagePath(resource).split('/')) pageDirectory = await pageDirectory.getDirectoryHandle(segment, { create: true });
     const pageFile = await pageDirectory.getFileHandle('index.html', { create: true });
     const writable = await pageFile.createWritable();
-    await writable.write(resourcePageMarkup(resource));
+    await writable.write(removeHeaderLibraryButton(resourcePageMarkup(resource)));
     await writable.close();
     if (resource.solutions || resource.solutionsVideo) {
       const solutionsDirectory = await pageDirectory.getDirectoryHandle('solutions', { create: true });
       const solutionsFile = await solutionsDirectory.getFileHandle('index.html', { create: true });
       const solutionsWritable = await solutionsFile.createWritable();
-      await solutionsWritable.write(solutionPageMarkup(resource));
+      await solutionsWritable.write(removeHeaderLibraryButton(solutionPageMarkup(resource)));
       await solutionsWritable.close();
     }
   }
