@@ -26,6 +26,7 @@ async function mountPdfReader(reader) {
 
   if (new URL(url, location.href).origin !== location.origin) {
     document.querySelector('.resource-faq')?.setAttribute('hidden', '');
+    reader.closest('.resource-detail')?.querySelector('.crumbs > span:last-child')?.setAttribute('hidden', '');
     const details = reader.closest('.resource-detail-layout')?.querySelector('.resource-detail-copy');
     if (details) {
       details.style.display = 'flex';
