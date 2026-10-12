@@ -2640,6 +2640,24 @@ function showWarn(el, msg) {
   node.addEventListener('change', renderPreview);
 });
 
+function syncSolutionFields() {
+  const solutionsEnabled = $('f-solutions-enabled').checked;
+  const solutionsVideoEnabled = $('f-solutions-video-enabled').checked;
+  $('f-solutions').disabled = !solutionsEnabled;
+  $('f-solutions-video').disabled = !solutionsVideoEnabled;
+  if (!solutionsEnabled) $('f-solutions').value = '';
+  if (!solutionsVideoEnabled) $('f-solutions-video').value = '';
+}
+
+$('f-solutions-enabled').addEventListener('change', () => {
+  syncSolutionFields();
+  renderPreview();
+});
+$('f-solutions-video-enabled').addEventListener('change', () => {
+  syncSolutionFields();
+  renderPreview();
+});
+
 /* ---------- form ---------- */
 function openForm(index) {
   editingIndex = index;
@@ -2649,6 +2667,9 @@ function openForm(index) {
   $('f-url').value = r.url || '';
   $('f-solutions').value = r.solutions || '';
   $('f-solutions-video').value = r.solutionsVideo || '';
+  $('f-solutions-enabled').checked = Boolean(r.solutions);
+  $('f-solutions-video-enabled').checked = Boolean(r.solutionsVideo);
+  syncSolutionFields();
   relatedResourceId = r.id || '__new__';
   relatedSelection = new Set(Array.isArray(r.relatedIds) ? r.relatedIds : []);
   $('f-related-search').value = '';
@@ -2718,13 +2739,15 @@ $('btn-save-item').addEventListener('click', () => {
   const err = $('form-err');
   const title = $('f-title').value.trim();
   const url = $('f-url').value.trim();
-  const solutions = $('f-solutions').value.trim();
-  const solutionsVideo = $('f-solutions-video').value.trim();
+  const solutions = $('f-solutions-enabled').checked ? $('f-solutions').value.trim() : '';
+  const solutionsVideo = $('f-solutions-video-enabled').checked ? $('f-solutions-video').value.trim() : '';
   let id = $('f-id').value.trim() || slugify(title);
 
   if (!title) return showErr(err, 'Please enter a title.');
   if (!url) return showErr(err, 'Please paste the link this card should open.');
   if (!/^https?:\/\//i.test(url)) return showErr(err, 'The link must start with http:// or https://');
+  if ($('f-solutions-enabled').checked && !solutions) return showErr(err, 'Paste a Solutions link or turn off the Solutions link toggle.');
+  if ($('f-solutions-video-enabled').checked && !solutionsVideo) return showErr(err, 'Paste a Solutions video link or turn off the Solutions video link toggle.');
   if (solutions && !/^https?:\/\//i.test(solutions)) return showErr(err, 'The Solutions link must start with http:// or https://');
   if (solutionsVideo && !/^https?:\/\//i.test(solutionsVideo)) return showErr(err, 'The Solutions video link must start with http:// or https://');
   if (items.some((r, i) => r.id === id && i !== editingIndex)) return showErr(err, `The ID "${id}" is already used. Give this one a different ID.`);
