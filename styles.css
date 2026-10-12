@@ -1103,6 +1103,9 @@ body.modal-open{overflow:hidden}
 }
 .session-loading.is-done{opacity:0;pointer-events:none}
 .session-loading-inner{width:min(92%,460px);text-align:center;color:#fff}
+
+/* Keep solution actions available beside inline document previews. */
+.resource-detail.has-inline-preview .resource-detail-copy{display:flex}
 .session-loading-brand{display:block;font-size:1.5rem;letter-spacing:0;margin-bottom:1.75rem}
 .session-loading-spinner{
   width:36px;height:36px;margin:0 auto 1.1rem;border-radius:50%;
