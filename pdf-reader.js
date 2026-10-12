@@ -32,8 +32,7 @@ async function mountPdfReader(reader) {
       details.style.display = 'flex';
       const heading = details.querySelector('h1');
       if (heading) {
-        heading.style.width = '100%';
-        heading.style.textAlign = 'center';
+        heading.hidden = true;
       }
       details.querySelectorAll('.btn-solutions').forEach((button) => {
         button.style.justifyContent = 'center';
