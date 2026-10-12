@@ -109,6 +109,11 @@ document.querySelectorAll('.btn-solutions').forEach((solutionsLink) => {
   solutionsLink.href = 'solutions/index.html';
 });
 
+document.querySelectorAll('.resource-detail-copy dl > div').forEach((row) => {
+  const label = row.querySelector('dt')?.textContent.trim().toLowerCase();
+  if (label === 'solutions') row.querySelector('a')?.setAttribute('href', 'solutions/index.html');
+});
+
 async function mountQuestionRegion(region) {
   const url = region.dataset.pdfUrl;
   const canvas = region.querySelector('canvas');
