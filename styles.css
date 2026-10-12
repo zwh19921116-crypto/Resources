@@ -1110,10 +1110,23 @@ body.modal-open{overflow:hidden}
   .resource-detail.has-inline-preview .resource-detail-preview{min-height:720px}
   .resource-detail.has-inline-preview .related-resources{max-height:none}
 }
+@media (min-width:901px){
+  .resource-detail.has-inline-preview .resource-detail-preview{height:calc(100vh - 120px);min-height:620px;max-height:1100px}
+  .resource-detail.has-inline-preview .related-resources{height:calc(100vh - 120px);max-height:1100px}
+}
 
 /* Keep solution actions available beside inline document previews. */
 .resource-detail.has-inline-preview .resource-detail-copy{display:flex}
 .resource-detail.has-inline-preview .resource-detail-copy h1{display:block}
+.resource-detail.has-inline-preview::before{display:none;content:none}
+.resource-detail.has-inline-preview .resource-detail-preview{border:1px solid #d8e0ee;border-radius:12px;box-shadow:0 10px 24px rgba(15,23,42,.08);background:#e9edf4}
+.resource-detail.has-inline-preview .resource-detail-copy{padding:1.5rem;background:#f7f9fe;border:1px solid #d8e0ee;border-radius:12px;box-shadow:0 10px 24px rgba(15,23,42,.06)}
+.resource-detail.has-inline-preview .resource-detail-copy h1{text-align:left;font-size:clamp(1.45rem,2.2vw,1.85rem)}
+.resource-detail.has-inline-preview .resource-detail-copy .badge{align-self:flex-start;margin-bottom:.85rem}
+.resource-detail.has-inline-preview .resource-detail-copy .resource-detail-desc{margin-top:.7rem}
+.resource-detail.has-inline-preview .resource-detail-copy .btn-solutions,.resource-detail.has-inline-preview .resource-detail-copy .resource-back{display:flex;width:100%;min-height:42px;border-radius:7px;align-items:center;justify-content:center;background:#173b7d;color:#fff;font-size:.8rem;font-weight:800;box-shadow:0 4px 10px rgba(23,59,125,.16)}
+.resource-detail.has-inline-preview .resource-detail-copy .btn-solutions:hover,.resource-detail.has-inline-preview .resource-detail-copy .resource-back:hover{text-decoration:none;background:#0f2d64}
+.resource-detail.has-inline-preview .resource-detail-copy .resource-back{margin-top:.75rem}
 @media (min-width:681px){
   .resource-detail.has-inline-preview .resource-detail-layout{grid-template-columns:minmax(0,1fr) 304px}
   .resource-detail.has-inline-preview .resource-detail-copy{display:flex}

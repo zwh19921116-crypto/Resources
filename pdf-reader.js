@@ -49,7 +49,9 @@ async function mountPdfReader(reader) {
       }
     }
     const frame = document.createElement('iframe');
-    frame.src = url;
+    const frameUrl = new URL(url, location.href);
+    frameUrl.hash = 'page=1&view=Fit&zoom=page-fit';
+    frame.src = frameUrl.href;
     frame.title = reader.querySelector('.pdf-reader-name')?.textContent || 'PDF document';
     frame.loading = 'eager';
     frame.setAttribute('allow', 'fullscreen');
