@@ -24,11 +24,6 @@ async function mountPdfReader(reader) {
     status.textContent = '';
   };
 
-  if (new URL(url, location.href).origin !== location.origin) {
-    showFallback();
-    return;
-  }
-
   const render = async () => {
     if (rendering || !documentProxy) return;
     rendering = true;
