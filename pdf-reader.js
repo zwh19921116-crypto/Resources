@@ -27,7 +27,14 @@ async function mountPdfReader(reader) {
   if (new URL(url, location.href).origin !== location.origin) {
     document.querySelector('.resource-faq')?.setAttribute('hidden', '');
     const details = reader.closest('.resource-detail-layout')?.querySelector('.resource-detail-copy');
-    if (details) details.style.display = 'flex';
+    if (details) {
+      details.style.display = 'flex';
+      const heading = details.querySelector('h1');
+      if (heading) {
+        heading.style.width = '100%';
+        heading.style.textAlign = 'center';
+      }
+    }
     const frame = document.createElement('iframe');
     frame.src = url;
     frame.title = reader.querySelector('.pdf-reader-name')?.textContent || 'PDF document';
