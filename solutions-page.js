@@ -7,5 +7,12 @@ if (stage && toggle && videoPanel) {
     stage.classList.add('is-video-open');
     videoPanel.hidden = false;
     toggle.hidden = true;
+
+    const resourceBack = stage.querySelector('.resource-back');
+    if (resourceBack && !stage.querySelector('.solution-return')) {
+      const returnLink = resourceBack.cloneNode(true);
+      returnLink.classList.add('solution-return');
+      stage.appendChild(returnLink);
+    }
   });
 }
