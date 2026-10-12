@@ -1124,7 +1124,7 @@ body.modal-open{overflow:hidden}
 .resource-detail.has-inline-preview .resource-detail-copy h1{text-align:left;font-size:clamp(1.45rem,2.2vw,1.85rem)}
 .resource-detail.has-inline-preview .resource-detail-copy .badge{align-self:flex-start;margin-bottom:.85rem}
 .resource-detail.has-inline-preview .resource-detail-copy .resource-detail-desc{margin-top:.7rem}
-.resource-detail.has-inline-preview .resource-detail-copy .btn-solutions,.resource-detail.has-inline-preview .resource-detail-copy .resource-back{display:flex;width:100%;min-height:42px;border-radius:7px;align-items:center;justify-content:center;background:#173b7d;color:#fff;font-size:.8rem;font-weight:800;box-shadow:0 4px 10px rgba(23,59,125,.16)}
+.resource-detail.has-inline-preview .resource-detail-copy .btn-solutions,.resource-detail.has-inline-preview .resource-detail-copy .resource-back{display:flex;width:100%;min-height:42px;border-radius:7px;align-items:center;justify-content:center;text-align:center;background:#173b7d;color:#fff;font-size:.8rem;font-weight:800;box-shadow:0 4px 10px rgba(23,59,125,.16)}
 .resource-detail.has-inline-preview .resource-detail-copy .btn-solutions:hover,.resource-detail.has-inline-preview .resource-detail-copy .resource-back:hover{text-decoration:none;background:#0f2d64}
 .resource-detail.has-inline-preview .resource-detail-copy .resource-back{margin-top:.75rem}
 .solutions-page{background:#f7f9fe;color:var(--ink)}
