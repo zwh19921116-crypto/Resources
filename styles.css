@@ -1132,7 +1132,15 @@ body.modal-open{overflow:hidden}
 .solutions-detail .solution-preview{min-height:780px;border:1px solid #d8e0ee;border-radius:10px;box-shadow:none;background:#e9edf4}
 .solutions-detail .solution-preview iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
 .solutions-detail .resource-detail-copy{background:#fff;border:1px solid #d8e0ee;border-radius:10px;box-shadow:none}
-.solutions-detail .resource-detail-copy .resource-back{margin-top:.75rem}
+.solutions-detail .resource-detail-copy{padding:2rem;gap:0;box-shadow:0 10px 24px rgba(15,23,42,.06)}
+.solutions-detail .resource-detail-copy .badge{margin-bottom:1.1rem;padding:.42rem .7rem;border-radius:6px;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase}
+.solutions-detail .resource-detail-copy h1{margin:0;font-size:clamp(1.8rem,3vw,2.25rem);line-height:1.1}
+.solutions-detail .resource-detail-copy .resource-detail-desc{margin:1rem 0 0;line-height:1.65}
+.solutions-detail .resource-detail-copy .btn{width:100%;min-height:46px;margin-top:1.25rem;border-radius:7px;justify-content:center;text-align:center;font-size:.86rem}
+.solutions-detail .resource-detail-copy .btn-solutions{margin-top:.65rem;background:#dc2626;color:#fff}
+.solutions-detail .resource-detail-copy .btn-solutions:hover{background:#b91c1c}
+.solutions-detail .resource-detail-copy .resource-back{margin:1.25rem auto 0;padding-top:1rem;border-top:1px solid #e5eaf3;font-size:.82rem}
+.solutions-detail .resource-detail-copy .resource-back{width:auto;min-height:0;margin:1.25rem auto 0;padding:1rem 0 0;border-top:1px solid #e5eaf3;background:transparent;box-shadow:none;color:#2563eb;font-size:.82rem}
 .solution-stage{display:grid;grid-template-columns:minmax(0,1fr) 304px;align-items:start;gap:1rem}
 .solution-pdf-panel{position:relative;min-height:780px;border:1px solid #d8e0ee;border-radius:10px;overflow:hidden;background:#e9edf4}
 .solution-pdf-panel iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
