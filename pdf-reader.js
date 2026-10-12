@@ -25,6 +25,8 @@ async function mountPdfReader(reader) {
   };
 
   if (new URL(url, location.href).origin !== location.origin) {
+    const details = reader.closest('.resource-detail-layout')?.querySelector('.resource-detail-copy');
+    if (details) details.style.display = 'flex';
     const frame = document.createElement('iframe');
     frame.src = url;
     frame.title = reader.querySelector('.pdf-reader-name')?.textContent || 'PDF document';
