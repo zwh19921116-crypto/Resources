@@ -1140,7 +1140,7 @@ body.modal-open{overflow:hidden}
 .solutions-detail .resource-detail-copy .btn-solutions{margin-top:.65rem;background:#dc2626;color:#fff}
 .solutions-detail .resource-detail-copy .btn-solutions:hover{background:#b91c1c}
 .solutions-detail .resource-detail-copy .resource-back{margin:1.25rem auto 0;padding-top:1rem;border-top:1px solid #e5eaf3;font-size:.82rem}
-.solutions-detail .resource-detail-copy .resource-back{width:auto;min-height:0;margin:1.25rem auto 0;padding:1rem 0 0;border-top:1px solid #e5eaf3;background:transparent;box-shadow:none;color:#2563eb;font-size:.82rem}
+.solutions-detail .resource-detail-copy .resource-back{width:100%;min-height:0;margin:1.25rem 0 0;padding:1rem 0 0;border-top:1px solid #e5eaf3;background:transparent;box-shadow:none;color:#2563eb;font-size:.82rem;text-align:center}
 .solution-stage{display:grid;grid-template-columns:minmax(0,1fr) 304px;align-items:start;gap:1rem}
 .solution-pdf-panel{position:relative;min-height:780px;border:1px solid #d8e0ee;border-radius:10px;overflow:hidden;background:#e9edf4}
 .solution-pdf-panel iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff}
