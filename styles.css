@@ -81,7 +81,8 @@ button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
 .brand-name.light{color:#fff}
 .brand-name.light strong{color:#f5b820}
 
-.primary-nav{display:flex;align-items:center;gap:2.2rem;margin-left:0;font-size:.82rem;font-weight:700}
+.primary-nav{display:flex;align-items:center;gap:1.7rem;margin-left:0;font-size:.82rem;font-weight:700}
+.navbar > .btn-cta{display:none!important}
 .primary-nav a{
   color:var(--navy);text-transform:uppercase;letter-spacing:.05em;
   padding:.35rem 0;position:relative;transition:color .15s ease;
