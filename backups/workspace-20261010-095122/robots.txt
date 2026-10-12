@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zwh19921116-crypto.github.io/Resources/sitemap.xml

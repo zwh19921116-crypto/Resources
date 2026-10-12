@@ -73,3 +73,34 @@ async function mountPdfReader(reader) {
 }
 
 document.querySelectorAll('.pdf-reader[data-pdf-url]').forEach(mountPdfReader);
+
+async function mountQuestionRegion(region) {
+  const url = region.dataset.pdfUrl;
+  const canvas = region.querySelector('canvas');
+  const status = region.querySelector('span');
+  const top = Math.max(0, Math.min(100, Number(region.dataset.pdfTop) || 0));
+  const bottom = Math.max(top + 1, Math.min(100, Number(region.dataset.pdfBottom) || 100));
+  try {
+    const documentProxy = await pdfjsLib.getDocument(url).promise;
+    const page = await documentProxy.getPage(Math.max(1, Number(region.dataset.pdfPage) || 1));
+    const base = page.getViewport({ scale: 1 });
+    const scale = Math.min(2, Math.max(320, region.clientWidth - 24) / base.width);
+    const viewport = page.getViewport({ scale });
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(viewport.width * ratio);
+    canvas.height = Math.floor(viewport.height * ratio);
+    canvas.style.width = `${Math.floor(viewport.width)}px`;
+    canvas.style.height = `${Math.floor(viewport.height)}px`;
+    canvas.getContext('2d').setTransform(ratio, 0, 0, ratio, 0, 0);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    region.style.height = `${Math.max(180, Math.floor(viewport.height * (bottom - top) / 100))}px`;
+    canvas.style.position = 'absolute';
+    canvas.style.top = `-${Math.floor(viewport.height * top / 100)}px`;
+    status.remove();
+  } catch (error) {
+    region.classList.add('is-fallback');
+    status.textContent = 'Open question to view this marked PDF region.';
+  }
+}
+
+document.querySelectorAll('.question-region[data-pdf-url]').forEach(mountQuestionRegion);

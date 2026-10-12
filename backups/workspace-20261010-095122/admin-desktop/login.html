@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Edgeducate Admin — Sign in</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  body{
+    margin:0;min-height:100vh;display:grid;place-items:center;
+    background:linear-gradient(120deg,#071d46 0%,#102d67 65%,#174184 100%);
+    font-family:'Segoe UI',Inter,system-ui,sans-serif;color:#0f172a;
+  }
+  .card{
+    width:min(400px,90vw);background:#fff;border-radius:16px;
+    padding:2rem 1.75rem;box-shadow:0 24px 60px rgba(9,13,35,.35);
+  }
+  .brand{display:block;text-align:center;font-size:1.3rem;font-weight:800;color:#111b4e;margin-bottom:.3rem}
+  .brand strong{color:#2563eb}
+  .steps{display:flex;justify-content:center;gap:.35rem;margin-bottom:1.1rem}
+  .steps span{width:22px;height:4px;border-radius:99px;background:#e2e8f0}
+  .steps span.is-done{background:#2563eb}
+  .steps span.is-active{background:#93b4ff}
+  h1{font-size:1.02rem;text-align:center;margin:0 0 1.3rem;color:#475569;font-weight:600}
+  label{display:block;font-size:.78rem;font-weight:700;color:#0f172a;margin-bottom:.35rem}
+  input{
+    width:100%;padding:.7rem .85rem;border:1px solid #e2e8f0;border-radius:10px;
+    font-size:.9rem;margin-bottom:1rem;letter-spacing:.02em;
+  }
+  input:focus{outline:none;border-color:#93b4ff;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+  .remember{display:flex;align-items:center;gap:.5rem;margin:-.25rem 0 1rem;font-size:.78rem;font-weight:600;color:#475569;cursor:pointer}
+  .remember input{width:auto;margin:0;accent-color:#2563eb}
+  button{
+    width:100%;padding:.75rem;border:0;border-radius:10px;background:#2563eb;color:#fff;
+    font-size:.9rem;font-weight:700;cursor:pointer;
+  }
+  button:hover{background:#1d4ed8}
+  button.ghost{background:none;color:#2563eb;font-weight:600;padding:.5rem;margin-top:.3rem}
+  button.ghost:hover{text-decoration:underline;background:none}
+  button:disabled{opacity:.55;cursor:not-allowed}
+  p.hint{font-size:.78rem;color:#64748b;text-align:center;margin:1rem 0 0;line-height:1.5}
+  p.err{font-size:.8rem;color:#dc2626;text-align:center;margin:0 0 .8rem;min-height:1.1em}
+  .qr{display:flex;justify-content:center;margin-bottom:1rem}
+  .qr img{width:180px;height:180px;border:1px solid #e2e8f0;border-radius:10px}
+  .secret{font-family:Consolas,monospace;font-size:.82rem;text-align:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:.5rem;margin-bottom:1rem;word-break:break-all}
+  .backup-codes{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:.75rem;margin-bottom:1rem;font-family:Consolas,monospace;font-size:.82rem}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <span class="brand"><strong>Edge</strong>ducate</span>
+  <div class="steps">
+    <span id="dot-1" class="is-active"></span>
+    <span id="dot-2"></span>
+    <span id="dot-3"></span>
+  </div>
+
+  <!-- Step 1: username + password -->
+  <section id="step-account">
+    <h1 id="account-title">Sign in to Admin</h1>
+    <p class="err" id="account-err"></p>
+    <form id="account-form">
+      <label for="username">Username</label>
+      <input id="username" autocomplete="username" required />
+      <label for="password" id="password-label">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required />
+      <label class="remember" for="remember-username">
+        <input id="remember-username" type="checkbox" />
+        Remember username
+      </label>
+      <button type="submit" id="account-submit">Continue</button>
+    </form>
+    <button type="button" class="ghost" id="forgot-password">Forgot password?</button>
+  </section>
+
+  <!-- Step 1b: reset password (needs a code emailed to williamc@edgeducate.com.au) -->
+  <section id="step-reset" hidden>
+    <h1>Reset your password</h1>
+    <p class="err" id="reset-err"></p>
+    <p class="hint" id="reset-status" style="margin:0 0 1rem">Sending a confirmation code to williamc@edgeducate.com.au…</p>
+    <form id="reset-code-form">
+      <label for="reset-code">Confirmation code</label>
+      <input id="reset-code" inputmode="numeric" maxlength="6" required />
+      <button type="submit">Confirm</button>
+      <button type="button" class="ghost" id="resend-reset">Resend code</button>
+    </form>
+    <form id="reset-password-form" hidden>
+      <label for="new-password">New password</label>
+      <input id="new-password" type="password" autocomplete="new-password" required />
+      <button type="submit">Set new password</button>
+    </form>
+    <button type="button" class="ghost" id="cancel-reset">Back to sign in</button>
+  </section>
+
+  <!-- Step 2: authenticator app (TOTP) -->
+  <section id="step-totp" hidden>
+    <h1 id="totp-title">Enter your authenticator code</h1>
+    <p class="err" id="totp-err"></p>
+
+    <div id="totp-setup" hidden>
+      <p class="hint" style="margin:0 0 .8rem">Scan this with Google Authenticator, Authy, or any TOTP app.</p>
+      <div class="qr"><img id="qr-image" alt="QR code" /></div>
+      <p class="hint" style="margin:0 0 .5rem">Or enter this key manually:</p>
+      <p class="secret" id="totp-secret"></p>
+      <p class="hint" style="margin:0 0 .5rem"><b>Save these one-time backup codes</b> — use one if you ever lose your phone. Each works once.</p>
+      <div class="backup-codes" id="backup-codes"></div>
+    </div>
+
+    <form id="totp-form">
+      <label for="totp-code">6-digit code</label>
+      <input id="totp-code" inputmode="numeric" maxlength="6" required />
+      <button type="submit" id="totp-submit">Verify</button>
+      <button type="button" class="ghost" id="use-backup-code">Lost your phone? Use a backup code</button>
+    </form>
+
+    <form id="backup-form" hidden>
+      <label for="backup-code">Backup code</label>
+      <input id="backup-code" required />
+      <button type="submit">Use backup code</button>
+      <button type="button" class="ghost" id="use-totp-instead">Use authenticator app instead</button>
+    </form>
+
+    <button type="button" class="ghost" id="reset-2fa-link">Authenticator broken or codes all used? Reset via email</button>
+  </section>
+
+  <!-- Step 3: email code -->
+  <section id="step-email" hidden>
+    <h1>Enter the code emailed to you</h1>
+    <p class="err" id="email-err"></p>
+    <p class="hint" id="email-status" style="margin:0 0 1rem">Sending a code to admin@edgeducate.com.au…</p>
+    <form id="email-form">
+      <label for="email-code">6-digit code</label>
+      <input id="email-code" inputmode="numeric" maxlength="6" required />
+      <button type="submit">Verify &amp; sign in</button>
+      <button type="button" class="ghost" id="resend-email">Resend code</button>
+    </form>
+  </section>
+
+  <p class="hint">Password and codes are checked entirely on this computer.</p>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let isSetup = false;
+  let username = '';
+  const rememberedUsername = localStorage.getItem('edgeducate-admin-username') || '';
+  if (rememberedUsername) {
+    $('username').value = rememberedUsername;
+    $('remember-username').checked = true;
+  }
+
+  function setStep(n) {
+    $('step-account').hidden = n !== 1;
+    $('step-totp').hidden = n !== 2;
+    $('step-email').hidden = n !== 3;
+    [1, 2, 3].forEach((i) => {
+      const dot = $(`dot-${i}`);
+      dot.className = i < n ? 'is-done' : i === n ? 'is-active' : '';
+    });
+  }
+
+  /* ---------- step 1: account ---------- */
+  (async () => {
+    isSetup = !(await window.desktop.hasAccount());
+    if (isSetup) {
+      $('account-title').textContent = 'Create your admin account';
+      $('password-label').textContent = 'New password';
+      $('account-submit').textContent = 'Create account';
+      $('forgot-password').hidden = true;
+    }
+  })();
+
+  $('account-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = $('account-err');
+    err.textContent = '';
+    username = $('username').value.trim();
+    const password = $('password').value;
+
+    if ($('remember-username').checked) localStorage.setItem('edgeducate-admin-username', username);
+    else localStorage.removeItem('edgeducate-admin-username');
+
+    if (isSetup) {
+      if (username.length < 3) return (err.textContent = 'Username must be at least 3 characters.');
+      if (password.length < 6) return (err.textContent = 'Use a password with at least 6 characters.');
+      await window.desktop.setAccount(username, password);
+      await beginTotpSetup();
+      return;
+    }
+
+    const result = await window.desktop.verifyAccount(username, password);
+    if (result.locked) {
+      err.textContent = `Too many attempts. Try again in ${result.locked}s.`;
+      return;
+    }
+    if (!result.ok) {
+      err.textContent = 'Incorrect username or password.';
+      return;
+    }
+    if (await window.desktop.hasValidSession()) {
+      await window.desktop.pullBeforeUnlock();
+      await window.desktop.unlock();
+      return;
+    }
+    if (await window.desktop.has2fa()) {
+      setStep(2);
+    } else {
+      await beginTotpSetup();
+    }
+  });
+
+  /* ---------- forgot password: requires a code emailed to williamc@edgeducate.com.au ---------- */
+  /* ---------- forgot password / reset 2FA: both require a code emailed to williamc@edgeducate.com.au ---------- */
+  let resetMode = 'password';
+
+  async function beginReset(mode) {
+    resetMode = mode;
+    $('step-account').hidden = true;
+    $('step-totp').hidden = true;
+    $('step-reset').hidden = false;
+    $('reset-code-form').hidden = false;
+    $('reset-password-form').hidden = mode !== 'password';
+    $('reset-err').textContent = '';
+    $('reset-status').textContent = 'Sending a confirmation code to williamc@edgeducate.com.au…';
+    const result = await window.desktop.sendResetCode();
+    $('reset-status').textContent = result.ok
+      ? 'Code sent to williamc@edgeducate.com.au. Check that inbox.'
+      : `Could not send the email (${result.error}). Try Resend below.`;
+  }
+
+  $('forgot-password').addEventListener('click', () => beginReset('password'));
+  $('reset-2fa-link').addEventListener('click', () => beginReset('2fa'));
+
+  $('resend-reset').addEventListener('click', async () => {
+    $('reset-status').textContent = 'Resending…';
+    const result = await window.desktop.sendResetCode();
+    $('reset-status').textContent = result.ok ? 'A new code has been sent.' : `Could not send the email (${result.error}).`;
+  });
+
+  $('cancel-reset').addEventListener('click', () => {
+    $('step-reset').hidden = true;
+    if (resetMode === '2fa') setStep(2);
+    else $('step-account').hidden = false;
+  });
+
+  $('reset-code-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = $('reset-err');
+    err.textContent = '';
+    const ok = await window.desktop.verifyResetCode($('reset-code').value);
+    if (!ok) {
+      err.textContent = 'Incorrect or expired code.';
+      return;
+    }
+    $('reset-code-form').hidden = true;
+
+    if (resetMode === '2fa') {
+      const { qrDataUrl, secret, backupCodes } = await window.desktop.reset2faViaEmail();
+      $('step-reset').hidden = true;
+      $('qr-image').src = qrDataUrl;
+      $('totp-secret').textContent = secret;
+      $('backup-codes').innerHTML = backupCodes.map((c) => `<span>${c}</span>`).join('');
+      $('totp-setup').hidden = false;
+      $('totp-title').textContent = 'Set up your authenticator app again';
+      $('totp-form').hidden = false;
+      $('backup-form').hidden = true;
+      setStep(2);
+      return;
+    }
+
+    $('reset-password-form').hidden = false;
+  });
+
+  $('reset-password-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = $('reset-err');
+    err.textContent = '';
+    const password = $('new-password').value;
+    if (password.length < 6) return (err.textContent = 'Use a password with at least 6 characters.');
+    const ok = await window.desktop.resetPassword(password);
+    if (!ok) {
+      err.textContent = 'Reset session expired — start over with Forgot password.';
+      return;
+    }
+    $('step-reset').hidden = true;
+    $('step-account').hidden = false;
+    $('account-err').textContent = 'Password reset. Sign in with your new password.';
+  });
+
+  /* ---------- step 2: TOTP ---------- */
+  async function beginTotpSetup() {
+    const { qrDataUrl, secret, backupCodes } = await window.desktop.setup2fa();
+    $('qr-image').src = qrDataUrl;
+    $('totp-secret').textContent = secret;
+    $('backup-codes').innerHTML = backupCodes.map((c) => `<span>${c}</span>`).join('');
+    $('totp-setup').hidden = false;
+    $('totp-title').textContent = 'Set up your authenticator app';
+    setStep(2);
+  }
+
+  $('totp-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = $('totp-err');
+    err.textContent = '';
+    const ok = await window.desktop.verifyTotp($('totp-code').value);
+    if (!ok) {
+      err.textContent = 'Incorrect or expired code.';
+      $('totp-code').value = '';
+      return;
+    }
+    beginEmailStep();
+  });
+
+  $('use-backup-code').addEventListener('click', () => {
+    $('totp-form').hidden = true;
+    $('backup-form').hidden = false;
+  });
+  $('use-totp-instead').addEventListener('click', () => {
+    $('backup-form').hidden = true;
+    $('totp-form').hidden = false;
+  });
+
+  $('backup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = $('totp-err');
+    err.textContent = '';
+    const ok = await window.desktop.verifyBackupCode($('backup-code').value);
+    if (!ok) {
+      err.textContent = 'That backup code is invalid or already used.';
+      return;
+    }
+    beginEmailStep();
+  });
+
+  /* ---------- step 3: email code ---------- */
+  async function beginEmailStep() {
+    setStep(3);
+    $('email-status').textContent = 'Sending a code to admin@edgeducate.com.au…';
+    const result = await window.desktop.sendEmailCode();
+    $('email-status').textContent = result.ok
+      ? 'Code sent to admin@edgeducate.com.au. Check your inbox.'
+      : `Could not send the email (${result.error}). You can try Resend below.`;
+  }
+
+  $('email-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = $('email-err');
+    err.textContent = '';
+    const ok = await window.desktop.verifyEmailCode($('email-code').value);
+    if (!ok) {
+      err.textContent = 'Incorrect or expired code.';
+      return;
+    }
+    $('email-form').querySelector('button[type=submit]').textContent = 'Syncing latest data…';
+    await window.desktop.pullBeforeUnlock();
+    await window.desktop.unlock();
+  });
+
+  $('resend-email').addEventListener('click', async () => {
+    $('email-status').textContent = 'Resending…';
+    const result = await window.desktop.sendEmailCode();
+    $('email-status').textContent = result.ok ? 'A new code has been sent.' : `Could not send the email (${result.error}).`;
+  });
+</script>
+</body>
+</html>

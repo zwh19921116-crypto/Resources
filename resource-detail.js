@@ -30,6 +30,30 @@ function relatedResourcesFor(resource) {
     && (item.subject === resource.subject || item.type === resource.type)).slice(0, 3);
 }
 
+function buildQuestionPaperLinks(resource) {
+  if (resource.viewType !== 'question-paper') return '';
+  const pairs = Array.isArray(resource.questionVideoPairs) ? resource.questionVideoPairs : [];
+  if (pairs.length) {
+    const pairMarkup = pairs.map((pair, index) => {
+      const question = DETAIL_ALL.find((item) => item.id === pair.questionResourceId);
+      const video = DETAIL_ALL.find((item) => item.id === pair.videoResourceId);
+      if (!question && !video) return '';
+      const questionUrl = question ? `${question.url || ''}${pair.page ? `#page=${encodeURIComponent(pair.page)}` : ''}` : '';
+      const videoId = video ? youtubeVideoId(video.url) : null;
+      const questionViewer = question ? `<div class="question-region" data-pdf-url="${escapeHtml(question.url)}" data-pdf-page="${escapeHtml(pair.page || 1)}" data-pdf-top="${escapeHtml(pair.top ?? 0)}" data-pdf-bottom="${escapeHtml(pair.bottom ?? 100)}"><canvas></canvas><span>Loading question</span></div><a class="btn btn-light btn-sm" href="${escapeHtml(questionUrl)}" target="_blank" rel="noopener">Open question</a>` : '<p>Question resource not selected.</p>';
+      return `<article class="question-video-pair"><div class="question-video-question"><span class="question-video-label">Question ${index + 1}${pair.page ? ` · Page ${escapeHtml(pair.page)}` : ''}</span>${question ? `<h3>${escapeHtml(question.title)}</h3>${questionViewer}` : questionViewer}</div><div class="question-video-viewer">${videoId ? `<iframe src="https://www.youtube-nocookie.com/embed/${videoId}?rel=0" title="${escapeHtml(video.title)}" loading="lazy" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>` : video ? `<a class="btn btn-light btn-sm" href="${escapeHtml(video.url)}" target="_blank" rel="noopener">Watch ${escapeHtml(video.title)}</a>` : '<p>Video not selected.</p>'}</div></article>`;
+    }).filter(Boolean).join('');
+    if (pairMarkup) return `<section class="question-paper-links" aria-labelledby="question-paper-links-title"><p class="section-eyebrow">Exam support</p><h2 id="question-paper-links-title">Questions and videos</h2><div class="question-video-pairs">${pairMarkup}</div></section>`;
+  }
+  const question = DETAIL_ALL.find((item) => item.id === resource.questionResourceId);
+  const video = DETAIL_ALL.find((item) => item.id === resource.videoResourceId);
+  const links = [
+    question ? `<a class="question-paper-link" href="resource-pages/${encodeURIComponent(question.id)}/index.html"><span>Question resource</span><strong>${escapeHtml(question.title)}</strong></a>` : '',
+    video ? `<a class="question-paper-link" href="resource-pages/${encodeURIComponent(video.id)}/index.html"><span>Associated video</span><strong>${escapeHtml(video.title)}</strong></a>` : ''
+  ].filter(Boolean).join('');
+  return links ? `<section class="question-paper-links" aria-labelledby="question-paper-links-title"><p class="section-eyebrow">Exam support</p><h2 id="question-paper-links-title">Use this paper with</h2><div class="question-paper-link-grid">${links}</div></section>` : '';
+}
+
 function renderResourceDetail() {
   const yearNode = detailElement('year');
   if (yearNode) yearNode.textContent = new Date().getFullYear();
@@ -69,6 +93,12 @@ function renderResourceDetail() {
 
   const metadata = [['Subject', resource.subject], ['Year level', resource.year], ['Difficulty', resource.level], ['Details', resource.details]].filter(([, value]) => value);
   detailElement('resource-meta').innerHTML = metadata.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
+
+  const questionPaperLinks = detailElement('question-paper-links');
+  if (questionPaperLinks) {
+    questionPaperLinks.innerHTML = buildQuestionPaperLinks(resource);
+    questionPaperLinks.hidden = !questionPaperLinks.innerHTML;
+  }
 
   const related = relatedResourcesFor(resource);
   detailElement('related-grid').innerHTML = related.map(buildRelatedCard).join('');
