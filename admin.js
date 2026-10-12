@@ -903,7 +903,8 @@ function updateResourceSelectionUi(visibleIds = []) {
 function deleteSelectedResources() {
   const selected = items.filter((item) => selectedResourceIds.has(item.id));
   if (!selected.length) return;
-  if (!confirm(`Delete ${selected.length} selected resource${selected.length === 1 ? '' : 's'}?\n\nThis only removes the cards from the site. The files in your Drive are untouched.`)) return;
+  const confirmation = prompt(`Type DELETE to remove ${selected.length} selected resource${selected.length === 1 ? '' : 's'}.\n\nThis only removes the cards from the site. The files in your Drive are untouched.`);
+  if (confirmation !== 'DELETE') return;
   selected.forEach((item) => log(`Deleted "${item.title}"`, 'warnl', item.id));
   items = items.filter((item) => !selectedResourceIds.has(item.id));
   selectedResourceIds.clear();
