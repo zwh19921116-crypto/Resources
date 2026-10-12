@@ -2634,7 +2634,7 @@ function showWarn(el, msg) {
   el.hidden = false;
 }
 
-['f-title', 'f-url', 'f-solutions', 'f-type', 'f-art', 'f-image', 'f-stage', 'f-unit', 'f-year', 'f-level', 'f-details'].forEach((id) => {
+['f-title', 'f-url', 'f-solutions', 'f-solutions-video', 'f-type', 'f-art', 'f-image', 'f-stage', 'f-unit', 'f-year', 'f-level', 'f-details'].forEach((id) => {
   const node = $(id);
   node.addEventListener('input', renderPreview);
   node.addEventListener('change', renderPreview);
@@ -2648,6 +2648,7 @@ function openForm(index) {
   $('f-title').value = r.title || '';
   $('f-url').value = r.url || '';
   $('f-solutions').value = r.solutions || '';
+  $('f-solutions-video').value = r.solutionsVideo || '';
   relatedResourceId = r.id || '__new__';
   relatedSelection = new Set(Array.isArray(r.relatedIds) ? r.relatedIds : []);
   $('f-related-search').value = '';
@@ -2718,12 +2719,14 @@ $('btn-save-item').addEventListener('click', () => {
   const title = $('f-title').value.trim();
   const url = $('f-url').value.trim();
   const solutions = $('f-solutions').value.trim();
+  const solutionsVideo = $('f-solutions-video').value.trim();
   let id = $('f-id').value.trim() || slugify(title);
 
   if (!title) return showErr(err, 'Please enter a title.');
   if (!url) return showErr(err, 'Please paste the link this card should open.');
   if (!/^https?:\/\//i.test(url)) return showErr(err, 'The link must start with http:// or https://');
   if (solutions && !/^https?:\/\//i.test(solutions)) return showErr(err, 'The Solutions link must start with http:// or https://');
+  if (solutionsVideo && !/^https?:\/\//i.test(solutionsVideo)) return showErr(err, 'The Solutions video link must start with http:// or https://');
   if (items.some((r, i) => r.id === id && i !== editingIndex)) return showErr(err, `The ID "${id}" is already used. Give this one a different ID.`);
 
   const record = {
@@ -2747,6 +2750,7 @@ $('btn-save-item').addEventListener('click', () => {
     relatedIds: [...relatedSelection],
     url,
     solutions,
+    solutionsVideo,
     added: (editingIndex >= 0 && items[editingIndex].added) || new Date().toISOString().slice(0, 10),
     status: $('f-status').value
   };
@@ -2802,6 +2806,7 @@ function serialize() {
       `    relatedIds: [${(r.relatedIds || []).map(js).join(', ')}],`,
       `    url: ${js(r.url)},`,
       `    solutions: ${js(r.solutions || '')},`,
+      `    solutionsVideo: ${js(r.solutionsVideo || '')},`,
       `    added: ${js(r.added)},`,
       `    status: ${js(r.status)}`
     ];
@@ -2863,9 +2868,9 @@ function resourcePageMarkup(resource) {
   const staticPath = resourcePagePath(resource);
   const rootPrefix = '../../';
   const resourcePagesPrefix = '../';
-  const metadata = [['Subject', resource.subject], ['Year level', resource.year], ['Difficulty', resource.level], ['Details', resource.details], ['Solutions', resource.solutions]]
+  const metadata = [['Subject', resource.subject], ['Year level', resource.year], ['Difficulty', resource.level], ['Details', resource.details], ['Solutions', resource.solutions], ['Solutions video', resource.solutionsVideo]]
     .filter(([, value]) => value)
-    .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${label === 'Solutions' ? `<a href="${escapeAttr(value)}">View solutions</a>` : escapeHtml(value)}</dd></div>`).join('');
+    .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${label === 'Solutions' ? `<a href="${escapeAttr(value)}">View solutions</a>` : label === 'Solutions video' ? `<a href="${escapeAttr(value)}">Watch solutions video</a>` : escapeHtml(value)}</dd></div>`).join('');
   const related = relatedResourcesFor(resource);
   const relatedMarkup = related.map((item) => {
     const relatedType = CONFIG.types[item.type] || { label: item.type, colour: 'blue' };
@@ -2880,6 +2885,7 @@ function resourcePageMarkup(resource) {
   const description = resource.desc || type.blurb;
   const actionLabel = resource.type === 'video' ? 'Watch video' : /\.pdf(\?|#|$)/i.test(String(resource.url || '')) ? 'View full document' : 'Open resource';
   const solutionsButton = resource.solutions ? `<a class="btn btn-solutions btn-block" href="${escapeAttr(solutionHref)}">View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>` : '';
+  const solutionsVideoButton = resource.solutionsVideo ? `<a class="btn btn-primary btn-block" href="${escapeAttr(resource.solutionsVideo)}" target="_blank" rel="noopener noreferrer">Watch Solutions Video <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>` : '';
   const schema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'LearningResource', name: resource.title, description, educationalLevel: resource.year, learningResourceType: type.label, url: canonical, about: resource.tags || [], isAccessibleForFree: true, inLanguage: 'en-AU' });
   const faqSchema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [
     { '@type': 'Question', name: `Who is ${resource.title} for?`, acceptedAnswer: { '@type': 'Answer', text: `${resource.title} is suitable for ${resource.year || 'students'} studying ${resource.subject || 'this topic'}.` } },
@@ -2890,7 +2896,7 @@ function resourcePageMarkup(resource) {
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(resource.title)} | Edgeducate Resources</title><meta name="description" content="${escapeHtml(description)}"><link rel="canonical" href="${canonical}"><meta property="og:title" content="${escapeHtml(resource.title)} | Edgeducate Resources"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:type" content="article"><meta property="og:url" content="${canonical}"><script type="application/ld+json">${schema}</script><script type="application/ld+json">${faqSchema}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="${rootPrefix}styles.css"></head>
 <body class="resource-detail-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories">Categories</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header>
 <main><article class="resource-detail${hasInlinePreview(resource) ? ' has-inline-preview' : ''}"${hasInlinePreview(resource) ? ` data-resource-title="${escapeAttr(resource.title)}" data-resource-context="${escapeAttr(`${type.label} · ${resource.subject} · ${resource.year}`)}"` : ''}><div class="container"><nav class="crumbs"><a href="${rootPrefix}index.html">Resources</a><span>/</span><a href="${rootPrefix}resources.html">Library</a><span>/</span><span>${escapeHtml(resource.title)}</span></nav><div class="resource-detail-layout"><div class="resource-detail-preview">${preview}</div><div class="resource-detail-copy"><span class="badge badge-${type.colour}">${escapeHtml(type.label)}</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">${escapeHtml(description)}</p><dl class="resource-detail-meta">${metadata}</dl><a class="btn btn-primary btn-block" href="${escapeHtml(resource.url)}">${actionLabel}</a><a class="resource-back" href="${rootPrefix}resources.html">Back to all resources</a></div></div><section class="resource-faq"><h2>About this resource</h2><dl><div><dt>Who is this for?</dt><dd>${escapeHtml(resource.title)} is suitable for ${escapeHtml(resource.year || 'students')} studying ${escapeHtml(resource.subject || 'this topic')}.</dd></div><div><dt>How should I use it?</dt><dd>${escapeHtml(description)}</dd></div></dl></section>${relatedSection}</div></article></main>
-  <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}reader-layout.js"></script><script src="${rootPrefix}carousel.js"></script><script type="module" src="${rootPrefix}pdf-reader.js"></script></body></html>`.replace('</div></div><section class="resource-faq"', `</div></div>${questionPaperSection}<section class="resource-faq"`).replace('<a class="resource-back"', `${solutionsButton}<a class="resource-back"`);
+  <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}reader-layout.js"></script><script src="${rootPrefix}carousel.js"></script><script type="module" src="${rootPrefix}pdf-reader.js"></script></body></html>`.replace('</div></div><section class="resource-faq"', `</div></div>${questionPaperSection}<section class="resource-faq"`).replace('<a class="resource-back"', `${solutionsButton}${solutionsVideoButton}<a class="resource-back"`);
 }
 
 async function writeStaticPages() {
