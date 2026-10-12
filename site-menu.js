@@ -85,7 +85,9 @@
     showResourceLoading(url.href);
   });
 
-  const prefix = location.pathname.includes('/resource-pages/') ? '../../' : '';
+  const prefix = location.pathname.includes('/resource-pages/')
+    ? (location.pathname.includes('/solutions/') ? '../../../' : '../../')
+    : '';
   const footerMarkup = `
     <div class="container footer-grid">
       <nav class="footer-column" aria-label="Site links">
