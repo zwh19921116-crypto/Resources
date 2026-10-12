@@ -34,6 +34,17 @@ async function mountPdfReader(reader) {
         heading.style.width = '100%';
         heading.style.textAlign = 'center';
       }
+      details.querySelectorAll('.btn-solutions').forEach((button) => {
+        button.style.justifyContent = 'center';
+        button.style.textAlign = 'center';
+      });
+      const backLink = details.querySelector('.resource-back');
+      if (backLink) {
+        backLink.classList.add('btn', 'btn-light', 'btn-block');
+        backLink.style.display = 'flex';
+        backLink.style.justifyContent = 'center';
+        backLink.style.textAlign = 'center';
+      }
     }
     const frame = document.createElement('iframe');
     frame.src = url;
