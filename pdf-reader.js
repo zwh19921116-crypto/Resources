@@ -105,6 +105,9 @@ async function mountPdfReader(reader) {
 
 document.querySelectorAll('.pdf-reader[data-pdf-url]').forEach(mountPdfReader);
 
+const solutionsLink = document.querySelector('.btn-solutions');
+if (solutionsLink) solutionsLink.href = 'solutions/index.html';
+
 async function mountQuestionRegion(region) {
   const url = region.dataset.pdfUrl;
   const canvas = region.querySelector('canvas');

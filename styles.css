@@ -1127,6 +1127,23 @@ body.modal-open{overflow:hidden}
 .resource-detail.has-inline-preview .resource-detail-copy .btn-solutions,.resource-detail.has-inline-preview .resource-detail-copy .resource-back{display:flex;width:100%;min-height:42px;border-radius:7px;align-items:center;justify-content:center;background:#173b7d;color:#fff;font-size:.8rem;font-weight:800;box-shadow:0 4px 10px rgba(23,59,125,.16)}
 .resource-detail.has-inline-preview .resource-detail-copy .btn-solutions:hover,.resource-detail.has-inline-preview .resource-detail-copy .resource-back:hover{text-decoration:none;background:#0f2d64}
 .resource-detail.has-inline-preview .resource-detail-copy .resource-back{margin-top:.75rem}
+.solutions-page{background:#f7f9fe;color:var(--ink)}
+.solutions-page main{padding:1.5rem 0 4.5rem}
+.solutions-page-intro{max-width:700px;margin:1.75rem 0 1.5rem}
+.solutions-page-intro h1{font-size:clamp(1.8rem,3vw,2.6rem);line-height:1.15}
+.solutions-page-intro p:last-child{margin-top:.65rem;color:var(--muted);line-height:1.6}
+.solutions-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr);gap:1rem;align-items:start}
+.solution-panel{padding:1rem;background:#fff;border:1px solid #d8e0ee;border-radius:12px;box-shadow:0 10px 24px rgba(15,23,42,.06)}
+.solution-panel-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.8rem}
+.solution-panel-head .section-eyebrow{margin:0}
+.solution-pdf{display:block;width:100%;height:min(78vh,900px);min-height:620px;border:1px solid #d8e0ee;border-radius:8px;background:#e9edf4}
+.solution-video{overflow:hidden;aspect-ratio:16/9;border-radius:8px;background:#071d46}
+.solution-video iframe{width:100%;height:100%;border:0;display:block}
+.solutions-page .resource-back{display:inline-flex;margin-top:1rem;min-height:42px;align-items:center;justify-content:center}
+@media (max-width:900px){
+  .solutions-layout{grid-template-columns:1fr}
+  .solution-pdf{height:70vh;min-height:520px}
+}
 @media (min-width:681px){
   .resource-detail.has-inline-preview .resource-detail-layout{grid-template-columns:minmax(0,1fr) 304px}
   .resource-detail.has-inline-preview .resource-detail-copy{display:flex}

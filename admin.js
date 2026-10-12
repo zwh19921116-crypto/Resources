@@ -786,6 +786,32 @@ function relatedResourcesFor(resource) {
     .sort((left, right) => right.score - left.score || String(right.item.added || '').localeCompare(String(left.item.added || '')))
     .slice(0, 6)
     .map(({ item }) => item);
+  }
+function solutionVideoEmbedUrl(value) {
+  try {
+    const parsed = new URL(value);
+    if (parsed.hostname === 'youtu.be') return `https://www.youtube.com/embed/${parsed.pathname.slice(1)}`;
+    if (parsed.hostname.endsWith('youtube.com')) {
+      const videoId = parsed.searchParams.get('v');
+      if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+    }
+    if (parsed.hostname.endsWith('vimeo.com')) {
+      const videoId = parsed.pathname.split('/').filter(Boolean).pop();
+      if (videoId && /^\d+$/.test(videoId)) return `https://player.vimeo.com/video/${videoId}`;
+    }
+  } catch (error) {
+    return '';
+  }
+  return '';
+}
+function solutionPageMarkup(resource) {
+  const rootPrefix = '../../../';
+  const solutionUrl = resource.solutions || '';
+  const videoUrl = resource.solutionsVideo || '';
+  const videoEmbedUrl = solutionVideoEmbedUrl(videoUrl);
+  const pdfMarkup = solutionUrl ? `<section class="solution-panel"><div class="solution-panel-head"><p class="section-eyebrow">Solutions PDF</p><a class="btn btn-light" href="${escapeAttr(solutionUrl)}" target="_blank" rel="noopener noreferrer">Open PDF</a></div><iframe class="solution-pdf" src="${escapeAttr(solutionUrl)}#page=1&view=Fit&zoom=page-fit" title="Solutions PDF"></iframe></section>` : '';
+  const videoMarkup = videoUrl ? `<section class="solution-panel"><div class="solution-panel-head"><p class="section-eyebrow">Solutions video</p>${videoEmbedUrl ? '' : `<a class="btn btn-light" href="${escapeAttr(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch video</a>`}</div>${videoEmbedUrl ? `<div class="solution-video"><iframe src="${escapeAttr(videoEmbedUrl)}" title="Solutions video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>` : ''}</section>` : '';
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Solutions for ${escapeHtml(resource.title)} | Edgeducate Resources</title><meta name="description" content="Solutions for ${escapeHtml(resource.title)}."><link rel="canonical" href="https://zwh19921116-crypto.github.io/Resources/resource-pages/${resourcePagePath(resource)}/solutions/"><link rel="stylesheet" href="${rootPrefix}styles.css"></head><body class="solutions-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header><main><div class="container"><nav class="crumbs"><a href="${rootPrefix}resources.html">Library</a><span>/</span><a href="../index.html">${escapeHtml(resource.title)}</a><span>/</span><span>Solutions</span></nav><div class="solutions-page-intro"><p class="section-eyebrow">Solutions</p><h1>${escapeHtml(resource.title)}</h1><p>Work through the solutions and review the explanation video where available.</p></div><div class="solutions-layout">${pdfMarkup}${videoMarkup}</div><a class="resource-back btn btn-light" href="../index.html">Back to resource</a></div></main><footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer></body></html>`;
 }
 
 function renderRelatedResourceOptions(resource) {
@@ -2904,13 +2930,11 @@ function resourcePageMarkup(resource) {
   }).join('');
   const relatedSection = relatedMarkup ? `<section class="related-resources" data-carousel><a class="reader-download" href="${escapeAttr(resource.url)}" download>Download resource</a><div class="related-resources-head"><div><p class="section-eyebrow">Keep learning</p><h2>More ${escapeHtml(resource.subject)} resources</h2></div><div class="carousel-controls"><button type="button" data-carousel-prev aria-label="Previous related resources">‹</button><button type="button" data-carousel-next aria-label="Next related resources">›</button></div></div><div class="related-carousel" tabindex="0" aria-label="Related ${escapeHtml(resource.subject)} resources"><div class="related-track">${relatedMarkup}</div></div></section>` : '';
   const questionPaperSection = questionPaperMarkup(resource, resourcePagesPrefix);
-  const solutionHref = String(resource.solutions || '').startsWith('resource-pages/') ? `../${String(resource.solutions).slice('resource-pages/'.length)}` : resource.solutions;
   const preview = resourcePreviewMarkup(resource);
   const canonical = `https://zwh19921116-crypto.github.io/Resources/resource-pages/${staticPath}/`;
   const description = resource.desc || type.blurb;
   const actionLabel = resource.type === 'video' ? 'Watch video' : /\.pdf(\?|#|$)/i.test(String(resource.url || '')) ? 'View full document' : 'Open resource';
-  const solutionsButton = resource.solutions ? `<a class="btn btn-solutions btn-block" href="${escapeAttr(solutionHref)}">View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>` : '';
-  const solutionsVideoButton = resource.solutionsVideo ? `<a class="btn btn-primary btn-block" href="${escapeAttr(resource.solutionsVideo)}" target="_blank" rel="noopener noreferrer">Watch Solutions Video <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>` : '';
+  const solutionsButton = resource.solutions || resource.solutionsVideo ? '<a class="btn btn-solutions btn-block" href="solutions/index.html">View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>' : '';
   const schema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'LearningResource', name: resource.title, description, educationalLevel: resource.year, learningResourceType: type.label, url: canonical, about: resource.tags || [], isAccessibleForFree: true, inLanguage: 'en-AU' });
   const faqSchema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [
     { '@type': 'Question', name: `Who is ${resource.title} for?`, acceptedAnswer: { '@type': 'Answer', text: `${resource.title} is suitable for ${resource.year || 'students'} studying ${resource.subject || 'this topic'}.` } },
@@ -2921,7 +2945,7 @@ function resourcePageMarkup(resource) {
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(resource.title)} | Edgeducate Resources</title><meta name="description" content="${escapeHtml(description)}"><link rel="canonical" href="${canonical}"><meta property="og:title" content="${escapeHtml(resource.title)} | Edgeducate Resources"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:type" content="article"><meta property="og:url" content="${canonical}"><script type="application/ld+json">${schema}</script><script type="application/ld+json">${faqSchema}</script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="${rootPrefix}styles.css"></head>
 <body class="resource-detail-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories">Categories</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header>
 <main><article class="resource-detail${hasInlinePreview(resource) ? ' has-inline-preview' : ''}"${hasInlinePreview(resource) ? ` data-resource-title="${escapeAttr(resource.title)}" data-resource-context="${escapeAttr(`${type.label} · ${resource.subject} · ${resource.year}`)}"` : ''}><div class="container"><nav class="crumbs"><a href="${rootPrefix}index.html">Resources</a><span>/</span><a href="${rootPrefix}resources.html">Library</a><span>/</span><span>${escapeHtml(resource.title)}</span></nav><div class="resource-detail-layout"><div class="resource-detail-preview">${preview}</div><div class="resource-detail-copy"><span class="badge badge-${type.colour}">${escapeHtml(type.label)}</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">${escapeHtml(description)}</p><dl class="resource-detail-meta">${metadata}</dl><a class="btn btn-primary btn-block" href="${escapeHtml(resource.url)}">${actionLabel}</a><a class="resource-back" href="${rootPrefix}resources.html">Back to all resources</a></div></div><section class="resource-faq"><h2>About this resource</h2><dl><div><dt>Who is this for?</dt><dd>${escapeHtml(resource.title)} is suitable for ${escapeHtml(resource.year || 'students')} studying ${escapeHtml(resource.subject || 'this topic')}.</dd></div><div><dt>How should I use it?</dt><dd>${escapeHtml(description)}</dd></div></dl></section>${relatedSection}</div></article></main>
-  <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}reader-layout.js"></script><script src="${rootPrefix}carousel.js"></script><script type="module" src="${rootPrefix}pdf-reader.js?v=20261012native"></script></body></html>`.replace('</div></div><section class="resource-faq"', `</div></div>${questionPaperSection}<section class="resource-faq"`).replace('<a class="resource-back"', `${solutionsButton}${solutionsVideoButton}<a class="resource-back"`);
+  <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}reader-layout.js"></script><script src="${rootPrefix}carousel.js"></script><script type="module" src="${rootPrefix}pdf-reader.js?v=20261012native"></script></body></html>`.replace('</div></div><section class="resource-faq"', `</div></div>${questionPaperSection}<section class="resource-faq"`).replace('<a class="resource-back"', `${solutionsButton}<a class="resource-back"`);
 }
 
 async function writeStaticPages() {
@@ -2935,8 +2959,20 @@ async function writeStaticPages() {
     const writable = await pageFile.createWritable();
     await writable.write(resourcePageMarkup(resource));
     await writable.close();
+    if (resource.solutions || resource.solutionsVideo) {
+      const solutionsDirectory = await pageDirectory.getDirectoryHandle('solutions', { create: true });
+      const solutionsFile = await solutionsDirectory.getFileHandle('index.html', { create: true });
+      const solutionsWritable = await solutionsFile.createWritable();
+      await solutionsWritable.write(solutionPageMarkup(resource));
+      await solutionsWritable.close();
+    }
   }
-  const sitemap = items.filter((item) => item.status !== 'draft').map((item) => `  <url><loc>https://zwh19921116-crypto.github.io/Resources/resource-pages/${resourcePagePath(item)}/</loc><lastmod>${item.added || new Date().toISOString().slice(0, 10)}</lastmod></url>`).join('\n');
+  const sitemap = items.filter((item) => item.status !== 'draft').flatMap((item) => {
+    const lastmod = item.added || new Date().toISOString().slice(0, 10);
+    const pages = [`  <url><loc>https://zwh19921116-crypto.github.io/Resources/resource-pages/${resourcePagePath(item)}/</loc><lastmod>${lastmod}</lastmod></url>`];
+    if (item.solutions || item.solutionsVideo) pages.push(`  <url><loc>https://zwh19921116-crypto.github.io/Resources/resource-pages/${resourcePagePath(item)}/solutions/</loc><lastmod>${lastmod}</lastmod></url>`);
+    return pages;
+  }).join('\n');
   const sitemapFile = await projectHandle.getFileHandle('sitemap.xml', { create: true });
   const sitemapWriter = await sitemapFile.createWritable();
   await sitemapWriter.write(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>https://zwh19921116-crypto.github.io/Resources/</loc></url>\n  <url><loc>https://zwh19921116-crypto.github.io/Resources/resources.html</loc></url>\n${sitemap}\n</urlset>\n`);
