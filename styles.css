@@ -1114,6 +1114,7 @@ body.modal-open{overflow:hidden}
 
 /* Keep solution actions available beside inline document previews. */
 .resource-detail.has-inline-preview .resource-detail-copy{display:flex}
+.resource-detail.has-inline-preview .resource-detail-copy h1{display:none}
 .session-loading-brand{display:block;font-size:1.5rem;letter-spacing:0;margin-bottom:1.75rem}
 .session-loading-spinner{
   width:36px;height:36px;margin:0 auto 1.1rem;border-radius:50%;
