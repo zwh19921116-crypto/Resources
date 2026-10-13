@@ -2,6 +2,7 @@ const stage = document.querySelector('[data-solution-stage]');
 const toggle = document.querySelector('[data-solution-video-toggle]');
 const videoPanel = document.querySelector('[data-solution-video-panel]');
 const resourceBack = stage?.querySelector('.resource-back');
+let allResourcesBack;
 const pdfButton = stage?.querySelector('.resource-detail-copy .btn-primary');
 
 if (pdfButton) {
@@ -20,6 +21,7 @@ if (stage && resourceBack) {
       allResourcesBack.textContent = 'Back to all resources';
       detailCopy.appendChild(allResourcesBack);
     }
+    allResourcesBack = detailCopy.querySelector('.solution-all-resources');
   }
 }
 
@@ -31,5 +33,8 @@ if (stage && toggle && videoPanel) {
 
     resourceBack.classList.add('solution-return');
     stage.insertBefore(resourceBack, stage.firstElementChild);
+    if (allResourcesBack) {
+      stage.insertBefore(allResourcesBack, resourceBack.nextElementSibling);
+    }
   });
 }
