@@ -6,7 +6,7 @@ const el = (id) => document.getElementById(id);
 const grid = el('resource-grid');
 const searchInput = el('q');
 
-const state = { q: '', type: '', subject: '', year: '', sort: 'newest', shown: CONFIG.pageSize };
+const state = { q: '', type: '', subject: '', year: '', solutions: false, video: false, sort: 'newest', shown: CONFIG.pageSize };
 
 const footerYearNode = el('year');
 if (footerYearNode) footerYearNode.textContent = new Date().getFullYear();
@@ -695,6 +695,8 @@ function matches(r) {
   if (state.type && r.type !== state.type) return false;
   if (state.subject && r.subject !== state.subject) return false;
   if (state.year && r.year !== state.year) return false;
+  if (state.solutions && !(r.solutions || r.solutionsVideo)) return false;
+  if (state.video && !r.solutionsVideo) return false;
   if (!state.q) return true;
   const type = CONFIG.types[r.type];
   const haystack = [r.title, r.desc, r.subject, r.year, r.level, r.details, type && type.label, (r.tags || []).join(' ')]
@@ -710,7 +712,7 @@ function setFilter(key, value) {
 }
 
 function resetFilters() {
-  Object.assign(state, { q: '', type: '', subject: '', year: '', shown: CONFIG.pageSize });
+  Object.assign(state, { q: '', type: '', subject: '', year: '', solutions: false, video: false, shown: CONFIG.pageSize });
   searchInput.value = '';
   el('filter-subject').value = '';
   el('filter-year').value = '';
@@ -750,6 +752,19 @@ function renderLibraryControls() {
     typeWrap.appendChild(option(key, t.label, ALL.filter((r) => r.type === key).length, t.icon, t.colour))
   );
 
+  const availabilityWrap = el('filter-availability');
+  const availabilityOption = (key, label, count) => {
+    const b = option('', label, count);
+    b.dataset.feature = key;
+    b.addEventListener('click', () => {
+      state[key] = !state[key];
+      renderLibrary();
+    });
+    return b;
+  };
+  availabilityWrap.appendChild(availabilityOption('solutions', 'Solutions provided', ALL.filter((r) => r.solutions || r.solutionsVideo).length));
+  availabilityWrap.appendChild(availabilityOption('video', 'Video provided', ALL.filter((r) => r.solutionsVideo).length));
+
   const fill = (select, values) => values.forEach((v) => {
     const o = document.createElement('option');
     o.value = v;
@@ -774,6 +789,8 @@ function renderLibraryControls() {
     state.type = '';
     state.subject = '';
     state.year = '';
+    state.solutions = false;
+    state.video = false;
     el('filter-subject').value = '';
     el('filter-year').value = '';
     setFilter('q', searchInput.value.trim());
@@ -792,6 +809,8 @@ function renderActiveFilters() {
   if (state.type) pills.push({ key: 'type', label: (CONFIG.types[state.type] || {}).label || state.type });
   if (state.subject) pills.push({ key: 'subject', label: state.subject });
   if (state.year) pills.push({ key: 'year', label: state.year });
+  if (state.solutions) pills.push({ key: 'solutions', label: 'Solutions provided' });
+  if (state.video) pills.push({ key: 'video', label: 'Video provided' });
 
   wrap.hidden = pills.length === 0;
   wrap.innerHTML = '';
@@ -805,6 +824,7 @@ function renderActiveFilters() {
       if (p.key === 'q') searchInput.value = '';
       if (p.key === 'subject') el('filter-subject').value = '';
       if (p.key === 'year') el('filter-year').value = '';
+      if (p.key === 'solutions' || p.key === 'video') state[p.key] = false;
       setFilter(p.key, '');
     });
     wrap.appendChild(b);
@@ -840,9 +860,14 @@ function renderLibrary() {
   el('load-more').textContent = `Load more (${more} remaining)`;
 
   renderActiveFilters();
-  el('filter-reset').hidden = !(state.q || state.type || state.subject || state.year);
+  el('filter-reset').hidden = !(state.q || state.type || state.subject || state.year || state.solutions || state.video);
   document.querySelectorAll('#filter-type .filter-option').forEach((opt) => {
     const on = opt.dataset.type === state.type;
+    opt.classList.toggle('is-on', on);
+    opt.setAttribute('aria-pressed', String(on));
+  });
+  document.querySelectorAll('#filter-availability .filter-option').forEach((opt) => {
+    const on = Boolean(state[opt.dataset.feature]);
     opt.classList.toggle('is-on', on);
     opt.setAttribute('aria-pressed', String(on));
   });
@@ -854,6 +879,8 @@ if (PAGE === 'library') {
   const params = new URLSearchParams(location.search);
   const q = params.get('q');
   const type = params.get('type');
+  state.solutions = params.get('solutions') === '1';
+  state.video = params.get('video') === '1';
   if (q) {
     state.q = q;
     searchInput.value = q;
