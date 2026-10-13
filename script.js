@@ -75,8 +75,8 @@ function buildCard(r) {
   const hasVideo = Boolean(String(r.solutionsVideo || '').trim());
   const availability = hasSolutions || hasVideo ? `
       <span class="resource-availability" aria-label="Available materials">
-        ${hasSolutions ? '<span class="availability-item availability-solutions"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg>Solutions provided</span>' : ''}
-        ${hasVideo ? '<span class="availability-item availability-video"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>Video provided</span>' : ''}
+        ${hasSolutions ? '<span class="availability-item availability-solutions"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg>Solutions</span>' : ''}
+        ${hasVideo ? '<span class="availability-item availability-video"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>Video</span>' : ''}
       </span>` : '';
   card.innerHTML = `
     <a class="thumb" href="${detailUrl}" target="_blank" rel="noopener" aria-label="Open ${esc(r.title)} in a new tab">
