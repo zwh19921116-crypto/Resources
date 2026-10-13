@@ -71,6 +71,13 @@ function buildCard(r) {
   const detailUrl = `resource-pages/${encodeURIComponent(r.id)}/index.html`;
 
   const tone = levelTone(r.level);
+  const hasSolutions = Boolean(String(r.solutions || '').trim() || String(r.solutionsVideo || '').trim());
+  const hasVideo = Boolean(String(r.solutionsVideo || '').trim());
+  const availability = hasSolutions || hasVideo ? `
+      <div class="resource-availability" aria-label="Available materials">
+        ${hasSolutions ? '<span class="availability-item availability-solutions"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg>Solutions provided</span>' : ''}
+        ${hasVideo ? '<span class="availability-item availability-video"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>Video provided</span>' : ''}
+      </div>` : '';
   card.innerHTML = `
     <a class="thumb" href="${detailUrl}" target="_blank" rel="noopener" aria-label="Open ${esc(r.title)} in a new tab">
       ${window.edgThumb(r.art, r.image)}
@@ -81,6 +88,7 @@ function buildCard(r) {
       <h3>${esc(r.title)}</h3>
       <p class="meta">${[r.year, r.details].filter(Boolean).map(esc).join(' &nbsp;•&nbsp; ')}</p>
     </a>
+    ${availability}
     <p class="foot">
       <span class="level ${tone}">${esc(r.level || '')}</span>
       <span class="card-actions">
