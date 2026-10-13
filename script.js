@@ -18,21 +18,24 @@ const showLibraryLoading = () => {
     body: 'Small-group VCE and secondary tuition led by top-performing tutors. Book a free consultation for your class.',
     duration: 4
   };
-  const overlay = document.createElement('div');
-  overlay.className = 'session-loading resource-navigation-loading';
-  overlay.innerHTML = `<div class="session-loading-inner" role="status" aria-live="polite">
-    <span class="session-loading-brand"><strong>Edge</strong>ducate</span>
-    <div class="session-loading-spinner" aria-hidden="true"></div>
-    <p class="session-loading-status">Preparing your resource library...</p>
-    <div class="session-loading-ad">
-      <p class="session-loading-ad-eyebrow">While you wait</p>
-      <h2>${esc(ad.title)}</h2>
-      <p>${esc(ad.body)}</p>
-    </div>
-  </div>`;
-  document.body.appendChild(overlay);
+  const overlay = document.querySelector('.resource-navigation-loading') || document.createElement('div');
+  if (!overlay.parentElement) {
+    overlay.className = 'session-loading resource-navigation-loading';
+    overlay.innerHTML = `<div class="session-loading-inner" role="status" aria-live="polite">
+      <span class="session-loading-brand"><strong>Edge</strong>ducate</span>
+      <div class="session-loading-spinner" aria-hidden="true"></div>
+      <p class="session-loading-status">Preparing your resource library...</p>
+      <div class="session-loading-ad">
+        <p class="session-loading-ad-eyebrow">While you wait</p>
+        <h2>${esc(ad.title)}</h2>
+        <p>${esc(ad.body)}</p>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+  }
   window.setTimeout(() => {
     overlay.classList.add('is-done');
+    document.documentElement.classList.remove('resource-loading-pending');
     window.setTimeout(() => overlay.remove(), 450);
     const url = new URL(window.location.href);
     url.searchParams.delete('edg-loading');

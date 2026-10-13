@@ -1101,6 +1101,8 @@ body.modal-open{overflow:hidden}
   background:linear-gradient(120deg,#071d46 0%,#102d67 65%,#174184 100%);
   transition:opacity .4s ease;
 }
+.resource-navigation-loading{display:none!important}
+.resource-loading-pending .resource-navigation-loading{display:flex!important}
 .session-loading.is-done{opacity:0;pointer-events:none}
 .session-loading-inner{width:min(92%,460px);text-align:center;color:#fff}
 
