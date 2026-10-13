@@ -95,7 +95,7 @@
         <a href="https://edgeducate.com.au/vce-chemistry">VCE Chemistry</a>
         <a href="https://edgeducate.com.au/vce-general-mathematics">VCE General Mathematics</a>
         <a href="https://edgeducate.com.au/vce-mathematical-methods">VCE Mathematical Methods</a>
-        <a href="https://edgeducate.com.au/vce-physics">VCE Physics</a>
+        <a href="${prefix}all-resources.html?subject=Physics">VCE Physics</a>
       </nav>
       <nav class="footer-column" aria-label="Legal links">
         <h2>Legal</h2>

@@ -893,6 +893,7 @@ if (PAGE === 'library') {
   const params = new URLSearchParams(location.search);
   const q = params.get('q');
   const type = params.get('type');
+  const subject = params.get('subject');
   state.solutions = params.get('solutions') === '1';
   state.video = params.get('video') === '1';
   if (q) {
@@ -900,6 +901,7 @@ if (PAGE === 'library') {
     searchInput.value = q;
   }
   if (type && CONFIG.types[type]) state.type = type;
+  if (subject && CONFIG.subjects.includes(subject)) state.subject = subject;
   renderLibrary();
 } else {
   renderHome();
