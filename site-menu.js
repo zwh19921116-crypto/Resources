@@ -93,7 +93,7 @@
         <h2>Subjects</h2>
         <a href="${prefix}all-resources.html?subject=Biology">VCE Biology</a>
         <a href="${prefix}all-resources.html?subject=Chemistry">VCE Chemistry</a>
-        <a href="https://edgeducate.com.au/vce-general-mathematics">VCE General Mathematics</a>
+        <a href="${prefix}all-resources.html?subject=General">VCE General Mathematics</a>
         <a href="https://edgeducate.com.au/vce-mathematical-methods">VCE Mathematical Methods</a>
         <a href="${prefix}all-resources.html?subject=Physics">VCE Physics</a>
       </nav>
