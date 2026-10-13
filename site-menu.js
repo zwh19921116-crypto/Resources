@@ -100,6 +100,7 @@
         <a href="${prefix}all-resources.html?subject=Physics&type=practice-exam">VCE Physics Practice Exams</a>
         <a href="${prefix}all-resources.html?subject=Physics&type=checklist">VCE Physics Checklists</a>
         <a href="${prefix}all-resources.html?subject=Physics&type=knowledge-sheet">VCE Physics Knowledge Sheets</a>
+        <a href="${prefix}all-resources.html?subject=Physics&type=interactive-app">VCE Physics Interactive Learning</a>
       </nav>
       <nav class="footer-column" aria-label="Legal links">
         <h2>Legal</h2>
