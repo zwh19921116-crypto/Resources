@@ -60,6 +60,7 @@
     window.location.href = url.href;
   };
   window.addEventListener('pageshow', () => {
+    if (new URLSearchParams(window.location.search).get('edg-loading') === '1') return;
     document.querySelectorAll('.resource-navigation-loading').forEach((overlay) => overlay.remove());
   });
   document.addEventListener('click', (event) => {
