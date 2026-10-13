@@ -3435,6 +3435,13 @@ async function restoreHandle() {
     $('btn-save').textContent = 'Save now';
     const permission = await handle.queryPermission({ mode: 'readwrite' });
     if (permission === 'granted' && projectHandle) {
+      const dataDirectory = await projectHandle.getDirectoryHandle('data');
+      if (!adsFileHandle) adsFileHandle = await dataDirectory.getFileHandle('ads.js', { create: true });
+      if (!clubFileHandle) clubFileHandle = await dataDirectory.getFileHandle('club-deals.js', { create: true });
+      if (!packagesFileHandle) packagesFileHandle = await dataDirectory.getFileHandle('packages.js', { create: true });
+      await saveAdsHandle(adsFileHandle);
+      await saveClubHandle(clubFileHandle);
+      await savePackageHandle(packagesFileHandle);
       setConnectionUi(true);
       setState('is-saved', 'Connected');
       log(`Reconnected to project folder and ${handle.name} - auto-save is on.`, 'ok');
