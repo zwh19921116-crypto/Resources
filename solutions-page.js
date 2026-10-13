@@ -3,6 +3,12 @@ const toggle = document.querySelector('[data-solution-video-toggle]');
 const videoPanel = document.querySelector('[data-solution-video-panel]');
 const resourceBack = stage?.querySelector('.resource-back');
 const pdfButton = stage?.querySelector('.resource-detail-copy .btn-primary');
+const libraryCrumb = stage?.parentElement.querySelector('.crumbs a');
+
+if (libraryCrumb) {
+  libraryCrumb.href = '../../../all-resources.html';
+  libraryCrumb.textContent = 'All Resources';
+}
 
 if (pdfButton) {
   pdfButton.textContent = 'View solutions PDF';
