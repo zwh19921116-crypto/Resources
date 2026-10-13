@@ -810,10 +810,7 @@ function renderLibraryControls() {
     if (years.length) {
       fill(yearSelect, years);
     } else if (state.mathsType) {
-      const emptyOption = document.createElement('option');
-      emptyOption.textContent = 'No matching year levels';
-      emptyOption.disabled = true;
-      yearSelect.appendChild(emptyOption);
+      fill(yearSelect, CONFIG.vceUnits || ['VCE Units 1&2', 'VCE Units 3&4']);
     } else {
       fill(yearSelect, CONFIG.years);
     }
