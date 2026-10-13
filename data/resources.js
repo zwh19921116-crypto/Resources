@@ -25,7 +25,7 @@ window.EDG_RESOURCES = [
     relatedIds: [],
     url: 'https://files.edgeducate.com.au/biology/units-3-4/practice-exams/VCE_Biology_Trial_Paper_1.pdf',
     solutions: 'https://files.edgeducate.com.au/biology/units-3-4/practice-exams/VCE_Biology_Trial_Paper_1.pdf',
-    solutionsVideo: 'https://www.youtube.com/watch?v=8wPd-qscNwA',
+    solutionsVideo: 'https://www.youtube.com/watch?v=tniMLseqCyo',
     added: '2026-10-12',
     status: 'published'
   }
