@@ -2,7 +2,6 @@ const stage = document.querySelector('[data-solution-stage]');
 const toggle = document.querySelector('[data-solution-video-toggle]');
 const videoPanel = document.querySelector('[data-solution-video-panel]');
 const resourceBack = stage?.querySelector('.resource-back');
-let allResourcesBack;
 const pdfButton = stage?.querySelector('.resource-detail-copy .btn-primary');
 
 if (pdfButton) {
@@ -13,17 +12,7 @@ if (stage && resourceBack) {
   resourceBack.classList.add('solution-back-top');
   const detailCopy = stage.querySelector('.resource-detail-copy');
   const crumbs = stage.parentElement.querySelector('.crumbs');
-  if (detailCopy) {
-    if (crumbs) crumbs.appendChild(resourceBack);
-    if (!detailCopy.querySelector('.solution-all-resources')) {
-      const allResourcesBack = document.createElement('a');
-      allResourcesBack.className = 'resource-back solution-all-resources';
-      allResourcesBack.href = '../../../resources.html';
-      allResourcesBack.textContent = 'Back to all resources';
-      detailCopy.appendChild(allResourcesBack);
-    }
-    allResourcesBack = detailCopy.querySelector('.solution-all-resources');
-  }
+  if (crumbs) crumbs.appendChild(resourceBack);
 }
 
 if (stage && toggle && videoPanel) {
@@ -32,8 +21,5 @@ if (stage && toggle && videoPanel) {
     videoPanel.hidden = false;
     toggle.hidden = true;
 
-    if (allResourcesBack) {
-      stage.insertBefore(allResourcesBack, stage.firstElementChild);
-    }
   });
 }

@@ -1154,7 +1154,6 @@ body.modal-open{overflow:hidden}
 .solution-return{display:none!important}
 .solution-stage.is-video-open .solution-return{display:flex!important;grid-column:1 / -1;align-items:center;justify-content:center;width:fit-content;min-height:42px;margin:.25rem auto 0;padding:.7rem 1.15rem;border:1px solid #d8e0ee;border-radius:7px;background:#fff;color:#2563eb;font-size:.82rem;font-weight:800;text-decoration:none}
 .solution-stage.is-video-open .solution-return:hover{background:#f1f5ff;text-decoration:none}
-.solution-stage.is-video-open .solution-all-resources{grid-column:1 / -1;justify-self:center;width:auto!important;margin:0 0 1rem!important}
 .resource-detail.has-inline-preview .resource-detail-copy .resource-back{margin-top:.75rem}
 .solutions-page{background:#f7f9fe;color:var(--ink)}
 .solutions-page main{padding:1.5rem 0 4.5rem}
@@ -1173,8 +1172,6 @@ body.modal-open{overflow:hidden}
 .solutions-page .solution-back-top{width:auto!important;min-height:0!important;margin:0 0 0 auto!important;padding:0!important;border:0;border-radius:0;background:transparent!important;color:#1f478f!important;align-self:center;text-align:center!important;justify-content:center;text-decoration:none;box-shadow:none!important;font-size:.82rem;font-weight:700}
 .solutions-page .solution-back-top::before{content:'←';margin-right:.45rem}
 .solutions-page .solution-back-top:hover{color:#173b7d!important;text-decoration:underline}
-.solutions-page .solution-all-resources{display:flex!important;min-height:42px!important;margin:1.25rem 0 0!important;padding:.7rem 1rem!important;border:1px solid #1f478f!important;border-radius:7px;background:#1f478f!important;color:#fff!important;align-items:center;justify-content:center;text-align:center;font-size:.8rem;font-weight:800;text-decoration:none;box-shadow:0 4px 10px rgba(23,59,125,.16)}
-.solutions-page .solution-all-resources:hover{background:#173b7d!important;color:#fff!important;text-decoration:none}
 @media (max-width:900px){
   .solution-stage,.solution-stage.is-video-open{grid-template-columns:1fr}
   .solution-pdf-panel,.solution-video-panel{min-height:420px}
