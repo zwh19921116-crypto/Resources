@@ -378,14 +378,9 @@ button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
 
 .filters-panel{
   position:sticky;top:88px;
-  max-height:calc(100vh - 108px);overflow-y:auto;overscroll-behavior:contain;
   background:#fff;border:1px solid var(--line);border-radius:16px;
   padding:1.25rem;box-shadow:0 8px 26px rgba(15,23,42,.07);
-  scrollbar-width:thin;scrollbar-color:#cbd5e8 transparent;
 }
-.filters-panel::-webkit-scrollbar{width:8px}
-.filters-panel::-webkit-scrollbar-thumb{background:#d5dcec;border-radius:99px;border:2px solid #fff}
-.filters-panel::-webkit-scrollbar-thumb:hover{background:#bcc7de}
 .filters-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.1rem}
 .filters-head h2{font-size:.95rem;font-weight:700}
 .filter-block + .filter-block{margin-top:1.35rem;padding-top:1.35rem;border-top:1px solid #f1f4fb}
