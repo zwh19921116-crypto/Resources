@@ -1176,7 +1176,7 @@ body.modal-open{overflow:hidden}
 .solutions-page .solution-back-top:hover{color:#173b7d!important;text-decoration:underline}
 @media (max-width:900px){
   .solution-stage,.solution-stage.is-video-open{grid-template-columns:1fr}
-  .solution-pdf-panel,.solution-video-panel{min-height:420px}
+  .solution-pdf-panel,.solution-video-panel{min-height:380px}
   .solution-video-panel iframe{min-height:420px}
   .solution-stage.is-video-open .solution-pdf-panel{min-height:300px}
   .solutions-detail .resource-detail-layout{grid-template-columns:1fr}
