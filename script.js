@@ -901,7 +901,10 @@ if (PAGE === 'library') {
     searchInput.value = q;
   }
   if (type && CONFIG.types[type]) state.type = type;
-  if (subject && CONFIG.subjects.includes(subject)) state.subject = subject;
+  if (subject && CONFIG.subjects.includes(subject)) {
+    state.subject = subject;
+    el('filter-subject').value = subject;
+  }
   renderLibrary();
 } else {
   renderHome();
