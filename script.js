@@ -807,7 +807,16 @@ function renderLibraryControls() {
     );
     const years = [...new Set(matchingResources.map((resource) => resource.year).filter(Boolean))];
     yearSelect.innerHTML = '<option value="">All year levels</option>';
-    fill(yearSelect, years.length ? years : CONFIG.years);
+    if (years.length) {
+      fill(yearSelect, years);
+    } else if (state.mathsType) {
+      const emptyOption = document.createElement('option');
+      emptyOption.textContent = 'No matching year levels';
+      emptyOption.disabled = true;
+      yearSelect.appendChild(emptyOption);
+    } else {
+      fill(yearSelect, CONFIG.years);
+    }
     if (!years.includes(state.year)) {
       state.year = '';
       yearSelect.value = '';
