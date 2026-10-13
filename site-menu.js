@@ -111,6 +111,28 @@
     footer.innerHTML = footerMarkup;
   });
 
+  const hydrateSolutionsDetails = async () => {
+    const copy = document.querySelector('.solutions-detail .resource-detail-copy');
+    if (!copy || copy.querySelector('.resource-detail-meta')) return;
+
+    try {
+      const response = await fetch('../index.html', { credentials: 'same-origin' });
+      if (!response.ok) return;
+      const source = new DOMParser().parseFromString(await response.text(), 'text/html');
+      const sourceMeta = source.querySelector('.resource-detail-meta');
+      if (!sourceMeta) return;
+
+      const meta = sourceMeta.cloneNode(true);
+      meta.querySelectorAll('a[href]').forEach((link) => {
+        link.href = new URL(link.getAttribute('href'), new URL('../index.html', window.location.href)).href;
+      });
+      copy.insertBefore(meta, copy.querySelector('.btn') || null);
+    } catch (error) {
+      // The existing Solutions page remains usable if metadata cannot be loaded.
+    }
+  };
+  void hydrateSolutionsDetails();
+
   const menuMarkup = `
     <a href="https://edgeducate.com.au/pricing">Pricing</a>
     <details class="nav-dropdown">
