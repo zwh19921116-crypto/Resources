@@ -3422,7 +3422,7 @@ $('btn-save').addEventListener('click', async () => {
 async function restoreHandle() {
   try {
     const [root, handle, adsHandle, savedClubHandle, savedPackageHandle] = await Promise.all([loadProjectHandle(), loadHandle(), loadAdsHandle(), loadClubHandle(), loadPackageHandle()]);
-    if (fileHandle || projectHandle) return;
+    if (fileHandle && projectHandle && adsFileHandle && clubFileHandle && packagesFileHandle) return;
     if (!handle) {
       setConnectionUi(false);
       return setState('', 'Not connected');
