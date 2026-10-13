@@ -29,10 +29,7 @@ if (stage && toggle && videoPanel) {
     videoPanel.hidden = false;
     toggle.hidden = true;
 
-    if (!stage.querySelector('.solution-return')) {
-      const returnLink = resourceBack.cloneNode(true);
-      returnLink.classList.add('solution-return');
-      stage.insertBefore(returnLink, stage.firstElementChild);
-    }
+    resourceBack.classList.add('solution-return');
+    stage.insertBefore(resourceBack, stage.firstElementChild);
   });
 }
