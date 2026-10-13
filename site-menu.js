@@ -156,6 +156,15 @@
   };
   void hydrateSolutionsDetails();
 
+  const solutionsCopy = document.querySelector('.solutions-detail .resource-detail-copy');
+  if (solutionsCopy && !solutionsCopy.querySelector('.resource-back')) {
+    const backLink = document.createElement('a');
+    backLink.className = 'resource-back solution-back-link btn btn-light btn-block';
+    backLink.href = '../index.html';
+    backLink.textContent = 'Back to resource';
+    solutionsCopy.appendChild(backLink);
+  }
+
   const menuMarkup = `
     <a href="https://edgeducate.com.au/pricing">Pricing</a>
     <details class="nav-dropdown">
