@@ -796,7 +796,12 @@ function renderLibraryControls() {
     o.textContent = v;
     select.appendChild(o);
   });
-  fill(el('filter-subject'), CONFIG.subjects);
+  CONFIG.subjects.forEach((subject) => {
+    const option = document.createElement('option');
+    option.value = subject;
+    option.textContent = subject === 'Maths' ? 'Mathematics' : subject;
+    el('filter-subject').appendChild(option);
+  });
   const mathsTypeFilter = el('maths-type-filter');
   const mathsTypeSelect = el('filter-maths-type');
   const yearSelect = el('filter-year');
@@ -882,7 +887,7 @@ function renderActiveFilters() {
   const pills = [];
   if (state.q) pills.push({ key: 'q', label: `“${state.q}”` });
   if (state.type) pills.push({ key: 'type', label: (CONFIG.types[state.type] || {}).label || state.type });
-  if (state.subject) pills.push({ key: 'subject', label: state.subject });
+  if (state.subject) pills.push({ key: 'subject', label: state.subject === 'Maths' ? 'Mathematics' : state.subject });
   if (state.mathsType) pills.push({ key: 'mathsType', label: state.mathsType === 'methods' ? 'Mathematical Methods' : 'General Mathematics' });
   if (state.year) pills.push({ key: 'year', label: state.year });
   if (state.solutions) pills.push({ key: 'solutions', label: 'Solutions provided' });

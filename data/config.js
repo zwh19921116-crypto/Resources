@@ -53,7 +53,7 @@ window.EDG_CONFIG = {
     // 'ai-tool': { label: 'AI Tool', blurb: '...', colour: 'indigo', icon: 'spark', action: 'link' }
   },
 
-  subjects: ['Maths', 'Biology', 'Chemistry', 'Physics', 'English', 'General'],
+  subjects: ['Maths', 'Biology', 'Chemistry', 'Physics', 'English'],
 
   educationStages: {
     primary: { label: 'Primary' },
