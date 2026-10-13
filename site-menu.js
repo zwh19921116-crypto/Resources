@@ -181,7 +181,7 @@
         <a href="https://edgeducate.com.au/vce-biology">VCE Biology</a>
         <a href="https://edgeducate.com.au/vce-chemistry">VCE Chemistry</a>
         <a href="https://edgeducate.com.au/vce-physics">VCE Physics</a>
-        <a href="https://edgeducate.com.au/vce-general-mathematics">VCE General Mathematics</a>
+        <a href="${prefix}all-resources.html?subject=General">VCE General Mathematics</a>
         <a href="https://edgeducate.com.au/vce-mathematical-methods">VCE Mathematical Methods</a>
       </div>
     </details>
