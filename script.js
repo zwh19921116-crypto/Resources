@@ -160,6 +160,11 @@ function openDetail(r) {
   action.href = r.url || '#';
   action.textContent = youtubeId(r.url) ? 'Watch on YouTube' : 'Download / Open';
 
+  const solutionsAction = el('detail-solutions');
+  const solutionsUrl = String(r.solutions || '').trim();
+  solutionsAction.hidden = !solutionsUrl;
+  solutionsAction.href = solutionsUrl || '#';
+
   modal.hidden = false;
   document.body.classList.add('modal-open');
   el('detail-close').focus();
