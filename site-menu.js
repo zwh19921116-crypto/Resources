@@ -97,6 +97,7 @@
         <a href="${prefix}all-resources.html?subject=Maths&mathsType=methods">VCE Mathematical Methods</a>
         <a href="${prefix}all-resources.html?subject=Physics">VCE Physics</a>
         <a href="${prefix}all-resources.html?subject=Physics&type=practice-questions">VCE Physics Practice Questions</a>
+        <a href="${prefix}all-resources.html?subject=Physics&type=practice-exam">VCE Physics Practice Exams</a>
       </nav>
       <nav class="footer-column" aria-label="Legal links">
         <h2>Legal</h2>
