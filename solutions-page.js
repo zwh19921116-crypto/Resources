@@ -11,7 +11,16 @@ if (pdfButton) {
 if (stage && resourceBack) {
   resourceBack.classList.add('solution-back-top');
   const detailCopy = stage.querySelector('.resource-detail-copy');
-  if (detailCopy) detailCopy.insertBefore(resourceBack, detailCopy.firstChild);
+  if (detailCopy) {
+    detailCopy.insertBefore(resourceBack, detailCopy.firstChild);
+    if (!detailCopy.querySelector('.solution-all-resources')) {
+      const allResourcesBack = document.createElement('a');
+      allResourcesBack.className = 'resource-back solution-all-resources';
+      allResourcesBack.href = '../../../resources.html';
+      allResourcesBack.textContent = 'Back to all resources';
+      detailCopy.appendChild(allResourcesBack);
+    }
+  }
 }
 
 if (stage && toggle && videoPanel) {
