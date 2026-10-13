@@ -146,7 +146,7 @@
           if (label === 'Solutions' || label === 'Solutions video') {
             const link = document.createElement('a');
             link.href = label === 'Solutions' ? 'solutions/index.html' : value;
-            link.textContent = label === 'Solutions' ? 'View solutions' : 'Watch solutions video';
+            link.textContent = 'Available';
             definition.appendChild(link);
           } else {
             definition.textContent = value;
@@ -161,6 +161,13 @@
     const meta = sourceMeta.cloneNode(true);
     meta.querySelectorAll('a[href]').forEach((link) => {
       link.href = new URL(link.getAttribute('href'), new URL('../index.html', window.location.href)).href;
+    });
+    meta.querySelectorAll('div').forEach((row) => {
+      const label = row.querySelector('dt')?.textContent.trim();
+      if (label === 'Solutions' || label === 'Solutions video') {
+        const link = row.querySelector('a');
+        if (link) link.textContent = 'Available';
+      }
     });
     copy.insertBefore(meta, copy.querySelector('.btn') || null);
   };
