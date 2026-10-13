@@ -55,12 +55,10 @@
     return ads[Math.floor(Math.random() * ads.length)] || loadingAd;
   };
   const showResourceLoading = (destination) => {
-    const url = new URL(destination);
-    url.searchParams.set('edg-loading', '1');
-    window.location.href = url.href;
+    window.location.href = destination;
   };
   window.addEventListener('pageshow', () => {
-    if (new URLSearchParams(window.location.search).get('edg-loading') === '1') return;
+    if (window.location.pathname.endsWith('/all-resources.html')) return;
     document.querySelectorAll('.resource-navigation-loading').forEach((overlay) => overlay.remove());
   });
   document.addEventListener('click', (event) => {
@@ -70,7 +68,6 @@
     if (link.dataset.directNavigation === 'true') return;
     const url = new URL(link.href, window.location.href);
     if (url.origin !== window.location.origin || !url.pathname.endsWith('/all-resources.html')) return;
-    event.preventDefault();
     showResourceLoading(url.href);
   });
 

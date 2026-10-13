@@ -12,7 +12,6 @@ const footerYearNode = el('year');
 if (footerYearNode) footerYearNode.textContent = new Date().getFullYear();
 
 const showLibraryLoading = () => {
-  if (new URLSearchParams(window.location.search).get('edg-loading') !== '1') return;
   const ad = (window.EDG_ADS || []).filter((item) => item.status !== 'draft')[0] || {
     title: 'Get exam-ready with Edgeducate classes',
     body: 'Small-group VCE and secondary tuition led by top-performing tutors. Book a free consultation for your class.',
@@ -37,9 +36,6 @@ const showLibraryLoading = () => {
     overlay.classList.add('is-done');
     document.documentElement.classList.remove('resource-loading-pending');
     window.setTimeout(() => overlay.remove(), 450);
-    const url = new URL(window.location.href);
-    url.searchParams.delete('edg-loading');
-    window.history.replaceState({}, '', url.href);
   }, Math.max(2, Number(ad.duration) || 4) * 1000);
 };
 
