@@ -12,8 +12,9 @@ if (pdfButton) {
 if (stage && resourceBack) {
   resourceBack.classList.add('solution-back-top');
   const detailCopy = stage.querySelector('.resource-detail-copy');
+  const crumbs = stage.parentElement.querySelector('.crumbs');
   if (detailCopy) {
-    detailCopy.insertBefore(resourceBack, detailCopy.firstChild);
+    if (crumbs) crumbs.appendChild(resourceBack);
     if (!detailCopy.querySelector('.solution-all-resources')) {
       const allResourcesBack = document.createElement('a');
       allResourcesBack.className = 'resource-back solution-all-resources';
