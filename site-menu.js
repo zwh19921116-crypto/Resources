@@ -91,7 +91,7 @@
       </nav>
       <nav class="footer-column" aria-label="Subject links">
         <h2>Subjects</h2>
-        <a href="https://edgeducate.com.au/vce-biology">VCE Biology</a>
+        <a href="${prefix}all-resources.html?subject=Biology">VCE Biology</a>
         <a href="https://edgeducate.com.au/vce-chemistry">VCE Chemistry</a>
         <a href="https://edgeducate.com.au/vce-general-mathematics">VCE General Mathematics</a>
         <a href="https://edgeducate.com.au/vce-mathematical-methods">VCE Mathematical Methods</a>
