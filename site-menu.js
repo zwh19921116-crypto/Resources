@@ -54,9 +54,6 @@
     const ads = (window.EDG_ADS || []).filter((ad) => ad.status !== 'draft' && isAdEligibleNow(ad, now));
     return ads[Math.floor(Math.random() * ads.length)] || loadingAd;
   };
-  const showResourceLoading = (destination) => {
-    window.location.href = destination;
-  };
   window.addEventListener('pageshow', () => {
     if (window.location.pathname.endsWith('/all-resources.html')) return;
     document.querySelectorAll('.resource-navigation-loading').forEach((overlay) => overlay.remove());
@@ -68,7 +65,6 @@
     if (link.dataset.directNavigation === 'true') return;
     const url = new URL(link.href, window.location.href);
     if (url.origin !== window.location.origin || !url.pathname.endsWith('/all-resources.html')) return;
-    showResourceLoading(url.href);
   });
 
   const prefix = location.pathname.includes('/resource-pages/')
