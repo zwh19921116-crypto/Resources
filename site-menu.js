@@ -154,6 +154,7 @@
           row.append(term, definition);
           sourceMeta.appendChild(row);
         });
+      }
     }
 
     if (!sourceMeta) return;
