@@ -161,9 +161,11 @@ function openDetail(r) {
   action.textContent = youtubeId(r.url) ? 'Watch on YouTube' : 'Download / Open';
 
   const solutionsAction = el('detail-solutions');
-  const solutionsUrl = String(r.solutions || '').trim();
-  solutionsAction.hidden = !solutionsUrl;
-  solutionsAction.href = solutionsUrl || '#';
+  const hasSolutionsPage = Boolean(String(r.solutions || '').trim() || String(r.solutionsVideo || '').trim());
+  solutionsAction.hidden = !hasSolutionsPage;
+  solutionsAction.href = hasSolutionsPage
+    ? `resource-pages/${encodeURIComponent(r.id)}/solutions/index.html`
+    : '#';
 
   modal.hidden = false;
   document.body.classList.add('modal-open');
