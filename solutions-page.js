@@ -32,10 +32,8 @@ if (stage && toggle && videoPanel) {
     videoPanel.hidden = false;
     toggle.hidden = true;
 
-    resourceBack.classList.add('solution-return');
-    stage.insertBefore(resourceBack, stage.firstElementChild);
     if (allResourcesBack) {
-      stage.insertBefore(allResourcesBack, resourceBack.nextElementSibling);
+      stage.insertBefore(allResourcesBack, stage.firstElementChild);
     }
   });
 }
