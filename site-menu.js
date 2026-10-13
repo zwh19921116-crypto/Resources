@@ -111,68 +111,6 @@
     footer.innerHTML = footerMarkup;
   });
 
-  const hydrateSolutionsDetails = async () => {
-    const copy = document.querySelector('.solutions-detail .resource-detail-copy');
-    if (!copy || copy.querySelector('.resource-detail-meta')) return;
-
-    let sourceMeta = null;
-    try {
-      const response = await fetch('../index.html', { credentials: 'same-origin' });
-      if (response.ok) {
-        const source = new DOMParser().parseFromString(await response.text(), 'text/html');
-        sourceMeta = source.querySelector('.resource-detail-meta');
-      }
-    } catch (error) {
-      sourceMeta = null;
-    }
-
-    if (!sourceMeta && Array.isArray(window.EDG_RESOURCES)) {
-      const title = copy.querySelector('h1')?.textContent.trim();
-      const resource = window.EDG_RESOURCES.find((item) => item.title === title);
-      if (resource) {
-        sourceMeta = document.createElement('dl');
-        sourceMeta.className = 'resource-detail-meta';
-        [
-          ['Subject', resource.subject],
-          ['Year level', resource.year],
-          ['Difficulty', resource.level],
-          ['Solutions', resource.solutions],
-          ['Solutions video', resource.solutionsVideo]
-        ].filter(([, value]) => value).forEach(([label, value]) => {
-          const row = document.createElement('div');
-          const term = document.createElement('dt');
-          const definition = document.createElement('dd');
-          term.textContent = label;
-          if (label === 'Solutions' || label === 'Solutions video') {
-            const link = document.createElement('a');
-            link.href = label === 'Solutions' ? 'solutions/index.html' : value;
-            link.textContent = 'Available';
-            definition.appendChild(link);
-          } else {
-            definition.textContent = value;
-          }
-          row.append(term, definition);
-          sourceMeta.appendChild(row);
-        });
-      }
-    }
-
-    if (!sourceMeta) return;
-    const meta = sourceMeta.cloneNode(true);
-    meta.querySelectorAll('a[href]').forEach((link) => {
-      link.href = new URL(link.getAttribute('href'), new URL('../index.html', window.location.href)).href;
-    });
-    meta.querySelectorAll('div').forEach((row) => {
-      const label = row.querySelector('dt')?.textContent.trim();
-      if (label === 'Solutions' || label === 'Solutions video') {
-        const link = row.querySelector('a');
-        if (link) link.textContent = 'Available';
-      }
-    });
-    copy.insertBefore(meta, copy.querySelector('.btn') || null);
-  };
-  void hydrateSolutionsDetails();
-
   const menuMarkup = `
     <a href="https://edgeducate.com.au/pricing">Pricing</a>
     <details class="nav-dropdown">
