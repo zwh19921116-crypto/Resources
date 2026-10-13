@@ -8,6 +8,7 @@ const libraryCrumb = stage?.parentElement.querySelector('.crumbs a');
 if (libraryCrumb) {
   libraryCrumb.href = '../../../all-resources.html';
   libraryCrumb.textContent = 'All Resources';
+      libraryCrumb.dataset.directNavigation = 'true';
 }
 
 if (pdfButton) {
