@@ -14,7 +14,7 @@ window.EDG_RESOURCES = [
     questionVideoPairs: [],
     stage: 'secondary',
     unit: '',
-    subject: 'Biology',
+    subject: 'Physics',
     year: 'VCE Units 3&4',
     level: 'Easy',
     desc: '',
