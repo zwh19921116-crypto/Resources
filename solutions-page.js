@@ -5,7 +5,8 @@ const resourceBack = stage?.querySelector('.resource-back');
 
 if (stage && resourceBack) {
   resourceBack.classList.add('solution-back-top');
-  stage.parentElement.insertBefore(resourceBack, stage);
+  const detailCopy = stage.querySelector('.resource-detail-copy');
+  if (detailCopy) detailCopy.insertBefore(resourceBack, detailCopy.firstChild);
 }
 
 if (stage && toggle && videoPanel) {
@@ -13,5 +14,11 @@ if (stage && toggle && videoPanel) {
     stage.classList.add('is-video-open');
     videoPanel.hidden = false;
     toggle.hidden = true;
+
+    if (!stage.querySelector('.solution-return')) {
+      const returnLink = resourceBack.cloneNode(true);
+      returnLink.classList.add('solution-return');
+      stage.insertBefore(returnLink, stage.firstElementChild);
+    }
   });
 }
