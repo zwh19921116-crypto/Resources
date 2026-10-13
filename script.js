@@ -6,7 +6,7 @@ const el = (id) => document.getElementById(id);
 const grid = el('resource-grid');
 const searchInput = el('q');
 
-const state = { q: '', type: '', subject: '', year: '', solutions: false, video: false, sort: 'newest', shown: CONFIG.pageSize };
+const state = { q: '', type: '', subject: '', mathsType: '', year: '', solutions: false, video: false, sort: 'newest', shown: CONFIG.pageSize };
 
 const footerYearNode = el('year');
 if (footerYearNode) footerYearNode.textContent = new Date().getFullYear();
@@ -708,6 +708,7 @@ function renderStudyBuilder() {
 function matches(r) {
   if (state.type && r.type !== state.type) return false;
   if (state.subject && r.subject !== state.subject) return false;
+  if (state.mathsType && mathematicsTypeFor(r) !== state.mathsType) return false;
   if (state.year && r.year !== state.year) return false;
   if (state.solutions && !(r.solutions || r.solutionsVideo)) return false;
   if (state.video && !r.solutionsVideo) return false;
@@ -719,6 +720,15 @@ function matches(r) {
   return state.q.toLowerCase().split(/\s+/).filter(Boolean).every((w) => haystack.includes(w));
 }
 
+function mathematicsTypeFor(resource) {
+  if (resource.subject !== 'Maths') return '';
+  if (resource.mathsType === 'methods' || resource.mathsType === 'general') return resource.mathsType;
+  const haystack = [resource.title, resource.desc, ...(resource.tags || [])].join(' ').toLowerCase();
+  if (haystack.includes('method')) return 'methods';
+  if (haystack.includes('general mathematics') || haystack.includes('general maths')) return 'general';
+  return '';
+}
+
 function setFilter(key, value) {
   state[key] = value;
   state.shown = CONFIG.pageSize;
@@ -726,9 +736,10 @@ function setFilter(key, value) {
 }
 
 function resetFilters() {
-  Object.assign(state, { q: '', type: '', subject: '', year: '', solutions: false, video: false, shown: CONFIG.pageSize });
+  Object.assign(state, { q: '', type: '', subject: '', mathsType: '', year: '', solutions: false, video: false, shown: CONFIG.pageSize });
   searchInput.value = '';
   el('filter-subject').value = '';
+  el('filter-maths-type').value = '';
   el('filter-year').value = '';
   renderLibrary();
 }
@@ -786,9 +797,48 @@ function renderLibraryControls() {
     select.appendChild(o);
   });
   fill(el('filter-subject'), CONFIG.subjects);
-  fill(el('filter-year'), CONFIG.years);
+  const mathsTypeFilter = el('maths-type-filter');
+  const mathsTypeSelect = el('filter-maths-type');
+  const yearSelect = el('filter-year');
+  const updateYearOptions = () => {
+    const matchingResources = ALL.filter((resource) =>
+      (!state.subject || resource.subject === state.subject)
+      && (!state.mathsType || mathematicsTypeFor(resource) === state.mathsType)
+    );
+    const years = [...new Set(matchingResources.map((resource) => resource.year).filter(Boolean))];
+    yearSelect.innerHTML = '<option value="">All year levels</option>';
+    fill(yearSelect, years.length ? years : CONFIG.years);
+    if (!years.includes(state.year)) {
+      state.year = '';
+      yearSelect.value = '';
+    } else {
+      yearSelect.value = state.year;
+    }
+  };
+  const updateMathsFilters = () => {
+    const isMaths = state.subject === 'Maths';
+    mathsTypeFilter.hidden = !isMaths;
+    if (!isMaths) {
+      state.mathsType = '';
+      mathsTypeSelect.value = '';
+    }
+    updateYearOptions();
+  };
+  fill(yearSelect, CONFIG.years);
 
-  el('filter-subject').addEventListener('change', (e) => setFilter('subject', e.target.value));
+  el('filter-subject').addEventListener('change', (e) => {
+    state.subject = e.target.value;
+    state.mathsType = '';
+    mathsTypeSelect.value = '';
+    updateMathsFilters();
+    setFilter('subject', e.target.value);
+  });
+  mathsTypeSelect.addEventListener('change', (e) => {
+    state.mathsType = e.target.value;
+    state.year = '';
+    updateYearOptions();
+    setFilter('mathsType', e.target.value);
+  });
   el('filter-year').addEventListener('change', (e) => setFilter('year', e.target.value));
   el('sort-by').addEventListener('change', (e) => setFilter('sort', e.target.value));
   el('no-results-reset').addEventListener('click', resetFilters);
@@ -802,11 +852,14 @@ function renderLibraryControls() {
   const runSearch = () => {
     state.type = '';
     state.subject = '';
+    state.mathsType = '';
     state.year = '';
     state.solutions = false;
     state.video = false;
     el('filter-subject').value = '';
+    mathsTypeSelect.value = '';
     el('filter-year').value = '';
+    updateMathsFilters();
     setFilter('q', searchInput.value.trim());
   };
   searchInput.addEventListener('input', runSearch);
@@ -814,6 +867,8 @@ function renderLibraryControls() {
     e.preventDefault();
     runSearch();
   });
+  window.syncLibraryMathsFilters = updateMathsFilters;
+  updateMathsFilters();
 }
 
 function renderActiveFilters() {
@@ -822,6 +877,7 @@ function renderActiveFilters() {
   if (state.q) pills.push({ key: 'q', label: `“${state.q}”` });
   if (state.type) pills.push({ key: 'type', label: (CONFIG.types[state.type] || {}).label || state.type });
   if (state.subject) pills.push({ key: 'subject', label: state.subject });
+  if (state.mathsType) pills.push({ key: 'mathsType', label: state.mathsType === 'methods' ? 'Mathematical Methods' : 'General Mathematics' });
   if (state.year) pills.push({ key: 'year', label: state.year });
   if (state.solutions) pills.push({ key: 'solutions', label: 'Solutions provided' });
   if (state.video) pills.push({ key: 'video', label: 'Video provided' });
@@ -837,6 +893,7 @@ function renderActiveFilters() {
     b.addEventListener('click', () => {
       if (p.key === 'q') searchInput.value = '';
       if (p.key === 'subject') el('filter-subject').value = '';
+      if (p.key === 'mathsType') el('filter-maths-type').value = '';
       if (p.key === 'year') el('filter-year').value = '';
       if (p.key === 'solutions' || p.key === 'video') state[p.key] = false;
       setFilter(p.key, '');
@@ -874,7 +931,7 @@ function renderLibrary() {
   el('load-more').textContent = `Load more (${more} remaining)`;
 
   renderActiveFilters();
-  el('filter-reset').hidden = !(state.q || state.type || state.subject || state.year || state.solutions || state.video);
+  el('filter-reset').hidden = !(state.q || state.type || state.subject || state.mathsType || state.year || state.solutions || state.video);
   document.querySelectorAll('#filter-type .filter-option').forEach((opt) => {
     const on = opt.dataset.type === state.type;
     opt.classList.toggle('is-on', on);
@@ -894,6 +951,7 @@ if (PAGE === 'library') {
   const q = params.get('q');
   const type = params.get('type');
   const subject = params.get('subject');
+  const mathsType = params.get('mathsType');
   state.solutions = params.get('solutions') === '1';
   state.video = params.get('video') === '1';
   if (q) {
@@ -905,6 +963,11 @@ if (PAGE === 'library') {
     state.subject = subject;
     el('filter-subject').value = subject;
   }
+  if (state.subject === 'Maths' && (mathsType === 'methods' || mathsType === 'general')) {
+    state.mathsType = mathsType;
+    el('filter-maths-type').value = mathsType;
+  }
+  window.syncLibraryMathsFilters?.();
   renderLibrary();
 } else {
   renderHome();
