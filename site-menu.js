@@ -96,6 +96,7 @@
         <a href="${prefix}all-resources.html?subject=Maths&mathsType=general">VCE General Mathematics</a>
         <a href="${prefix}all-resources.html?subject=Maths&mathsType=methods">VCE Mathematical Methods</a>
         <a href="${prefix}all-resources.html?subject=Physics">VCE Physics</a>
+        <a href="${prefix}all-resources.html?subject=Physics&type=practice-questions">VCE Physics Practice Questions</a>
       </nav>
       <nav class="footer-column" aria-label="Legal links">
         <h2>Legal</h2>
@@ -180,7 +181,7 @@
       <div class="nav-dropdown-menu">
         <a href="https://edgeducate.com.au/vce-biology">VCE Biology</a>
         <a href="https://edgeducate.com.au/vce-chemistry">VCE Chemistry</a>
-        <a href="https://edgeducate.com.au/vce-physics">VCE Physics</a>
+        <a href="${prefix}all-resources.html?subject=Physics">VCE Physics</a>
         <a href="${prefix}all-resources.html?subject=Maths&mathsType=general">VCE General Mathematics</a>
         <a href="https://edgeducate.com.au/vce-mathematical-methods">VCE Mathematical Methods</a>
       </div>
