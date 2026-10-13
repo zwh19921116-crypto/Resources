@@ -55,22 +55,9 @@
     return ads[Math.floor(Math.random() * ads.length)] || loadingAd;
   };
   const showResourceLoading = (destination) => {
-    const ad = eligibleAd();
-    const overlay = document.createElement('div');
-    overlay.className = 'session-loading resource-navigation-loading';
-    overlay.innerHTML = `<div class="session-loading-inner" role="status" aria-live="polite">
-      <span class="session-loading-brand"><strong>Edge</strong>ducate</span>
-      <div class="session-loading-spinner" aria-hidden="true"></div>
-      <p class="session-loading-status">Preparing your resource library...</p>
-      <div class="session-loading-ad">
-        <p class="session-loading-ad-eyebrow">While you wait</p>
-        <h2>${String(ad.title || loadingAd.title).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]))}</h2>
-        <p>${String(ad.body || loadingAd.body).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]))}</p>
-      </div>
-    </div>`;
-    document.body.appendChild(overlay);
-    const duration = Math.max(2, Number(ad.duration) || loadingAd.duration) * 1000;
-    window.setTimeout(() => { window.location.href = destination; }, duration);
+    const url = new URL(destination);
+    url.searchParams.set('edg-loading', '1');
+    window.location.href = url.href;
   };
   window.addEventListener('pageshow', () => {
     document.querySelectorAll('.resource-navigation-loading').forEach((overlay) => overlay.remove());
@@ -79,7 +66,7 @@
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const link = event.target.closest('a[href]');
     if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
-    if (link.dataset.directNavigation === 'true' || link.classList.contains('resource-back')) return;
+    if (link.dataset.directNavigation === 'true') return;
     const url = new URL(link.href, window.location.href);
     if (url.origin !== window.location.origin || !url.pathname.endsWith('/all-resources.html')) return;
     event.preventDefault();

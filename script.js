@@ -11,6 +11,35 @@ const state = { q: '', type: '', subject: '', year: '', sort: 'newest', shown: C
 const footerYearNode = el('year');
 if (footerYearNode) footerYearNode.textContent = new Date().getFullYear();
 
+const showLibraryLoading = () => {
+  if (new URLSearchParams(window.location.search).get('edg-loading') !== '1') return;
+  const ad = (window.EDG_ADS || []).filter((item) => item.status !== 'draft')[0] || {
+    title: 'Get exam-ready with Edgeducate classes',
+    body: 'Small-group VCE and secondary tuition led by top-performing tutors. Book a free consultation for your class.',
+    duration: 4
+  };
+  const overlay = document.createElement('div');
+  overlay.className = 'session-loading resource-navigation-loading';
+  overlay.innerHTML = `<div class="session-loading-inner" role="status" aria-live="polite">
+    <span class="session-loading-brand"><strong>Edge</strong>ducate</span>
+    <div class="session-loading-spinner" aria-hidden="true"></div>
+    <p class="session-loading-status">Preparing your resource library...</p>
+    <div class="session-loading-ad">
+      <p class="session-loading-ad-eyebrow">While you wait</p>
+      <h2>${esc(ad.title)}</h2>
+      <p>${esc(ad.body)}</p>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  window.setTimeout(() => {
+    overlay.classList.add('is-done');
+    window.setTimeout(() => overlay.remove(), 450);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('edg-loading');
+    window.history.replaceState({}, '', url.href);
+  }, Math.max(2, Number(ad.duration) || 4) * 1000);
+};
+
 /* ---------- header ---------- */
 
 const header = document.querySelector('.site-header');
@@ -21,6 +50,8 @@ window.addEventListener('scroll', setHeaderState, { passive: true });
 /* ---------- helpers ---------- */
 const levelTone = (level) => ({ Easy: 'easy', Medium: 'medium', Hard: 'hard', Fun: 'fun' }[level] || 'info');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+showLibraryLoading();
 
 function youtubeId(url) {
   const m = String(url).match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/);
