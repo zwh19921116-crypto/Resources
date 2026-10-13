@@ -1153,6 +1153,10 @@ body.modal-open{overflow:hidden}
 .solutions-detail .resource-detail-copy .btn{display:flex;width:100%;min-height:42px;margin-top:1.25rem;border-radius:7px;align-items:center;justify-content:center;text-align:center;font-size:.8rem;font-weight:800;line-height:1.2;box-shadow:0 4px 10px rgba(23,59,125,.16)}
 .solutions-detail .resource-detail-copy .btn-primary{background:#1f478f;color:#fff;border-color:#1f478f}
 .solutions-detail .resource-detail-copy .btn-primary:hover{background:#173b7d;border-color:#173b7d}
+.solutions-detail .resource-detail-copy .btn-primary,
+.solutions-detail .resource-detail-copy .btn-light{background:#dc2626;color:#fff;border-color:#dc2626}
+.solutions-detail .resource-detail-copy .btn-primary:hover,
+.solutions-detail .resource-detail-copy .btn-light:hover{background:#b91c1c;color:#fff;border-color:#b91c1c}
 .solutions-detail .resource-detail-copy .btn-solutions{margin-top:.65rem;background:#1f478f;color:#fff;border:1px solid #1f478f;box-shadow:0 4px 10px rgba(23,59,125,.16)}
 .solutions-detail .resource-detail-copy .btn-solutions:hover{background:#173b7d;color:#fff;border-color:#173b7d}
 .solutions-detail .resource-detail-copy .resource-back{margin:1.25rem auto 0;padding-top:1rem;border-top:1px solid #e5eaf3;font-size:.82rem}
