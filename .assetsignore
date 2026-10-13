@@ -1,4 +1,7 @@
 admin-desktop/
+admin-panel/
+admin.html
+admin.js
 backups/
 node_modules/
 .git/
