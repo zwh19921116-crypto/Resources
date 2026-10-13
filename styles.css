@@ -882,9 +882,14 @@ body.modal-open{overflow:hidden}
 .detail-meta dd{margin:0;font-size:.85rem;font-weight:600;color:var(--ink);text-align:right}
 .detail-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:1.25rem}
 .tag-chip{background:var(--blue-soft);color:#1e40af;border-radius:999px;padding:.25rem .7rem;font-size:.75rem;font-weight:600}
-.detail-actions{padding:1.1rem 1.6rem 1.5rem;border-top:1px solid var(--line);display:grid;gap:.55rem;background:#fbfcff}
-.detail-actions .btn-ghost{border-color:var(--line);color:var(--body);background:#fff}
-.detail-actions .btn-ghost:hover{border-color:#c7d2fe;color:var(--blue)}
+.detail-actions{padding:1.1rem 1.6rem 1.5rem;border-top:1px solid var(--line);display:grid;gap:.65rem;background:#fbfcff}
+.detail-actions .btn{min-height:44px;border-radius:8px;padding:.7rem 1rem;font-size:.82rem;font-weight:800;line-height:1}
+.detail-actions .btn-primary{background:#173b7d;color:#fff;box-shadow:0 4px 10px rgba(23,59,125,.16)}
+.detail-actions .btn-primary:hover{background:#0f2d64}
+.detail-actions .btn-ghost{border:1px solid #c8d5e8;color:#21416f;background:#fff}
+.detail-actions .btn-ghost:hover{border-color:#8fb2f5;color:#173b7d;background:#f5f8ff}
+.detail-actions [data-close]{font-weight:700;color:#64748b;background:transparent}
+.detail-actions [data-close]:hover{color:#173b7d;background:#eef4ff}
 
 /* ---------- Standalone resource page ---------- */
 .resource-detail{padding:1.75rem 0 4.5rem;background:#f7f9fc}
