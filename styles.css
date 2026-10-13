@@ -1159,7 +1159,7 @@ body.modal-open{overflow:hidden}
 .resource-detail.has-inline-preview .resource-detail-copy .resource-back{margin-top:.75rem}
 .solutions-page{background:#f7f9fe;color:var(--ink)}
 .solutions-page .resource-detail{padding-top:1.25rem}
-.solutions-page main{padding:1.5rem 0 4.5rem}
+.solutions-page main{padding:0 0 4.5rem}
 .solutions-page-intro{max-width:700px;margin:1.75rem 0 1.5rem}
 .solutions-page-intro h1{font-size:clamp(1.8rem,3vw,2.6rem);line-height:1.15}
 .solutions-page-intro p:last-child{margin-top:.65rem;color:var(--muted);line-height:1.6}
