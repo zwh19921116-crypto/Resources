@@ -64,7 +64,7 @@ button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
   transition:padding .25s ease,border-radius .25s ease,box-shadow .25s ease;
 }
 
-.site-header.is-scrolled{padding:.8rem 0;background:transparent;border-bottom-color:transparent}
+.site-header.is-scrolled{padding:.35rem 0 .8rem;background:transparent;border-bottom-color:transparent}
 .site-header.is-scrolled .navbar{
   border-radius:999px;
   padding:.55rem .7rem .55rem 2rem;
