@@ -71,8 +71,8 @@ button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
   box-shadow:0 6px 26px rgba(15,23,42,.12);
 }
 
-.brand{display:flex;align-items:center;margin-right:auto;margin-left:3rem}
-.brand-logo{height:52px;width:auto}
+.brand{display:flex;align-items:center;margin-right:auto;margin-left:3.5rem}
+.brand-logo{height:56px;width:auto}
 .brand-logo + .brand-fallback{display:none}
 .brand-fallback{display:flex;flex-direction:column;line-height:1.05}
 .brand-name{font-size:1.5rem;font-weight:500;color:var(--navy);letter-spacing:-.03em}
