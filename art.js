@@ -87,6 +87,28 @@ window.EDG_ART = {
       <circle cx="170" cy="78" r="3"/><circle cx="92" cy="152" r="3"/><circle cx="274" cy="64" r="3"/>
     </g>`,
 
+  physics: `
+    <rect width="300" height="180" fill="#eaf4ff"/>
+    <circle cx="150" cy="90" r="20" fill="#2563eb"/>
+    <g fill="none" stroke="#7aa8ee" stroke-width="3"><ellipse cx="150" cy="90" rx="92" ry="34"/><ellipse cx="150" cy="90" rx="34" ry="92"/><ellipse cx="150" cy="90" rx="76" ry="58" transform="rotate(45 150 90)"/></g>
+    <g fill="#f5b820"><circle cx="58" cy="90" r="7"/><circle cx="184" cy="27" r="7"/><circle cx="215" cy="135" r="7"/></g>`,
+
+  chemistry: `
+    <rect width="300" height="180" fill="#eafaf7"/>
+    <path d="M126 27h48M137 27v45l-45 69c-7 11 1 25 14 25h88c13 0 21-14 14-25l-45-69V27" fill="#fff" stroke="#0d9488" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M107 125h86l16 25h-118z" fill="#8bd8ce"/><circle cx="142" cy="112" r="7" fill="#0d9488"/><circle cx="172" cy="132" r="5" fill="#f5b820"/>`,
+
+  biology: `
+    <rect width="300" height="180" fill="#ecfbf4"/>
+    <path d="M150 157C93 132 83 71 150 28c67 43 57 104 0 129z" fill="#38b879"/>
+    <path d="M150 30v126M150 83L116 64M150 103l38-25M150 126l-31-18M150 64l28-18" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="49" cy="43" r="18" fill="#bcefd4"/><circle cx="252" cy="139" r="28" fill="#bcefd4"/>`,
+
+  english: `
+    <rect width="300" height="180" fill="#fff4ed"/>
+    <path d="M60 40c30-12 62-8 90 8v100c-28-16-60-20-90-8zM240 40c-30-12-62-8-90 8v100c28-16 60-20 90-8z" fill="#fff" stroke="#e58b5b" stroke-width="5" stroke-linejoin="round"/>
+    <g stroke="#f0bd9e" stroke-width="5" stroke-linecap="round"><path d="M82 69h42M82 87h51M82 105h34M176 69h42M176 87h51M176 105h34"/></g>`,
+
   exam: `
     <rect width="300" height="180" fill="#e8e2d8"/>
     <rect x="22" y="14" width="196" height="170" rx="6" fill="#fbf9f5" transform="rotate(-4 120 99)"/>

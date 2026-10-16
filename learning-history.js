@@ -35,6 +35,14 @@
 
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
   const resourceUrl = (prefix, resource) => `${prefix}resource-pages/${encodeURIComponent(resource.id)}/index.html`;
+  const subjectArt = {
+    physics: 'physics',
+    maths: 'maths',
+    mathematics: 'maths',
+    chemistry: 'chemistry',
+    biology: 'biology',
+    english: 'english'
+  };
 
   const recommend = (resource, resources) => {
     const history = readHistory();
@@ -76,7 +84,17 @@
       container.hidden = false;
       return;
     }
-    container.innerHTML = `<p class="section-eyebrow">Based on this session</p><h2 id="learning-recommendations-title">Recommended next</h2><p class="recommendation-note">These suggestions use this browser session only and are not sent to Edgeducate.</p><div class="resource-grid">${recommendations.map((candidate) => `<article class="resource-card"><a class="card-link" href="${resourceUrl(prefix, candidate)}"><span class="badge badge-${escapeHtml((window.EDG_CONFIG?.types?.[candidate.type] || {}).colour || 'blue')}">${escapeHtml((window.EDG_CONFIG?.types?.[candidate.type] || {}).label || candidate.type)}</span><h3>${escapeHtml(candidate.title)}</h3><p class="meta">${escapeHtml(candidate.subject || '')}${candidate.year ? ` · ${escapeHtml(candidate.year)}` : ''}</p></a></article>`).join('')}</div>`;
+    container.innerHTML = `<p class="section-eyebrow">Based on this session</p><h2 id="learning-recommendations-title">Recommended next</h2><p class="recommendation-note">These suggestions use this browser session only and are not sent to Edgeducate.</p><div class="resource-grid">${recommendations.map((candidate) => {
+      const type = window.EDG_CONFIG?.types?.[candidate.type] || {};
+      const art = subjectArt[String(candidate.subject || '').toLowerCase()] || candidate.art;
+      const thumbnail = typeof window.edgThumb === 'function'
+        ? window.edgThumb(art, candidate.image)
+        : candidate.image
+          ? `<img class="art" src="${escapeHtml(candidate.image)}" alt="" loading="lazy" />`
+          : '';
+      const summary = candidate.desc || candidate.details || 'Explore this resource next.';
+      return `<article class="resource-card"><a class="thumb" href="${resourceUrl(prefix, candidate)}"><span class="badge badge-${escapeHtml(type.colour || 'blue')}">${escapeHtml(type.label || candidate.type)}</span>${thumbnail}</a><a class="card-link" href="${resourceUrl(prefix, candidate)}"><h3>${escapeHtml(candidate.title)}</h3><p class="meta">${escapeHtml(candidate.subject || '')}${candidate.year ? ` · ${escapeHtml(candidate.year)}` : ''}</p><p class="recommendation-summary">${escapeHtml(summary)}</p></a></article>`;
+    }).join('')}</div>`;
     container.hidden = false;
   };
 

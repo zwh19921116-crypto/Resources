@@ -135,6 +135,7 @@
     try {
       await loadScript(`${prefix}data/config.js`);
       await loadScript(`${prefix}data/resources.js`);
+      await loadScript(`${prefix}art.js`);
       await loadScript(`${prefix}learning-history.js`);
       const pathParts = location.pathname.split('/resource-pages/')[1]?.split('/') || [];
       const resourceId = pathParts[0] ? decodeURIComponent(pathParts[0]) : '';
