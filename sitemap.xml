@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://zwh19921116-crypto.github.io/Resources/</loc></url>
-  <url><loc>https://zwh19921116-crypto.github.io/Resources/resources.html</loc></url>
-  <url><loc>https://zwh19921116-crypto.github.io/Resources/resource-pages/test/</loc><lastmod>2026-10-12</lastmod></url>
-  <url><loc>https://zwh19921116-crypto.github.io/Resources/resource-pages/test/solutions/</loc><lastmod>2026-10-12</lastmod></url>
+  <url><loc>https://resources.edgeducate.com.au/</loc></url>
+  <url><loc>https://resources.edgeducate.com.au/resources.html</loc></url>
+  <url><loc>https://resources.edgeducate.com.au/all-resources.html</loc></url>
+  <url><loc>https://resources.edgeducate.com.au/club.html</loc></url>
+  <url><loc>https://resources.edgeducate.com.au/resource-pages/test/</loc><lastmod>2026-10-12</lastmod></url>
+  <url><loc>https://resources.edgeducate.com.au/resource-pages/test/solutions/</loc><lastmod>2026-10-12</lastmod></url>
 </urlset>

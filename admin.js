@@ -1,4 +1,6 @@
 const CONFIG = window.EDG_CONFIG;
+const SITE_URL = 'https://resources.edgeducate.com.au';
+const LEGACY_SITE_URL = 'https://zwh19921116-crypto.github.io/Resources';
 const DRAFT_KEY = 'edg-admin-draft';
 const ADS_DRAFT_KEY = 'edg-admin-ads-draft';
 const LOG_KEY = 'edg-admin-log';
@@ -82,6 +84,7 @@ function showPanel(panelKey) {
     panel.hidden = panel.id !== `panel-${panelKey}`;
   });
   if (panelKey === 'dashboard') renderDashboard();
+  if (panelKey === 'settings') renderSettings();
 }
 
 document.querySelectorAll('.side-nav-btn[data-panel]').forEach((btn) => btn.addEventListener('click', () => {
@@ -91,6 +94,61 @@ document.querySelectorAll('.side-nav-btn[data-panel]').forEach((btn) => btn.addE
 document.querySelectorAll('[data-dash-panel]').forEach((btn) => btn.addEventListener('click', () => {
   showPanel(btn.dataset.dashPanel);
 }));
+
+function buildSitemapXml() {
+  const urls = [
+    `${SITE_URL}/`,
+    `${SITE_URL}/resources.html`,
+    `${SITE_URL}/all-resources.html`,
+    `${SITE_URL}/club.html`
+  ];
+  const resourceUrls = items.filter((item) => item.status !== 'draft').flatMap((item) => {
+    const path = resourcePagePath(item);
+    const lastmod = item.added || new Date().toISOString().slice(0, 10);
+    const pages = [{ url: `${SITE_URL}/resource-pages/${path}/`, lastmod }];
+    if (item.solutions || item.solutionsVideo) pages.push({ url: `${SITE_URL}/resource-pages/${path}/solutions/`, lastmod });
+    return pages;
+  });
+  const entries = [
+    ...urls.map((url) => `  <url><loc>${url}</loc></url>`),
+    ...resourceUrls.map((entry) => `  <url><loc>${entry.url}</loc><lastmod>${entry.lastmod}</lastmod></url>`)
+  ];
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.join('\n')}\n</urlset>\n`;
+}
+
+$('btn-download-sitemap')?.addEventListener('click', () => {
+  const url = URL.createObjectURL(new Blob([buildSitemapXml()], { type: 'application/xml;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'sitemap.xml';
+  link.click();
+  URL.revokeObjectURL(url);
+  flash('Sitemap downloaded.', 'success');
+});
+
+const SETTINGS_COMPACT_KEY = 'edg-admin-compact-tables';
+
+function renderSettings() {
+  const state = $('save-state')?.textContent?.trim() || 'Not connected';
+  const compact = document.body.classList.contains('settings-compact');
+  if ($('settings-connection-status')) $('settings-connection-status').textContent = state;
+  if ($('settings-last-push')) $('settings-last-push').textContent = $('last-push-time')?.textContent?.trim() || 'Never';
+  if ($('settings-last-pull')) $('settings-last-pull').textContent = $('last-pull-time')?.textContent?.trim() || 'Never';
+  if ($('settings-compact-toggle')) $('settings-compact-toggle').setAttribute('aria-checked', String(compact));
+}
+
+function setCompactTables(enabled) {
+  document.body.classList.toggle('settings-compact', enabled);
+  try { localStorage.setItem(SETTINGS_COMPACT_KEY, String(enabled)); } catch (e) { /* ignore */ }
+  renderSettings();
+}
+
+let compactTables = false;
+try { compactTables = localStorage.getItem(SETTINGS_COMPACT_KEY) === 'true'; } catch (e) { /* ignore */ }
+setCompactTables(compactTables);
+$('settings-compact-toggle')?.addEventListener('click', () => {
+  setCompactTables(!document.body.classList.contains('settings-compact'));
+});
 
 function formatMoney(value) {
   return `$${Math.round(Number(value) || 0).toLocaleString()}`;
@@ -2968,6 +3026,7 @@ function resourcePageMarkup(resource) {
 }
 
 const removeHeaderLibraryButton = (markup) => markup.replace(/<a class="btn btn-cta" href="[^"]*">Browse library<\/a>/g, '');
+const replaceLegacySiteUrls = (markup) => markup.replaceAll(LEGACY_SITE_URL, SITE_URL);
 
 async function writeStaticPages() {
   if (!projectHandle) return false;
@@ -2978,25 +3037,19 @@ async function writeStaticPages() {
     for (const segment of resourcePagePath(resource).split('/')) pageDirectory = await pageDirectory.getDirectoryHandle(segment, { create: true });
     const pageFile = await pageDirectory.getFileHandle('index.html', { create: true });
     const writable = await pageFile.createWritable();
-    await writable.write(removeHeaderLibraryButton(resourcePageMarkup(resource)));
+    await writable.write(replaceLegacySiteUrls(removeHeaderLibraryButton(resourcePageMarkup(resource))));
     await writable.close();
     if (resource.solutions || resource.solutionsVideo) {
       const solutionsDirectory = await pageDirectory.getDirectoryHandle('solutions', { create: true });
       const solutionsFile = await solutionsDirectory.getFileHandle('index.html', { create: true });
       const solutionsWritable = await solutionsFile.createWritable();
-      await solutionsWritable.write(removeHeaderLibraryButton(solutionPageMarkup(resource)));
+      await solutionsWritable.write(replaceLegacySiteUrls(removeHeaderLibraryButton(solutionPageMarkup(resource))));
       await solutionsWritable.close();
     }
   }
-  const sitemap = items.filter((item) => item.status !== 'draft').flatMap((item) => {
-    const lastmod = item.added || new Date().toISOString().slice(0, 10);
-    const pages = [`  <url><loc>https://zwh19921116-crypto.github.io/Resources/resource-pages/${resourcePagePath(item)}/</loc><lastmod>${lastmod}</lastmod></url>`];
-    if (item.solutions || item.solutionsVideo) pages.push(`  <url><loc>https://zwh19921116-crypto.github.io/Resources/resource-pages/${resourcePagePath(item)}/solutions/</loc><lastmod>${lastmod}</lastmod></url>`);
-    return pages;
-  }).join('\n');
   const sitemapFile = await projectHandle.getFileHandle('sitemap.xml', { create: true });
   const sitemapWriter = await sitemapFile.createWritable();
-  await sitemapWriter.write(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>https://zwh19921116-crypto.github.io/Resources/</loc></url>\n  <url><loc>https://zwh19921116-crypto.github.io/Resources/resources.html</loc></url>\n${sitemap}\n</urlset>\n`);
+  await sitemapWriter.write(buildSitemapXml());
   await sitemapWriter.close();
   return true;
 }
