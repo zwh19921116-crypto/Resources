@@ -228,7 +228,8 @@
     codeBox.innerHTML = deal.code ? `<p>Show this voucher code at checkout.</p><span>${escapeHtml(deal.code)}</span><div class="club-code-actions"><button type="button" data-copy="${escapeHtml(deal.code)}"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg>Copy code</button><button type="button" data-qr="${escapeHtml(deal.code)}"><svg class="ico" aria-hidden="true"><use href="#i-qr"/></svg>Show QR code</button></div>` : '';
     const actionLink = deal.actionEnabled === false ? '' : deal.url || locationLink;
     const actionLabel = deal.birthday ? 'Access Free Notes' : deal.url ? 'View deal' : 'Open location';
-    document.getElementById('club-detail-actions').innerHTML = actionLink ? `<a class="btn btn-primary" href="${escapeHtml(actionLink)}"${hasCoordinates(deal) ? '' : ' target="_blank" rel="noopener noreferrer"'}>${actionLabel} <span aria-hidden="true">&rarr;</span></a>` : '';
+    const actionAttributes = hasCoordinates(deal) ? '' : deal.url ? ' target="_blank" rel="sponsored noopener noreferrer"' : ' target="_blank" rel="noopener noreferrer"';
+    document.getElementById('club-detail-actions').innerHTML = actionLink ? `<a class="btn btn-primary" href="${escapeHtml(actionLink)}"${actionAttributes}>${actionLabel} <span aria-hidden="true">&rarr;</span></a>` : '';
     detailDialog.showModal();
   }
 
