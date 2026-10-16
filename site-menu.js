@@ -96,11 +96,6 @@
         <a href="https://edgeducate.com.au/vce-general-mathematics">VCE General Mathematics</a>
         <a href="https://edgeducate.com.au/vce-mathematical-methods">VCE Mathematical Methods</a>
         <a href="${prefix}all-resources.html?subject=Physics">VCE Physics</a>
-        <a href="${prefix}all-resources.html?subject=Physics&type=practice-questions">VCE Physics Practice Questions</a>
-        <a href="${prefix}all-resources.html?subject=Physics&type=practice-exam">VCE Physics Practice Exams</a>
-        <a href="${prefix}all-resources.html?subject=Physics&type=checklist">VCE Physics Checklists</a>
-        <a href="${prefix}all-resources.html?subject=Physics&type=knowledge-sheet">VCE Physics Knowledge Sheets</a>
-        <a href="${prefix}all-resources.html?subject=Physics&type=interactive-app">VCE Physics Interactive Learning</a>
       </nav>
       <nav class="footer-column" aria-label="Legal links">
         <h2>Legal</h2>
@@ -115,6 +110,46 @@
   document.querySelectorAll('.site-footer').forEach((footer) => {
     footer.innerHTML = footerMarkup;
   });
+
+  const loadScript = (src) => new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+
+  const hydrateStaticRecommendations = async () => {
+    const article = document.querySelector('.resource-detail[data-resource-title], .solutions-detail');
+    if (!article || !location.pathname.includes('/resource-pages/')) return;
+    const contentContainer = article.querySelector('.container');
+    if (!contentContainer || document.getElementById('learning-recommendations')) return;
+
+    const recommendations = document.createElement('section');
+    recommendations.id = 'learning-recommendations';
+    recommendations.className = 'recommended-learning';
+    recommendations.setAttribute('aria-labelledby', 'learning-recommendations-title');
+    recommendations.hidden = true;
+    contentContainer.append(recommendations);
+
+    try {
+      await loadScript(`${prefix}data/config.js`);
+      await loadScript(`${prefix}data/resources.js`);
+      await loadScript(`${prefix}learning-history.js`);
+      const pathParts = location.pathname.split('/resource-pages/')[1]?.split('/') || [];
+      const resourceId = pathParts[0] ? decodeURIComponent(pathParts[0]) : '';
+      const title = article.dataset.resourceTitle || article.querySelector('h1')?.textContent.trim();
+      const resource = (window.EDG_RESOURCES || []).find((item) => item.id === resourceId)
+        || (window.EDG_RESOURCES || []).find((item) => item.title === title);
+      if (resource && window.EDG_LEARNING_RECOMMENDATIONS) {
+        window.EDG_LEARNING_RECOMMENDATIONS.record(resource);
+        window.EDG_LEARNING_RECOMMENDATIONS.render(resource, window.EDG_RESOURCES, recommendations, prefix);
+      }
+    } catch (error) {
+      recommendations.remove();
+    }
+  };
+  void hydrateStaticRecommendations();
 
   const hydrateSolutionsDetails = async () => {
     const copy = document.querySelector('.solutions-detail .resource-detail-copy');

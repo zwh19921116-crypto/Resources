@@ -952,6 +952,7 @@ function renderTable() {
             <button class="icon-btn" data-act="up" title="Move up">↑</button>
             <button class="icon-btn" data-act="down" title="Move down">↓</button>
             <button class="icon-btn" data-act="log" title="View this resource's history">◴</button>
+            <button class="icon-btn" data-act="replicate" title="Replicate resource">⧉</button>
             <button class="icon-btn" data-act="edit" title="Edit">✎</button>
             <button class="icon-btn" data-act="del" title="Delete">🗑</button>
           </div>
@@ -1011,6 +1012,32 @@ async function refreshDesktopResources() {
   // Disabled in desktop mode to avoid replacing freshly added in-memory rows.
 }
 
+function replicateResource(index) {
+  const source = items[index];
+  if (!source) return;
+  const baseId = slugify(`${source.id}-copy`) || 'resource-copy';
+  let id = baseId;
+  let copyNumber = 2;
+  while (items.some((item) => item.id === id)) id = `${baseId}-${copyNumber++}`;
+  const copy = {
+    ...source,
+    id,
+    title: `${source.title} (Copy)`,
+    tags: [...(source.tags || [])],
+    relatedIds: [...(source.relatedIds || [])],
+    questionVideoPairs: JSON.parse(JSON.stringify(source.questionVideoPairs || [])),
+    added: new Date().toISOString().slice(0, 10),
+    status: 'draft'
+  };
+  items.splice(index + 1, 0, copy);
+  selectedResourceIds.delete(copy.id);
+  log(`Replicated "${source.title}" as "${copy.title}"`, 'ok', copy.id);
+  renderTable();
+  autoSave('replicate');
+  requestAnimationFrame(() => openForm(index + 1));
+  flash(fileHandle ? 'Resource replicated as a draft.' : 'Resource replicated as a draft — connect the file to save.', fileHandle ? 'success' : 'warning');
+}
+
 function bindRow(tr) {
   const index = Number(tr.dataset.index);
 
@@ -1018,6 +1045,7 @@ function bindRow(tr) {
     btn.addEventListener('click', () => {
       const act = btn.dataset.act;
       if (act === 'edit') return openForm(index);
+      if (act === 'replicate') return replicateResource(index);
       if (act === 'log') return openLog(items[index].id, items[index].title);
       if (act === 'del') {
         if (confirm(`Delete "${items[index].title}"?\n\nThis only removes the card from the site. The file in your Drive is untouched.`)) {

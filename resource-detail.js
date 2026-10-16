@@ -64,6 +64,8 @@ function renderResourceDetail() {
     return;
   }
 
+  window.EDG_LEARNING_RECOMMENDATIONS?.record(resource);
+
   const type = DETAIL_CONFIG.types[resource.type] || { label: resource.type, colour: 'blue' };
   document.title = `${resource.title} | Edgeducate Resources`;
   document.querySelector('meta[name="description"]').content = resource.desc || type.blurb;
@@ -102,6 +104,8 @@ function renderResourceDetail() {
 
   const related = relatedResourcesFor(resource);
   detailElement('related-grid').innerHTML = related.map(buildRelatedCard).join('');
+  const recommendations = detailElement('learning-recommendations');
+  if (recommendations) window.EDG_LEARNING_RECOMMENDATIONS?.render(resource, DETAIL_ALL, recommendations, '');
 
   const schema = document.createElement('script');
   schema.type = 'application/ld+json';
