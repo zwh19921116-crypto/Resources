@@ -34,7 +34,7 @@
   };
 
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
-  const resourceUrl = (prefix, resource) => `${prefix}resource-pages/${encodeURIComponent(resource.id)}/index.html`;
+  const resourceUrl = (prefix, resource) => `${prefix}resource-pages/${encodeURIComponent(resource.id)}/`;
   const subjectArt = {
     physics: 'physics',
     maths: 'maths',

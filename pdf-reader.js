@@ -106,12 +106,12 @@ async function mountPdfReader(reader) {
 document.querySelectorAll('.pdf-reader[data-pdf-url]').forEach(mountPdfReader);
 
 document.querySelectorAll('.btn-solutions').forEach((solutionsLink) => {
-  solutionsLink.href = 'solutions/index.html';
+  solutionsLink.href = 'solutions/';
 });
 
 document.querySelectorAll('.resource-detail-copy dl > div').forEach((row) => {
   const label = row.querySelector('dt')?.textContent.trim().toLowerCase();
-  if (label === 'solutions') row.querySelector('a')?.setAttribute('href', 'solutions/index.html');
+  if (label === 'solutions') row.querySelector('a')?.setAttribute('href', 'solutions/');
 });
 
 async function mountQuestionRegion(region) {

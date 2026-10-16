@@ -203,7 +203,7 @@
   if (solutionsCopy && !solutionsCopy.querySelector('.resource-back')) {
     const backLink = document.createElement('a');
     backLink.className = 'resource-back solution-back-link btn btn-light btn-block';
-    backLink.href = '../index.html';
+    backLink.href = '../';
     backLink.textContent = 'Back to resource';
     solutionsCopy.appendChild(backLink);
   }

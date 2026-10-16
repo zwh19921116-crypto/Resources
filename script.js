@@ -68,7 +68,7 @@ function buildCard(r) {
   const card = document.createElement('article');
   card.className = 'resource-card';
   card.dataset.id = r.id;
-  const detailUrl = `resource-pages/${encodeURIComponent(r.id)}/index.html`;
+  const detailUrl = `resource-pages/${encodeURIComponent(r.id)}/`;
 
   const tone = levelTone(r.level);
   const hasSolutions = Boolean(String(r.solutions || '').trim() || String(r.solutionsVideo || '').trim());
@@ -164,7 +164,7 @@ function openDetail(r) {
   const hasSolutionsPage = Boolean(String(r.solutions || '').trim() || String(r.solutionsVideo || '').trim());
   solutionsAction.hidden = !hasSolutionsPage;
   solutionsAction.href = hasSolutionsPage
-    ? `resource-pages/${encodeURIComponent(r.id)}/solutions/index.html`
+    ? `resource-pages/${encodeURIComponent(r.id)}/solutions/`
     : '#';
 
   modal.hidden = false;

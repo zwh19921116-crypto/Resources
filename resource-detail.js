@@ -17,7 +17,7 @@ function detailPreview(resource) {
 function buildRelatedCard(resource) {
   const type = DETAIL_CONFIG.types[resource.type];
   const prefix = document.body.dataset.resourceId ? '../' : 'resource-pages/';
-  const url = `${prefix}${encodeURIComponent(resource.id)}/index.html`;
+  const url = `${prefix}${encodeURIComponent(resource.id)}/`;
   return `<article class="resource-card"><a class="thumb" href="${url}"><span class="badge badge-${type.colour}">${escapeHtml(type.label)}</span>${window.edgThumb(resource.art, resource.image)}</a><a class="card-link" href="${url}"><h3>${escapeHtml(resource.title)}</h3><p class="meta">${escapeHtml(resource.year || '')}</p></a></article>`;
 }
 
@@ -48,8 +48,8 @@ function buildQuestionPaperLinks(resource) {
   const question = DETAIL_ALL.find((item) => item.id === resource.questionResourceId);
   const video = DETAIL_ALL.find((item) => item.id === resource.videoResourceId);
   const links = [
-    question ? `<a class="question-paper-link" href="resource-pages/${encodeURIComponent(question.id)}/index.html"><span>Question resource</span><strong>${escapeHtml(question.title)}</strong></a>` : '',
-    video ? `<a class="question-paper-link" href="resource-pages/${encodeURIComponent(video.id)}/index.html"><span>Associated video</span><strong>${escapeHtml(video.title)}</strong></a>` : ''
+    question ? `<a class="question-paper-link" href="resource-pages/${encodeURIComponent(question.id)}/"><span>Question resource</span><strong>${escapeHtml(question.title)}</strong></a>` : '',
+    video ? `<a class="question-paper-link" href="resource-pages/${encodeURIComponent(video.id)}/"><span>Associated video</span><strong>${escapeHtml(video.title)}</strong></a>` : ''
   ].filter(Boolean).join('');
   return links ? `<section class="question-paper-links" aria-labelledby="question-paper-links-title"><p class="section-eyebrow">Exam support</p><h2 id="question-paper-links-title">Use this paper with</h2><div class="question-paper-link-grid">${links}</div></section>` : '';
 }

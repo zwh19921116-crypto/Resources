@@ -30,4 +30,4 @@ To publish the pushed resources to Cloudflare, run this from the repository root
 npx wrangler deploy
 ```
 
-Verify the deployment on `https://resources.edgeducate.com.au/`. Resource pages currently use explicit `index.html` URLs because `wrangler.toml` sets `html_handling = "none"`.
+Verify the deployment on `https://resources.edgeducate.com.au/`. Resource pages use trailing-slash URLs; the Cloudflare Worker serves each directory's `index.html` while `wrangler.toml` keeps `html_handling = "none"`.
