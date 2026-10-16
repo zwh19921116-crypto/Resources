@@ -2615,18 +2615,17 @@ const GH_OWNER = 'zwh19921116-crypto';
 const GH_REPO = 'Resources';
 const GH_BRANCH = 'main';
 const GH_PATH = 'data/ads.js';
-const GH_TOKEN_KEY = 'edg-gh-token';
+let githubToken = '';
 
 function getGithubToken() {
-  let token = localStorage.getItem(GH_TOKEN_KEY);
-  if (!token) {
-    token = prompt(
+  if (!githubToken) {
+    const token = prompt(
       'Paste a GitHub personal access token with "Contents: Read and write" access to this repo.\n\n' +
-      'It is stored only in this browser\'s local storage and is only ever sent to api.github.com.'
+      'It is kept only in this page memory and is sent only to api.github.com. Refreshing or closing this page clears it.'
     );
-    if (token) localStorage.setItem(GH_TOKEN_KEY, token.trim());
+    githubToken = token ? token.trim() : '';
   }
-  return token ? token.trim() : '';
+  return githubToken;
 }
 
 function setAdsPushState(text) {
