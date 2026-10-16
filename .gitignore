@@ -12,5 +12,5 @@ admin-desktop/admin-panel
 .tmp-*
 *.zip
 
-# Local workspace backups are not part of the deployed site
-backups/workspace-*/
+# Local backups stay on this machine and are never pushed
+backups/
