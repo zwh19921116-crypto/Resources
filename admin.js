@@ -3710,11 +3710,14 @@ if (window.desktop) {
     log('Starting GitHub handshake for deploy push...', 'info');
     const result = await window.desktop.gitSync('Update resources/ads/club/packages via Edgeducate Admin');
     syncBtn.disabled = false;
-    if (result.ok) {
+    if (result.ok && result.pushed !== false) {
       recordSyncTime('push', lastPushTime);
       log('GitHub handshake successful. Push completed.', 'ok');
       log(`Synced to GitHub via desktop app.\n${result.log}`, 'ok');
       flash('Deployed to GitHub. Cloudflare will deploy shortly.', 'success');
+    } else if (result.ok) {
+      log(result.log, 'info');
+      flash('Saved locally. No main-repository changes need a GitHub push.', 'info');
     } else {
       log(`DESKTOP SYNC FAILED:\n${result.log}`, 'bad');
       flash('Saved locally, but GitHub push failed — see the log.', 'error');

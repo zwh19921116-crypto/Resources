@@ -391,6 +391,12 @@ async function gitSync(message) {
   const add = await runGit(['add', '-A']);
   if (!add.ok) return { ok: false, log: `git add failed:\n${add.output || add.error}` };
 
+  // Dirty nested backups do not produce a stageable change in the parent repo.
+  const staged = await runGit(['diff', '--cached', '--quiet']);
+  if (staged.ok) {
+    return { ok: true, pushed: false, log: 'Saved locally. No changes in the main repository to push.' };
+  }
+
   const commit = await runGit(['commit', '-m', message || 'Update via Edgeducate Admin']);
   if (!commit.ok) return { ok: false, log: `git commit failed:\n${commit.output || commit.error}` };
 
@@ -398,7 +404,7 @@ async function gitSync(message) {
   const push = await runGit(['push', 'origin', 'HEAD:main']);
   if (!push.ok) return { ok: false, log: `git push failed:\n${push.output || push.error}` };
 
-  return { ok: true, log: `${commit.output}\n${push.output}`.trim() };
+  return { ok: true, pushed: true, log: `${commit.output}\n${push.output}`.trim() };
 }
 
 async function gitPullData() {
