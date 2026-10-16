@@ -11,3 +11,6 @@ admin-desktop/admin-panel
 # Local scratch
 .tmp-*
 *.zip
+
+# Local workspace backups are not part of the deployed site
+backups/workspace-*/
