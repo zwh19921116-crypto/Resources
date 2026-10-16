@@ -123,7 +123,9 @@
     const article = document.querySelector('.resource-detail[data-resource-title], .solutions-detail');
     if (!article || !location.pathname.includes('/resource-pages/')) return;
     const contentContainer = article.querySelector('.container');
-    if (!contentContainer || document.getElementById('learning-recommendations')) return;
+    if (!contentContainer
+      || document.getElementById('learning-recommendations')
+      || article.querySelector('.related-resources')) return;
 
     const recommendations = document.createElement('section');
     recommendations.id = 'learning-recommendations';

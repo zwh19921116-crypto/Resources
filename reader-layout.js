@@ -41,5 +41,6 @@ if (footer) {
 document.querySelectorAll('.resource-detail.has-inline-preview').forEach((article) => {
   const layout = article.querySelector('.resource-detail-layout');
   const related = article.querySelector('.related-resources');
+  article.querySelector('.reader-download')?.remove();
   if (layout && related) layout.appendChild(related);
 });
