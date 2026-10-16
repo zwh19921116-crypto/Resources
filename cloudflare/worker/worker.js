@@ -87,7 +87,11 @@ export default {
       return env.ASSETS.fetch(new Request(new URL('/all-resources.html', request.url), request));
     }
 
-    const response = await env.ASSETS.fetch(request);
+    let response = await env.ASSETS.fetch(request);
+    if (response.status === 404 && request.method === 'GET' && url.pathname.endsWith('/')) {
+      const indexUrl = new URL(`${url.pathname}index.html`, request.url);
+      response = await env.ASSETS.fetch(new Request(indexUrl, request));
+    }
     if (request.method === 'GET' && (url.pathname.endsWith('.html') || url.pathname.endsWith('/'))) {
       const headers = new Headers(response.headers);
       headers.set('Cache-Control', 'no-store, max-age=0');
