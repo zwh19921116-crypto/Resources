@@ -35,6 +35,46 @@
   let renderLimit = 9;
   let loadObserver = null;
 
+  function injectClubStructuredData() {
+    const currentDeals = deals.filter((deal) => deal.status === 'published' && (!deal.starts || deal.starts <= today) && (!deal.expires || deal.expires >= today));
+    const pageUrl = 'https://resources.edgeducate.com.au/club.html';
+    const itemList = currentDeals.map((deal, index) => {
+      const offer = {
+        '@type': 'Offer',
+        name: deal.title,
+        description: deal.description || deal.title,
+        url: deal.url || pageUrl,
+        seller: { '@type': 'Organization', name: deal.partner || 'Edgeducate Club', url: deal.url || pageUrl },
+        availability: 'https://schema.org/InStock'
+      };
+      if (deal.starts) offer.validFrom = deal.starts;
+      if (deal.expires) offer.validThrough = deal.expires;
+      if (deal.image) offer.image = deal.image;
+      return { '@type': 'ListItem', position: index + 1, item: offer };
+    });
+    const structuredData = {
+      '@context': 'https://schema.org',
+      '@graph': [
+        {
+          '@type': 'CollectionPage',
+          '@id': `${pageUrl}#page`,
+          url: pageUrl,
+          name: 'Edgeducate Club | Member Offers',
+          description: 'Discover current offers and discounts from Edgeducate Club.',
+          isPartOf: { '@type': 'WebSite', name: 'Edgeducate Resources', url: 'https://resources.edgeducate.com.au/' },
+          publisher: { '@type': 'Organization', name: 'Edgeducate', url: 'https://edgeducate.com.au/' },
+          mainEntity: { '@type': 'ItemList', numberOfItems: itemList.length, itemListElement: itemList }
+        }
+      ]
+    };
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify(structuredData).replace(/</g, '\\u003c');
+    document.head.appendChild(script);
+  }
+
+  injectClubStructuredData();
+
   const yearNode = document.getElementById('year');
   if (yearNode) yearNode.textContent = new Date().getFullYear();
 
