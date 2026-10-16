@@ -992,6 +992,10 @@ body.modal-open{overflow:hidden}
 
 /* ---------- Footer ---------- */
 .site-footer{background:#071d46;color:#d8e3fa;padding:3.25rem 0;margin-top:0}
+.footer-resource-links{display:flex;gap:1rem}.footer-resource-links a{color:#aebddd;font-size:.78rem;font-weight:700}.footer-resource-links a:hover{color:#fff}
+.resource-index{padding:2.5rem 0 4rem}.resource-index h1{font-size:clamp(1.6rem,2.4vw,2.1rem);margin:.6rem 0 .4rem}.resource-index-intro{color:var(--muted);margin-bottom:2rem}
+.resource-index-group{margin-bottom:2rem}.resource-index-group h2{font-size:1.1rem;color:#0f2348;margin:0 0 .7rem;padding-bottom:.4rem;border-bottom:1px solid var(--line-2)}
+.resource-index-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.3rem .9rem}.resource-index-list a{color:var(--blue);font-weight:600;font-size:.9rem;display:inline-block;padding:.25rem 0}.resource-index-list a:hover{text-decoration:underline}
 .footer-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2.2rem}
 .footer-social .brand-name{display:block;font-size:1.55rem}.footer-social p{font-size:.8rem;color:#aebddd;margin-top:.3rem}
 .social-links{display:flex;flex-wrap:wrap;gap:.65rem;margin-top:1.25rem}.social-links a{display:grid;place-items:center;width:29px;height:29px;border:1px solid #496187;border-radius:50%;color:#aebddd;font-size:.82rem;font-weight:800;transition:color .15s ease,border-color .15s ease,background .15s ease}.social-links a:hover{color:#fff;border-color:#ffd21c;background:#203b6d}

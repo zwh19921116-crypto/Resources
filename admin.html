@@ -342,6 +342,322 @@ dialog::backdrop{background:rgba(9,13,35,.55);backdrop-filter:blur(3px)}
 .settings-toggle::before{content:'';display:block;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(15,23,42,.2);transition:transform .15s ease}
 .settings-toggle[aria-checked=true]{background:var(--blue)}
 .settings-toggle[aria-checked=true]::before{transform:translateX(18px)}
+.settings-card-wide{grid-column:1/-1}
+.sitemap-summary{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.9rem}
+.sitemap-stat{display:grid;gap:.12rem;min-width:112px;padding:.65rem .75rem;border:1px solid var(--line-2);border-radius:10px;background:#f8fafc}
+.sitemap-stat strong{font-size:1.05rem;color:var(--ink)}
+.sitemap-stat span{font-size:.68rem;color:var(--muted)}
+.sitemap-tree{margin-top:1rem;padding:1rem;border:1px solid var(--line-2);border-radius:12px;background:#fbfdff;overflow:auto}
+.sitemap-open-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1rem;flex-wrap:wrap}
+.sitemap-open-row .hint{margin:0;max-width:620px}
+.scout-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1rem;max-width:980px}
+.scout-hero{max-width:620px}
+.scout-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:1.4rem 1.45rem;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.scout-badge-note{background:#5b53c8}
+.scout-steps{margin:.3rem 0 0;padding-left:1.2rem;display:grid;gap:.6rem}
+.scout-steps li{font-size:.8rem;line-height:1.5;color:var(--body)}
+.scout-steps strong{color:var(--ink)}
+.scout-steps code{background:#f1f5fb;border:1px solid #e2e8f0;border-radius:5px;padding:.02rem .28rem;font-size:.74rem}
+.scout-notes-foot{margin:1rem 0 0;font-size:.74rem;color:var(--muted);line-height:1.5;border-top:1px solid var(--line-2);padding-top:.8rem}
+.settings-note .scout-steps{margin:.6rem 0 0;padding-left:1.2rem;display:grid;gap:.55rem;max-width:860px}
+.settings-note .scout-steps li{font-size:.82rem;line-height:1.55;color:var(--body)}
+.settings-note .scout-steps strong{color:var(--ink)}
+.settings-note .scout-steps code{background:#f1f5fb;border:1px solid #e2e8f0;border-radius:5px;padding:.02rem .28rem;font-size:.76rem}
+.settings-note .scout-notes-foot{max-width:860px}
+.scout-card-top{display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem}
+.scout-card-top h3{font-size:1.05rem;margin:0}
+.scout-badge{font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:#2563eb;padding:.26rem .5rem;border-radius:6px}
+.scout-badge-alt{background:#0f8a5f}
+.scout-card-sub{margin:0 0 1rem;color:var(--muted);font-size:.84rem;line-height:1.5}
+.scout-form{display:flex;gap:.5rem;margin-bottom:.5rem}
+.scout-input{flex:1;min-width:0;padding:.7rem .85rem;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:.92rem;color:var(--ink);background:#fff}
+.scout-input:focus{outline:none;border-color:#b9cdff;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.scout-status{margin:.1rem 0 .4rem;font-size:.76rem;color:var(--bad);min-height:1em}
+.scout-hint{margin:.2rem 0 1rem}
+.scout-privacy{display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap;margin:0 0 1rem;padding:.6rem .75rem;border:1px solid var(--line);border-radius:10px;background:#f8fafc}
+.scout-privacy-state{font-size:.76rem;color:var(--muted)}
+.scout-privacy-state.is-on{color:#0f8a5f;font-weight:600}
+.scout-quick{margin:0 0 1.1rem}
+.scout-chip-mine{background:#fff7e6;border-color:#f3d48a;color:#92600c;font-weight:700}
+.scout-chip-mine:hover{background:#fdecc4;border-color:#ecc568}
+.scout-recent-label{font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin-bottom:.4rem}
+.scout-recent-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem}
+.scout-recent-head .scout-recent-label{margin:0}
+.scout-clear{border:0;background:none;color:#2748a0;font-size:.72rem;font-weight:600;cursor:pointer;padding:.1rem .2rem}
+.scout-clear:hover{text-decoration:underline}
+.scout-recent{display:flex;flex-wrap:wrap;gap:.4rem}
+.scout-chip{display:inline-flex;align-items:center;border:1px solid var(--line);background:#f6f9ff;border-radius:999px;overflow:hidden}
+.scout-chip-go{border:0;background:none;color:#2748a0;padding:.38rem .5rem .38rem .8rem;font-size:.76rem;font-weight:600;cursor:pointer}
+.scout-chip:hover{border-color:#b9cdff;background:#e9f1ff}
+.scout-chip-rm{border:0;background:none;color:#8aa0bf;padding:.2rem .55rem .2rem .25rem;font-size:.9rem;line-height:1;cursor:pointer}
+.scout-chip-rm:hover{color:#c0392b}
+.scout-recent-empty{font-size:.76rem;color:var(--muted)}
+.sitemap-modal{width:min(1180px,96vw)}
+.sitemap-modal .dlg-body{padding:1rem 1.25rem 1.25rem}
+#sitemap-dlg.is-fullscreen{width:100vw;height:100vh;max-width:100vw;max-height:100vh;border-radius:0}
+#sitemap-dlg.is-fullscreen .dlg-head{display:none}
+#sitemap-dlg.is-fullscreen .dlg-body{height:100vh;box-sizing:border-box;display:flex;flex-direction:column;gap:.45rem;overflow:hidden;padding:0}
+.sitemap-fs-close{display:none}
+#sitemap-dlg.is-fullscreen .sitemap-fs-close{display:grid;place-items:center;position:fixed;top:12px;right:12px;z-index:50;width:34px;height:34px;border:1px solid #244869;border-radius:50%;background:rgba(8,20,36,.92);color:#e9f3ff;font-size:1.05rem;cursor:pointer}
+#sitemap-dlg.is-fullscreen .sitemap-fs-close:hover{background:rgba(20,40,66,.98);border-color:#3a608a}
+#sitemap-dlg.is-fullscreen .sitemap-analytics{top:58px}
+#sitemap-dlg.is-fullscreen .sitemap-scan-bar{padding:.4rem .7rem}
+#sitemap-dlg.is-fullscreen .sitemap-canvas-help{display:none}
+#sitemap-dlg.is-fullscreen .sitemap-view-tabs{margin-top:0}
+#sitemap-dlg.is-fullscreen .sitemap-canvas-wrap{flex:1;min-height:0;margin-top:0}
+#sitemap-dlg.is-fullscreen .sitemap-network{height:100%;min-height:0;border:0;border-radius:0}
+.sitemap-scan-bar{display:flex;align-items:center;gap:.7rem;justify-content:space-between;flex-wrap:wrap;padding:.7rem .8rem;border:1px solid var(--line-2);border-radius:10px;background:#f8fafc}
+.sitemap-scan-bar .btn-ghost{background:#fff;color:#334155;border-color:var(--line)}
+.sitemap-scan-bar .btn-ghost:hover{background:#f1f6ff;border-color:#b9cdff;color:var(--blue)}
+.sitemap-filter{padding:.42rem .6rem;border:1px solid var(--line);border-radius:8px;background:#fff;color:#334155;font:inherit;font-size:.79rem;cursor:pointer}
+.sitemap-filter-menu{position:relative;display:inline-block}
+.sitemap-filter-menu>summary{list-style:none;cursor:pointer}
+.sitemap-filter-menu>summary::-webkit-details-marker{display:none}
+.sitemap-filter-pop{position:absolute;z-index:40;top:calc(100% + 6px);left:0;min-width:210px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 14px 30px rgba(9,13,35,.2);padding:.5rem;display:grid;gap:.1rem}
+.sitemap-filter-pop label{display:flex;align-items:center;gap:.5rem;padding:.35rem .4rem;border-radius:7px;font-size:.78rem;color:#334155;cursor:pointer}
+.sitemap-filter-pop label:hover{background:#f1f6ff}
+.sitemap-filter-pop input{width:auto;margin:0}
+.sitemap-filter-divider{display:block;margin:.4rem .4rem .15rem;padding-top:.4rem;border-top:1px solid var(--line);font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sitemap-search{padding:.42rem .6rem;border:1px solid var(--line);border-radius:8px;background:#fff;color:#334155;font:inherit;font-size:.79rem;min-width:150px}
+.sitemap-search:focus{outline:none;border-color:#b9cdff;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.sitemap-scan-state{font-size:.74rem;color:var(--muted)}
+.sitemap-address{display:flex;align-items:center;gap:.35rem;flex:1;max-width:440px;margin:0 .3rem}
+.sitemap-address-input{flex:1;min-width:0;padding:.4rem .6rem;border:1px solid #c8d9eb;border-radius:8px;font-size:.82rem;background:#fff;color:#102a43}
+.sitemap-address-input:focus{outline:none;border-color:#3170b8;box-shadow:0 0 0 3px rgba(49,112,184,.18)}
+.sitemap-canvas-help{display:block;margin-top:.35rem;color:#6b86a3;font-size:.68rem}
+.sitemap-view-tabs{display:flex;gap:.35rem;margin-top:.8rem}
+.sitemap-view-tab{border:1px solid var(--line-2);border-radius:999px;background:#fff;color:var(--muted);padding:.42rem .75rem;font-size:.72rem;font-weight:700;cursor:pointer}
+.sitemap-view-tab[aria-selected=true]{background:#102d67;border-color:#102d67;color:#fff}
+.sitemap-domain-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem;align-items:start}
+.sitemap-web{position:relative;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,1fr);padding:1.1rem;background-color:#f8fbff;background-image:linear-gradient(#e6eef8 1px,transparent 1px),linear-gradient(90deg,#e6eef8 1px,transparent 1px);background-size:24px 24px;border:1px solid #d8e4f1;border-radius:14px}
+.sitemap-web::before,.sitemap-web::after{content:'';position:absolute;z-index:0;top:4.2rem;width:calc(16.666% - .7rem);border-top:2px solid #9db7d5}
+.sitemap-web::before{left:calc(33.333% - .35rem)}
+.sitemap-web::after{right:calc(33.333% - .35rem)}
+.sitemap-web .sitemap-domain{position:relative;z-index:1}
+.sitemap-web .sitemap-domain:nth-child(2){box-shadow:0 10px 24px rgba(31,78,121,.14);border-color:#aec6e2}
+.sitemap-web .sitemap-domain:nth-child(2) .sitemap-domain-head{background:#e8f1ff}
+.sitemap-web .sitemap-domain:nth-child(2)::before{content:'CENTRAL HUB';display:block;padding:.35rem .75rem;background:#102d67;color:#dce8ff;font-size:.58rem;font-weight:800;letter-spacing:.12em;text-align:center}
+.sitemap-web .sitemap-domain:first-child::after,.sitemap-web .sitemap-domain:nth-child(2)::after{content:'→';position:absolute;z-index:3;top:2.05rem;right:-1.15rem;width:1.6rem;border-top:3px solid #6d9ccc;color:#3867a0;font-size:1.15rem;font-weight:800;line-height:.7;text-align:center}
+.sitemap-domain{min-width:0;border:1px solid var(--line-2);border-radius:12px;background:#fff;overflow:hidden}
+.sitemap-domain-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.75rem .8rem;background:#f1f5ff;border-bottom:1px solid var(--line-2)}
+.sitemap-domain-head strong{font-size:.78rem;color:var(--ink);overflow-wrap:anywhere}
+.sitemap-domain-head small{color:var(--muted);font-size:.66rem;white-space:nowrap}
+.sitemap-domain-body{padding:.65rem .75rem;max-height:54vh;overflow:auto}
+.sitemap-domain-body ul{list-style:none;margin:0;padding:0;display:grid;gap:.35rem}
+.sitemap-link{display:block;padding:.42rem .5rem;border:1px solid #e2e8f0;border-radius:7px;color:#315a96;font-size:.7rem;overflow-wrap:anywhere;text-decoration:none}
+.sitemap-link:hover{background:#f8fafc;border-color:#a9bddb}
+.sitemap-link small{display:block;color:var(--muted);font-size:.62rem;margin-top:.12rem}
+.sitemap-empty{color:var(--muted);font-size:.72rem;margin:0}
+.sitemap-canvas-wrap{position:relative;margin-top:.8rem}
+.sitemap-canvas-menu{position:absolute;top:12px;left:12px;z-index:30;max-width:calc(100% - 24px)}
+.sitemap-canvas-menu[hidden]{display:none}
+.sitemap-canvas-menu-details>summary{list-style:none;cursor:pointer;display:inline-flex;width:max-content}
+.sitemap-canvas-menu-details>summary::-webkit-details-marker{display:none}
+.sitemap-canvas-menu-body{margin-top:.45rem;display:flex;flex-direction:column;align-items:stretch;gap:.4rem;width:min(246px,calc(100vw - 48px));padding:.55rem;background:rgba(8,20,36,.94);border:1px solid #244869;border-radius:12px;box-shadow:0 16px 36px rgba(0,0,0,.5)}
+.sitemap-canvas-menu-body #sitemap-scan-meta{width:100%}
+.sitemap-canvas-menu-body #sitemap-address-form,.sitemap-canvas-menu-body #sitemap-toolbar-controls{width:100%;box-sizing:border-box}
+.sitemap-canvas-menu-body #sitemap-address-form{flex-basis:auto}
+.sitemap-canvas-menu-body #sitemap-toolbar-controls{display:flex;flex-direction:column;align-items:stretch;gap:.4rem}
+.sitemap-canvas-menu-body .sitemap-tool-group{display:flex;flex-direction:column;align-items:stretch;gap:.35rem;width:100%;padding-top:.6rem;margin-top:.1rem;border-top:1px solid #23466a}
+.sitemap-canvas-menu-body .sitemap-tool-group:first-of-type{padding-top:0;margin-top:0;border-top:none}
+.sitemap-canvas-menu-body .sitemap-tool-group-label{font-size:.6rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#7fa6cc;padding:0 .15rem}
+.sitemap-canvas-menu-body .sitemap-tool-group .sitemap-filter-menu,.sitemap-canvas-menu-body .sitemap-tool-group .sitemap-search,.sitemap-canvas-menu-body .sitemap-tool-group .btn{width:100%;box-sizing:border-box}
+.sitemap-canvas-menu-body .sitemap-view-tabs{display:grid;grid-template-columns:1fr 1fr;width:100%}
+.sitemap-canvas-menu-body .sitemap-filter-pop{top:0;left:calc(100% + 6px)}
+.sitemap-canvas-menu-body .sitemap-scan-state{color:#cfe0f0;font-size:.72rem}
+.sitemap-canvas-menu-body .sitemap-canvas-help{color:#8fb3d6}
+.sitemap-canvas-menu-body .sitemap-view-tabs{margin-top:0}
+.sitemap-canvas-menu-body .btn-ghost{background:rgba(255,255,255,.06);color:#dce8f7;border-color:#2c4f73}
+.sitemap-canvas-menu-body .btn-ghost:hover{background:rgba(255,255,255,.14);color:#fff;border-color:#3a608a}
+.sitemap-canvas-menu-body .sitemap-filter-pop{background:#0f2338;border-color:#244869}
+.sitemap-canvas-menu-body .sitemap-filter-pop label{color:#cfe0f0}
+.sitemap-canvas-menu-body .sitemap-filter-pop label:hover{background:rgba(255,255,255,.08)}
+.sitemap-canvas-menu-body .sitemap-search{background:rgba(255,255,255,.06);color:#eef5ff;border-color:#2c4f73}
+.sitemap-canvas-menu-body #sitemap-address-form{flex-basis:100%;display:flex;gap:.4rem}
+.sitemap-canvas-menu-body .sitemap-address-input{flex:1;background:rgba(255,255,255,.06);color:#eef5ff;border-color:#2c4f73}
+.sitemap-network{position:relative;height:min(70vh,760px);min-height:560px;overflow:hidden;border:1px solid #c8d9eb;border-radius:14px;background:#071426;background-image:radial-gradient(circle at 50% 50%,rgba(49,112,184,.22),transparent 42%),linear-gradient(135deg,#061120,#0d2038);cursor:grab;touch-action:none}
+.sitemap-network.is-panning{cursor:grabbing}
+.sitemap-network[hidden]{display:none}
+.sitemap-analytics{position:absolute;top:12px;right:12px;z-index:35;width:min(320px,calc(100% - 24px));max-height:calc(100% - 24px);display:flex;flex-direction:column;background:rgba(8,20,36,.96);border:1px solid #244869;border-radius:14px;box-shadow:0 18px 42px rgba(0,0,0,.55);color:#eaf2fb;overflow:hidden}
+.sitemap-analytics[hidden]{display:none}
+.sitemap-analytics-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.7rem .85rem;border-bottom:1px solid #1d3a57;background:rgba(14,32,56,.9)}
+.sitemap-analytics-head strong{font-size:.86rem;letter-spacing:.02em}
+.sitemap-analytics-close{border:0;background:none;color:#9ec2e8;font-size:1.15rem;line-height:1;cursor:pointer;padding:.1rem .3rem;border-radius:6px}
+.sitemap-analytics-close:hover{background:rgba(255,255,255,.1);color:#fff}
+.sitemap-analytics-body{padding:.8rem .85rem 1rem;overflow:auto}
+.an-tiles{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.9rem}
+.an-tile{background:rgba(255,255,255,.05);border:1px solid #214063;border-radius:10px;padding:.55rem .6rem}
+.an-tile strong{display:block;font-size:1.15rem;line-height:1.1;color:#fff}
+.an-tile small{display:block;font-size:.62rem;color:#9ec2e8;margin-top:.15rem;letter-spacing:.03em;text-transform:uppercase}
+.an-section-title{font-size:.64rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#8fb3d6;margin:.9rem 0 .45rem}
+.an-chart{display:block;width:100%;height:auto;background:rgba(255,255,255,.03);border:1px solid #1d3a57;border-radius:8px;padding:.3rem}
+.an-bar{display:grid;grid-template-columns:72px 1fr 34px;align-items:center;gap:.4rem;margin:.28rem 0;font-size:.68rem}
+.an-bar-label{color:#cfe0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.an-bar-track{position:relative;height:9px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}
+.an-bar-fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#3aa0ff,#39d98a);border-radius:999px}
+.an-bar-val{text-align:right;color:#9ec2e8}
+.an-legend{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:.4rem;font-size:.6rem;color:#9ec2e8}
+.an-legend span{display:inline-flex;align-items:center;gap:.25rem}
+.an-legend i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.sitemap-network-world{position:absolute;left:0;top:0;width:1600px;height:1000px;transform-origin:0 0}
+.sitemap-network svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.sitemap-network-edge{stroke:#4f88c4;stroke-width:2.4;stroke-linecap:round;opacity:.5;pointer-events:none;transition:opacity .2s ease,stroke-width .2s ease}
+.sitemap-network.is-single-domain .sitemap-network-edge{stroke-width:1.5;opacity:.2}
+.sitemap-network.is-single-domain .sitemap-network-edge.domain-edge{stroke-width:2.5;opacity:.55}
+.sitemap-network.is-single-domain .sitemap-network-edge.is-active{stroke:#ffd166;opacity:1;stroke-width:4}
+.sitemap-network-edge.domain-edge{stroke:#8fc0f2;stroke-width:4;opacity:.85}
+.sitemap-network-edge.is-active{stroke:#ffd166;opacity:1;stroke-width:5}
+.sitemap-network-hit{fill:none;stroke:transparent;stroke-width:16;pointer-events:stroke;cursor:pointer}
+.sitemap-network-node{position:absolute;z-index:2;display:grid;place-items:center;gap:.12rem;min-width:84px;max-width:152px;min-height:38px;padding:.38rem .56rem;border:1px solid #5598d4;border-radius:999px;background:linear-gradient(160deg,#143a63,#0e2c4d);color:#eff7ff;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.28);transform:translate(-50%,-50%);transition:box-shadow .18s ease,border-color .18s ease,background .18s ease;cursor:grab;user-select:none;-webkit-user-select:none}
+.sitemap-network-node:hover{z-index:5;border-color:#9fd0ff;box-shadow:0 0 0 3px rgba(128,204,255,.3),0 8px 20px rgba(0,0,0,.34)}
+.sitemap-network-node.is-selected{z-index:6;border-color:#ffd166;box-shadow:0 0 0 3px rgba(255,209,102,.5),0 8px 22px rgba(0,0,0,.4)}
+.sitemap-network-node.is-path{z-index:5;border-color:#ffd166;box-shadow:0 0 0 2px rgba(255,209,102,.55),0 6px 18px rgba(0,0,0,.34)}
+.sitemap-network-node strong{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.69rem;font-weight:700}
+.sitemap-network.is-single-domain .sitemap-network-node{max-width:260px}
+.sitemap-network.is-single-domain .sitemap-network-node strong{max-width:240px;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;line-height:1.2}
+.sitemap-network.is-single-domain .sitemap-network-node small{max-width:240px;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.sitemap-network.is-single-domain .sitemap-network-node.link-card strong,.sitemap-network.is-single-domain .sitemap-network-node.social-card strong{display:-webkit-box;-webkit-line-clamp:1;line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.sitemap-network.is-single-domain .sitemap-network-node.link-card small,.sitemap-network.is-single-domain .sitemap-network-node.social-card small{display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sitemap-network-node small{max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a9c8e4;font-size:.56rem}
+.sitemap-network-node.root{min-width:150px;min-height:76px;border:2px solid #8fd0ff;border-radius:50%;background:radial-gradient(circle at 40% 30%,#2a85cf,#0f4f8a);box-shadow:0 0 26px rgba(62,169,255,.6)}
+.sitemap-network-node.domain{min-width:116px;min-height:54px;border-width:2px;background:linear-gradient(160deg,#1a5681,#123f63)}
+.sitemap-network-node.domain.resources{background:linear-gradient(160deg,#1a7a56,#0f5238);border-color:#6fe0af;box-shadow:0 0 20px rgba(74,224,167,.38)}
+.sitemap-network-node.domain.blog{background:linear-gradient(160deg,#1a6a82,#124f61);border-color:#65dbea}
+.sitemap-network-node.folder{min-width:104px;min-height:44px;border-radius:10px;border-width:2px;border-color:#9b8cff;background:linear-gradient(160deg,#2c2a56,#201f42)}
+.sitemap-network-node.folder small{color:#c3bcff}
+.sitemap-network-node.page{min-width:94px;max-width:134px;min-height:30px;border-radius:9px;background:linear-gradient(160deg,#143252,#0e2742)}
+.sitemap-network-node.external{min-width:90px;max-width:140px;min-height:30px;border-radius:9px;border-color:#e0a24a;background:linear-gradient(160deg,#4a2f13,#3a2610)}
+.sitemap-network-node.external small{color:#f0c58a}
+.sitemap-network-node.link-card,.sitemap-network-node.social-card{min-width:150px;max-width:210px;min-height:40px;align-items:start;text-align:left;border-radius:10px;padding:.42rem .6rem;border-color:#e0a24a;background:linear-gradient(160deg,#30415f,#1d2b45);transform:translate(0,-50%)}
+.sitemap-network-node.link-card strong,.sitemap-network-node.social-card strong{max-width:188px;font-size:.66rem;color:#eef5ff}
+.sitemap-network-node.link-card small,.sitemap-network-node.social-card small{max-width:188px;font-size:.58rem;color:#9ec2e8}
+.sitemap-network-node.social-card{border-color:#7f9cff;background:linear-gradient(160deg,#2b315c,#1b1f3c)}
+.sitemap-network-node.social-card small{color:#b9c3ff}
+.sitemap-network-node.external-hub{min-width:126px;min-height:54px;border-radius:14px;border-color:#f3c46a;background:linear-gradient(160deg,#76501e,#4a2f13);box-shadow:0 0 20px rgba(224,162,74,.3)}
+.sitemap-network-edge.ext-edge{stroke:#e0a24a;stroke-dasharray:3 3;opacity:.55}
+.sitemap-network-node.is-hidden,.sitemap-network-edge.is-hidden,.sitemap-network-hit.is-hidden{display:none}
+.sitemap-network[data-focus="main"] .sitemap-network-node:not([data-sitemap-group="main"]):not(.root),.sitemap-network[data-focus="main"] .sitemap-network-edge:not(.group-main){opacity:.16}
+.sitemap-network[data-focus="resources"] .sitemap-network-node:not([data-sitemap-group="resources"]):not(.root),.sitemap-network[data-focus="resources"] .sitemap-network-edge:not(.group-resources){opacity:.16}
+.sitemap-network[data-focus="blog"] .sitemap-network-node:not([data-sitemap-group="blog"]):not(.root),.sitemap-network[data-focus="blog"] .sitemap-network-edge:not(.group-blog){opacity:.16}
+.sitemap-detail{position:absolute;top:14px;right:14px;width:304px;max-height:calc(100% - 28px);overflow:auto;z-index:20;padding:1rem 1.05rem 1.1rem;border:1px solid #244869;border-radius:14px;background:linear-gradient(170deg,#0f2338,#0a1a2c);color:#e9f3ff;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+.sitemap-detail[hidden]{display:none}
+.sitemap-detail-close{position:absolute;top:.5rem;right:.6rem;width:26px;height:26px;border:none;border-radius:50%;background:rgba(255,255,255,.08);color:#cfe3f7;font-size:1rem;line-height:1;cursor:pointer}
+.sitemap-detail-close:hover{background:rgba(255,255,255,.18)}
+.sitemap-detail-kind{display:inline-block;font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;color:#7fb2e4;font-weight:700}
+.sitemap-detail h3{margin:.25rem 0 .2rem;font-size:.98rem;word-break:break-word;color:#ffffff}
+.sitemap-detail-url{margin:0 0 .75rem;font-size:.66rem;color:#8fb3d6;word-break:break-all}
+.sitemap-detail-grade{display:flex;align-items:center;gap:.7rem;padding:.6rem;border-radius:10px;background:rgba(255,255,255,.04);margin-bottom:.7rem}
+.sitemap-detail-grade-badge{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;font-size:1.3rem;font-weight:800;color:#06131f;background:#8fe3b4}
+.sitemap-detail-grade-badge[data-grade="B"]{background:#bfe68a}
+.sitemap-detail-grade-badge[data-grade="C"]{background:#ffd166}
+.sitemap-detail-grade-badge[data-grade="D"]{background:#ffab6b}
+.sitemap-detail-grade-badge[data-grade="E"]{background:#ff8a8a}
+.sitemap-detail-grade strong{font-size:1.4rem;line-height:1}
+.sitemap-detail-grade small{display:block;font-size:.6rem;color:#8fb3d6}
+.sitemap-detail-metrics{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.75rem}
+.sitemap-metric{padding:.5rem;border-radius:9px;background:rgba(255,255,255,.04);text-align:center}
+.sitemap-metric strong{display:block;font-size:1rem}
+.sitemap-metric small{font-size:.56rem;color:#8fb3d6}
+.sitemap-detail-analytics{margin:0 0 .85rem}
+.sitemap-detail-analytics[hidden]{display:none}
+.sitemap-detail-analytics h4{margin:0 0 .5rem;font-size:.74rem;color:#eaf2fb}
+.sda-score{display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem}
+.sda-gauge{position:relative;flex:1;height:10px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.sda-gauge-fill{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,#ff6b6b,#ffd166 55%,#39d98a)}
+.sda-score-num{display:flex;flex-direction:column;align-items:flex-end;min-width:54px}
+.sda-score-num strong{font-size:1.1rem;color:#fff;line-height:1}
+.sda-score-num small{font-size:.54rem;color:#8fb3d6}
+.sda-bars{display:grid;gap:.26rem}
+.sda-bar{display:grid;grid-template-columns:78px 1fr 30px;align-items:center;gap:.4rem;font-size:.64rem}
+.sda-bar-label{color:#cfe0f0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sda-bar-track{position:relative;height:8px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}
+.sda-bar-fill{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(90deg,#3aa0ff,#39d98a)}
+.sda-bar-fill.is-partial{background:linear-gradient(90deg,#f6a94a,#ffd166)}
+.sda-bar-fill.is-empty{background:#ff6b6b}
+.sda-bar-val{text-align:right;color:#9ec2e8}
+.sitemap-detail-criteria{list-style:none;margin:0 0 .8rem;padding:0;display:grid;gap:.3rem}
+.sitemap-detail-criteria li{font-size:.66rem;color:#cfe0f0}
+.sitemap-detail-criteria li.ok{color:#8fe3b4}
+.sitemap-detail-criteria li.warn{color:#ffc477}
+.sitemap-detail-criteria li.unknownc{color:#9fb3c9}
+.sitemap-detail-facts{margin:.2rem 0 .8rem;padding-top:.7rem;border-top:1px solid rgba(255,255,255,.08)}
+.sitemap-detail-facts h4,.sitemap-detail-recs h4{margin:0 0 .5rem;font-size:.72rem;color:#9fc3e8}
+.sitemap-detail-recs{margin:.2rem 0 .8rem;padding-top:.7rem;border-top:1px solid rgba(255,255,255,.08)}
+.sitemap-recs-label{display:block;margin:.6rem 0 .3rem;font-size:.62rem;letter-spacing:.06em;text-transform:uppercase;color:#7fb2e4}
+.sitemap-recs-list{list-style:none;margin:0;padding:0;display:grid;gap:.28rem}
+.sitemap-recs-list li{font-size:.66rem;color:#ffc477;padding-left:.9rem;position:relative}
+.sitemap-recs-list li::before{content:'→';position:absolute;left:0;color:#6d8bab}
+.sitemap-recs-guest{list-style:none;margin:0;padding:0;display:grid;gap:.26rem}
+.sitemap-recs-guest a{font-size:.66rem;color:#8fd0ff;text-decoration:none}
+.sitemap-recs-guest a:hover{text-decoration:underline}
+.sitemap-plan-page{margin:.35rem 0 .5rem;padding:.4rem .5rem;border-radius:8px;background:rgba(255,255,255,.04)}
+.sitemap-plan-name{font-size:.66rem;font-weight:700;color:#e9f3ff;word-break:break-all;margin-bottom:.2rem}
+.sitemap-plan-page ul{list-style:none;margin:0;padding:0;display:grid;gap:.2rem}
+.sitemap-plan-page li{font-size:.63rem;color:#ffd1a0;padding-left:.8rem;position:relative}
+.sitemap-plan-page li::before{content:'•';position:absolute;left:0;color:#6d8bab}
+.sitemap-plan-ok{font-size:.63rem;color:#8fe3b4}
+.sitemap-detail-facts-list{margin:0;display:grid;gap:.35rem}
+.sitemap-fact{display:grid;grid-template-columns:96px 1fr;gap:.5rem;font-size:.66rem}
+.sitemap-fact dt{color:#8fb3d6}
+.sitemap-fact dd{margin:0;color:#e2edf8;word-break:break-word}
+.sitemap-detail-open{display:block;width:100%;text-align:center}
+.sitemap-detail-note{margin:.6rem 0 0;font-size:.58rem;color:#6d8bab;text-align:center}
+.sitemap-schema-output{width:100%;box-sizing:border-box;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.72rem;line-height:1.45;padding:.7rem .8rem;border:1px solid #c8d9eb;border-radius:10px;background:#0d1b2a;color:#d7e7f7;resize:vertical}
+.sitemap-detail-search{margin:.2rem 0 .8rem;padding-top:.7rem;border-top:1px solid rgba(255,255,255,.08)}
+.sitemap-detail-search h4{margin:0 0 .5rem;font-size:.72rem;color:#9fc3e8}
+.sitemap-detail-queries{list-style:none;margin:.6rem 0 0;padding:0;display:grid;gap:.28rem;counter-reset:q}
+.sitemap-detail-queries li{display:flex;justify-content:space-between;gap:.5rem;font-size:.64rem;color:#cfe0f0}
+.sitemap-detail-queries li span:last-child{color:#8fb3d6;white-space:nowrap}
+.sitemap-detail-refs{margin:.2rem 0 .8rem;padding-top:.7rem;border-top:1px solid rgba(255,255,255,.08)}
+.sitemap-detail-refs h4{margin:0 0 .5rem;font-size:.72rem;color:#9fc3e8}
+.sitemap-origin-link{background:none;border:0;padding:0;margin:0;color:#9fd0ff;font:inherit;text-align:left;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.sitemap-origin-link:hover{color:#cfe8ff}
+.sitemap-origin-anchor{margin:.15rem 0 .4rem;padding:.3rem .4rem;border-radius:7px;background:rgba(255,255,255,.04);font-size:.62rem;line-height:1.35}
+.sitemap-origin-text{display:block;color:#e9f3ff;font-weight:600}
+.sitemap-origin-anchor a{display:block;color:#f0c58a;word-break:break-all;text-decoration:none}
+.sitemap-origin-anchor a:hover{text-decoration:underline}
+.sitemap-detail-social{margin:.2rem 0 .8rem;padding-top:.7rem;border-top:1px solid rgba(255,255,255,.08)}
+.sitemap-detail-social h4{margin:0 0 .5rem;font-size:.72rem;color:#9fc3e8}
+.sitemap-social-card{margin:0 0 .7rem;border:1px solid rgba(255,255,255,.12);border-radius:10px;overflow:hidden;background:rgba(255,255,255,.03)}
+.sitemap-social-card-img{aspect-ratio:1.91/1;background:#0a1626;display:block}
+.sitemap-social-card-img img{width:100%;height:100%;object-fit:cover;display:block}
+.sitemap-social-card-img.is-empty,.sitemap-social-card-img.is-broken{display:grid;place-items:center;aspect-ratio:1.91/1;font-size:.64rem;color:#6d8bab}
+.sitemap-social-card-img.is-broken img{display:none}
+.sitemap-social-card-img.is-broken::after{content:'Share image unavailable'}
+.sitemap-social-card-body{padding:.5rem .6rem}
+.sitemap-social-card-host{display:block;font-size:.58rem;letter-spacing:.04em;text-transform:uppercase;color:#7fb2e4}
+.sitemap-social-card-title{display:block;font-size:.76rem;color:#fff;margin:.15rem 0;line-height:1.3}
+.sitemap-social-card-desc{display:block;font-size:.64rem;color:#b8cbe0;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.sitemap-social-platform{margin:0 0 .5rem}
+.sitemap-social-origin{margin:.15rem 0 .4rem}
+.sitemap-social-platform-tag{display:inline-block;font-size:.56rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#0a1626;background:#8fd0ff;border-radius:5px;padding:.08rem .35rem;margin-right:.35rem}
+.sitemap-detail-expand{margin:.2rem 0 .8rem;padding-top:.7rem;border-top:1px solid rgba(255,255,255,.08)}
+.sitemap-detail-domains{list-style:none;margin:.55rem 0 0;padding:0;display:grid;gap:.24rem;max-height:120px;overflow:auto}
+.sitemap-detail-domains li{font-size:.64rem;color:#bcd4ec;word-break:break-all}
+.sitemap-detail-domains li.sitemap-refs-empty{color:#7b97b6}
+.gsc-usage{margin:.5rem 0 0;font-size:.64rem;color:#6d8bab;text-align:center}
+.gsc-field{display:block;margin:.55rem 0;font-size:.74rem;color:#33506e}
+.gsc-field input{display:block;width:100%;box-sizing:border-box;margin-top:.25rem;padding:.5rem .6rem;border:1px solid #c8d9eb;border-radius:8px;font-size:.78rem}
+.gsc-actions{display:flex;justify-content:space-between;gap:.5rem;margin-top:.8rem}
+@media (max-width:760px){.sitemap-network{min-height:560px}.sitemap-network-node{min-width:72px;max-width:112px}.sitemap-network-node strong,.sitemap-network-node small{max-width:104px}.sitemap-detail{position:static;width:auto;max-height:none;margin-top:.7rem}}
+@media (max-width:900px){.sitemap-domain-grid{grid-template-columns:1fr}}
+.sitemap-tree ul{list-style:none;margin:0;padding:0 0 0 1.1rem;position:relative}
+.sitemap-tree>ul{padding-left:0}
+.sitemap-tree ul ul{border-left:1px solid #cbd5e1}
+.sitemap-tree li{position:relative;padding:.18rem 0 .18rem 1rem;min-width:250px}
+.sitemap-tree>ul>li{padding-left:0}
+.sitemap-tree ul ul li::before{content:'';position:absolute;left:0;top:1rem;width:.7rem;border-top:1px solid #cbd5e1}
+.sitemap-node{display:inline-flex;align-items:center;gap:.45rem;padding:.38rem .58rem;border:1px solid #dbe5f0;border-radius:8px;background:#fff;color:var(--ink);font-size:.76rem}
+.sitemap-node strong{font-size:.78rem}
+.sitemap-node small{color:var(--muted);font-size:.66rem}
+.sitemap-node.root{background:#102d67;border-color:#102d67;color:#fff}
+.sitemap-node.root small{color:#dce8ff}
+.sitemap-node.branch{background:#f1f5ff;border-color:#cbd8f6}
+.sitemap-node.solution{background:#fff8ed;border-color:#f3d6a2}
+.sitemap-tree details>summary{cursor:pointer;list-style:none}
+.sitemap-tree details>summary::-webkit-details-marker{display:none}
+.sitemap-tree details>summary::before{content:'+';display:inline-grid;place-items:center;width:1rem;height:1rem;margin-right:.2rem;border:1px solid #b7c5d6;border-radius:4px;color:#52647a;font-weight:700}
+.sitemap-tree details[open]>summary::before{content:'−'}
 body.settings-compact th,body.settings-compact td{padding-top:.58rem;padding-bottom:.58rem}
 @media (max-width:760px){.settings-grid{grid-template-columns:1fr}}
 .admin-panel{width:auto;max-width:none;margin:0;padding:1.75rem 1.25rem 4rem;position:relative;isolation:isolate}
@@ -745,6 +1061,7 @@ body.settings-compact th,body.settings-compact td{padding-top:.58rem;padding-bot
       <button type="button" class="side-nav-btn" data-panel="club"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3.5 14.6 9l5.9.7-4.3 4 1.1 5.8L12 16.7 6.7 19.5l1.1-5.8-4.3-4L9.4 9z"/></svg></span>Club offers</button>
       <button type="button" class="side-nav-btn" data-panel="advertising"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="m7 15 3.2-3.2 2.5 2.5 2-2 2.3 2.7M8 9h.01"/></svg></span>Advertising</button>
       <button type="button" class="side-nav-btn" data-panel="packages"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7.5 12 4l8 3.5v9L12 20l-8-3.5zM4 7.5l8 3.5 8-3.5M12 11v9M8 5.8l8 3.6"/></svg></span>Packages</button>
+      <button type="button" class="side-nav-btn" data-panel="sitescout"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 12 18.4 5.6"/><circle cx="12" cy="12" r="3.6"/></svg></span>SiteScout</button>
       <button type="button" class="side-nav-btn" data-panel="settings"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/><path d="m19.4 15 .1.1a1.8 1.8 0 0 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3.1 1.3v.2a1.8 1.8 0 0 1-3.6 0v-.2a1.8 1.8 0 0 0-3.1-1.3l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1.8 1.8 0 0 0-1.3-3.1h-.2a1.8 1.8 0 0 1 0-3.6h.2a1.8 1.8 0 0 0 1.3-3.1l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1A1.8 1.8 0 0 0 10.2 3v-.2a1.8 1.8 0 0 1 3.6 0V3a1.8 1.8 0 0 0 3.1 1.3l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 1.3 3.1h.2a1.8 1.8 0 0 1 0 3.6h-.2a1.8 1.8 0 0 0-1.3 3.1Z"/></svg></span>Settings</button>
     </div>
     <div class="side-nav-divider"></div>
@@ -1030,8 +1347,177 @@ body.settings-compact th,body.settings-compact td{padding-top:.58rem;padding-bot
         <div class="settings-row"><div><strong>Site sitemap</strong><span>Download the sitemap for all public pages and published resources.</span></div><button type="button" class="btn btn-light btn-sm" id="btn-download-sitemap">Download</button></div>
       </section>
     </div>
+    <section class="settings-card settings-card-wide settings-note">
+      <h3>Note — How SiteScout works</h3>
+      <p>Reference for the SiteScout look-up tool. Open it from the SiteScout tab in the sidebar.</p>
+      <ol class="scout-steps">
+        <li><strong>Enter a domain</strong> and press <em>Scout site</em>. Your own Edgeducate domains switch to owner mode (all your domains + live Search Console); any other domain is analysed as a single external site.</li>
+        <li><strong>Sitemap scan.</strong> SiteScout reads the site's public <code>/sitemap.xml</code> to discover its live pages, then draws them as an interactive map around the homepage.</li>
+        <li><strong>Explore the map.</strong> Open it full screen; drag nodes, drag empty space to pan, and scroll to zoom. Click a link line to highlight that connection and open the connected page.</li>
+        <li><strong>On-page SEO audit.</strong> Click any page to fetch it live and grade real signals: title, meta description, H1, canonical, structured data, word count, and image alt text.</li>
+        <li><strong>Outbound references.</strong> Each audit lists external links, linked domains, and <em>sponsored / nofollow</em> tags — useful for spotting guest posts, partners, and paid links.</li>
+        <li><strong>Private scouting.</strong> When set up, requests to other companies route through your Cloudflare proxy Worker, so they see the proxy — not your IP. Once configured it stays on for every search.</li>
+        <li><strong>Live Search Console</strong> (your site only). Connect the GSC Worker to see real clicks, impressions, average position, and top queries per page. The dialog shows your remaining free Worker calls for the day.</li>
+        <li><strong>Sitelinks schema</strong> (your site only). Generates ready-to-paste JSON-LD (WebSite + SearchAction, Organization, BreadcrumbList) to help Google show a sitelinks search box and breadcrumbs.</li>
+      </ol>
+      <p class="scout-notes-foot">Everything runs on free tiers. True inbound backlinks (who links <em>to</em> a site) need a paid index like Ahrefs/Moz; SiteScout detects the page-readable, outbound half for free.</p>
+    </section>
+  </section>
+
+  <section class="wrap admin-panel" id="panel-sitescout" hidden>
+    <div class="panel-head">
+      <div>
+        <h2>SiteScout</h2>
+        <p>Look up any website — map its public pages, audit on-page SEO, and track search performance. See <strong>Settings → Note</strong> for how it works.</p>
+      </div>
+    </div>
+    <div class="scout-hero">
+      <section class="scout-card scout-search">
+        <div class="scout-card-top"><span class="scout-badge scout-badge-alt">Scout</span><h3>Analyse any website</h3></div>
+        <p class="scout-card-sub">Enter a domain — yours or anyone's — to map its public pages and audit each page's SEO. Your own Edgeducate domains also load live Search Console data and sitelinks tools.</p>
+        <form class="scout-form" id="scout-form">
+          <input type="text" id="scout-domain" class="scout-input" placeholder="example.com  ·  or  ·  edgeducate.com.au" autocomplete="off" spellcheck="false" aria-label="Domain to scout">
+          <button type="submit" class="btn btn-primary">Scout site</button>
+        </form>
+        <p class="scout-status" id="scout-status"></p>
+        <p class="hint scout-hint">Reads the site's public <code>/sitemap.xml</code>. Some sites block cross-site requests — those will report as unavailable.</p>
+        <div class="scout-privacy"><span class="scout-privacy-state" id="scout-privacy-state">Private mode OFF — scouting other sites uses your own IP.</span><button type="button" class="scout-clear" id="btn-scout-proxy">Set up private scouting</button></div>
+        <div class="scout-quick">
+          <button type="button" class="scout-chip scout-chip-mine" id="scout-my-site">★ My site · Edgeducate (all domains)</button>
+        </div>
+        <div class="scout-recent-head"><span class="scout-recent-label">Recent</span><button type="button" class="scout-clear" id="scout-clear" hidden>Clear all</button></div>
+        <div class="scout-recent" id="scout-recent"></div>
+      </section>
+    </div>
   </section>
 </div>
+
+<dialog id="sitemap-dlg" class="sitemap-modal">
+  <button type="button" class="sitemap-fs-close" id="sitemap-fs-close" aria-label="Close full screen">✕</button>
+  <div class="dlg-head">
+    <h2 id="sitemap-dlg-title">Site map visual</h2>
+    <form class="sitemap-address" id="sitemap-address-form" autocomplete="off">
+      <input type="text" id="sitemap-address" class="sitemap-address-input" placeholder="Search a website…" aria-label="Scouted website">
+      <button type="submit" class="btn btn-ghost btn-sm" id="sitemap-address-go">Go</button>
+    </form>
+    <span class="spacer"></span>
+    <button class="btn btn-light btn-sm" type="button" id="sitemap-close">Close</button>
+  </div>
+  <div class="dlg-body">
+    <div class="sitemap-scan-bar"><div id="sitemap-scan-meta"><span class="sitemap-scan-state" id="sitemap-scan-state">No online sitemap scan has run yet.</span><span class="sitemap-canvas-help">Drag nodes to move them. Drag empty space to pan. Scroll to zoom.</span></div><span id="sitemap-toolbar-controls"><details class="sitemap-filter-menu" id="sitemap-filter-menu"><summary class="btn btn-ghost btn-sm">Filters</summary><div class="sitemap-filter-pop"><label><input type="checkbox" class="sitemap-filter-check" value="issues"> Issues (score &lt; 50)</label><label><input type="checkbox" class="sitemap-filter-check" value="broken"> Broken / unreachable</label><label><input type="checkbox" class="sitemap-filter-check" value="notitle"> Missing title</label><label><input type="checkbox" class="sitemap-filter-check" value="nometa"> Missing meta description</label><label><input type="checkbox" class="sitemap-filter-check" value="noschema"> No structured data</label><label><input type="checkbox" class="sitemap-filter-check" value="nobreadcrumb"> No breadcrumb (sitelinks)</label><label><input type="checkbox" class="sitemap-filter-check" value="orphan"> Orphan pages (no inbound links)</label><span class="sitemap-filter-divider">SEO score range</span><label><input type="checkbox" class="sitemap-filter-check" value="score:90"> Score 90–100</label><label><input type="checkbox" class="sitemap-filter-check" value="score:80"> Score 80–89</label><label><input type="checkbox" class="sitemap-filter-check" value="score:70"> Score 70–79</label><label><input type="checkbox" class="sitemap-filter-check" value="score:60"> Score 60–69</label><label><input type="checkbox" class="sitemap-filter-check" value="score:50"> Score 50–59</label><label><input type="checkbox" class="sitemap-filter-check" value="score:40"> Score 40–49</label><label><input type="checkbox" class="sitemap-filter-check" value="score:30"> Score 30–39</label><label><input type="checkbox" class="sitemap-filter-check" value="score:20"> Score 20–29</label><label><input type="checkbox" class="sitemap-filter-check" value="score:10"> Score 10–19</label><label><input type="checkbox" class="sitemap-filter-check" value="score:0"> Score 0–9</label></div></details> <input type="search" id="sitemap-search" class="sitemap-search" placeholder="Search pages…" aria-label="Search pages"> <button type="button" class="btn btn-ghost btn-sm" id="btn-sitemap-fullscreen">Full screen</button> <details class="sitemap-filter-menu" id="sitemap-profile-menu"><summary class="btn btn-ghost btn-sm">Profiles</summary><div class="sitemap-filter-pop"><label><input type="checkbox" id="chk-linkprofile"> Outbound links</label><label><input type="checkbox" id="chk-inbound"> Inbound links</label><label><input type="checkbox" id="chk-social"> Social</label></div></details> <button type="button" class="btn btn-ghost btn-sm" id="btn-sitemap-suggest">Suggestions</button> <button type="button" class="btn btn-ghost btn-sm" id="btn-sitemap-keywords">Keywords</button> <button type="button" class="btn btn-ghost btn-sm" id="btn-sitemap-analytics">Analytics</button> <button type="button" class="btn btn-ghost btn-sm" id="btn-sitemap-gsc">Search Console</button> <button type="button" class="btn btn-ghost btn-sm" id="btn-sitemap-schema">Sitelinks schema</button> <button type="button" class="btn btn-ghost btn-sm" id="sitemap-reset-view">Reset view</button> <button type="button" class="btn btn-primary btn-sm" id="btn-sitemap-scan">Scan online sitemaps</button></span></div>
+      <div class="sitemap-view-tabs" role="tablist" aria-label="Site map views"><button type="button" class="sitemap-view-tab" id="sitemap-list-view" role="tab" aria-selected="true">List view</button><button type="button" class="sitemap-view-tab" id="sitemap-web-view" role="tab" aria-selected="false">Webview</button></div>
+    <div class="sitemap-domain-grid" id="sitemap-domain-grid" aria-live="polite"></div>
+    <div class="sitemap-canvas-wrap" id="sitemap-canvas-wrap">
+      <div class="sitemap-canvas-menu" id="sitemap-canvas-menu" hidden><details class="sitemap-canvas-menu-details"><summary class="btn btn-ghost btn-sm">☰ Menu</summary><div class="sitemap-canvas-menu-body" id="sitemap-canvas-menu-body"></div></details></div>
+      <div class="sitemap-network" id="sitemap-network" hidden aria-label="Interactive site map network"></div>
+      <div class="sitemap-analytics" id="sitemap-analytics" hidden aria-label="Site analytics">
+        <div class="sitemap-analytics-head"><strong>Site analytics</strong><button type="button" id="sitemap-analytics-close" class="sitemap-analytics-close" aria-label="Close analytics">&times;</button></div>
+        <div class="sitemap-analytics-body" id="sitemap-analytics-body"></div>
+      </div>
+      <aside class="sitemap-detail" id="sitemap-detail" hidden aria-label="Page analytics">
+        <button type="button" class="sitemap-detail-close" id="sitemap-detail-close" aria-label="Close details">&times;</button>
+        <span class="sitemap-detail-kind" id="sitemap-detail-kind"></span>
+        <h3 id="sitemap-detail-title"></h3>
+        <p class="sitemap-detail-url" id="sitemap-detail-url"></p>
+        <div class="sitemap-detail-grade"><span class="sitemap-detail-grade-badge" id="sitemap-detail-grade"></span><div><strong id="sitemap-detail-seo"></strong><small>SEO score / 100</small></div></div>
+        <div class="sitemap-detail-metrics" id="sitemap-detail-metrics"></div>
+        <div class="sitemap-detail-analytics" id="sitemap-detail-analytics" hidden>
+          <h4>Page analytics</h4>
+          <div class="sda-score"><div class="sda-gauge"><span class="sda-gauge-fill" id="sda-gauge-fill"></span></div><div class="sda-score-num"><strong id="sda-score">0</strong><small>SEO / 100</small></div></div>
+          <div class="sda-bars" id="sda-bars"></div>
+        </div>
+        <ul class="sitemap-detail-criteria" id="sitemap-detail-criteria"></ul>
+        <div class="sitemap-detail-recs" id="sitemap-detail-recs" hidden>
+          <h4>Recommendations &amp; opportunities</h4>
+          <strong class="sitemap-recs-label">Improvements required</strong>
+          <ul class="sitemap-recs-list" id="sitemap-detail-recs-list"></ul>
+          <strong class="sitemap-recs-label">Sitelink requirements</strong>
+          <ul class="sitemap-detail-criteria" id="sitemap-detail-recs-sitelinks"></ul>
+          <strong class="sitemap-recs-label">Guest-post opportunities</strong>
+          <ul class="sitemap-recs-guest" id="sitemap-detail-recs-guest"></ul>
+          <div class="sitemap-recs-plan" id="sitemap-detail-recs-plan-wrap" hidden>
+            <strong class="sitemap-recs-label">Step-by-step by page</strong>
+            <div id="sitemap-detail-recs-plan"></div>
+          </div>
+        </div>
+        <div class="sitemap-detail-facts" id="sitemap-detail-facts" hidden>
+          <h4>Page facts (as read)</h4>
+          <dl class="sitemap-detail-facts-list" id="sitemap-detail-facts-list"></dl>
+        </div>
+        <div class="sitemap-detail-search" id="sitemap-detail-search" hidden>
+          <h4>Live search data (28 days)</h4>
+          <div class="sitemap-detail-metrics" id="sitemap-detail-search-metrics"></div>
+          <ol class="sitemap-detail-queries" id="sitemap-detail-queries"></ol>
+        </div>
+        <div class="sitemap-detail-refs" id="sitemap-detail-refs" hidden>
+          <h4 id="sitemap-detail-refs-title">Outbound references &amp; links</h4>
+          <div class="sitemap-detail-metrics" id="sitemap-detail-refs-metrics"></div>
+          <ul class="sitemap-detail-domains" id="sitemap-detail-refs-domains"></ul>
+        </div>
+        <div class="sitemap-detail-refs" id="sitemap-detail-inbound" hidden>
+          <h4>Inbound links (from your pages)</h4>
+          <div class="sitemap-detail-metrics" id="sitemap-detail-inbound-metrics"></div>
+          <ul class="sitemap-detail-domains" id="sitemap-detail-inbound-list"></ul>
+        </div>
+        <div class="sitemap-detail-social" id="sitemap-detail-social" hidden>
+          <h4 id="sitemap-detail-social-title">Social media</h4>
+          <div class="sitemap-social-card" id="sitemap-social-card" hidden></div>
+          <ul class="sitemap-detail-criteria" id="sitemap-detail-social-checks"></ul>
+          <div class="sitemap-detail-metrics" id="sitemap-social-metrics"></div>
+          <ul class="sitemap-detail-domains" id="sitemap-social-links"></ul>
+        </div>
+        <div class="sitemap-detail-expand" id="sitemap-detail-expand" hidden></div>
+        <a class="btn btn-primary sitemap-detail-open" id="sitemap-detail-open" target="_blank" rel="noopener noreferrer">Open page</a>
+        <p class="sitemap-detail-note" id="sitemap-detail-note">Estimated SEO metrics for planning.</p>
+      </aside>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="sitemap-schema-dlg" class="sitemap-modal">
+  <div class="dlg-head">
+    <h2>Sitelinks structured data</h2>
+    <span class="spacer"></span>
+    <button class="btn btn-light btn-sm" type="button" id="sitemap-schema-copy">Copy</button>
+    <button class="btn btn-light btn-sm" type="button" id="sitemap-schema-close">Close</button>
+  </div>
+  <div class="dlg-body">
+    <p class="hint">Paste this JSON-LD into the &lt;head&gt; of your pages to help Google show a sitelinks search box, your logo, and breadcrumbs. Update the logo path and search URL (<code>?q=</code>) to match your real site before publishing.</p>
+    <textarea id="sitemap-schema-output" class="sitemap-schema-output" readonly rows="20" spellcheck="false"></textarea>
+  </div>
+</dialog>
+
+<dialog id="gsc-dlg" class="sitemap-modal gsc-modal">
+  <div class="dlg-head">
+    <h2>Connect Search Console</h2>
+    <span class="spacer"></span>
+    <button class="btn btn-light btn-sm" type="button" id="gsc-cancel">Close</button>
+  </div>
+  <div class="dlg-body">
+    <p class="hint">Enter your free Search Console proxy (Cloudflare Worker) details. These are kept in memory only for this session and are never saved to disk.</p>
+    <label class="gsc-field">Worker URL<input type="url" id="gsc-url" placeholder="https://your-worker.workers.dev" autocomplete="off"></label>
+    <label class="gsc-field">Access secret<input type="password" id="gsc-secret" placeholder="GSC_SECRET value" autocomplete="off"></label>
+    <label class="gsc-field">Property<input type="text" id="gsc-property" value="sc-domain:edgeducate.com.au" autocomplete="off"></label>
+    <div class="gsc-actions"><button type="button" class="btn btn-ghost btn-sm" id="gsc-disconnect">Disconnect</button><button type="button" class="btn btn-primary btn-sm" id="gsc-save">Save &amp; test</button></div>
+    <p class="sitemap-detail-note" id="gsc-status"></p>
+    <p class="gsc-usage" id="gsc-usage"></p>
+  </div>
+</dialog>
+
+<dialog id="scout-proxy-dlg" class="sitemap-modal gsc-modal">
+  <div class="dlg-head">
+    <h2>Private scouting</h2>
+    <span class="spacer"></span>
+    <button class="btn btn-light btn-sm" type="button" id="scout-proxy-cancel">Close</button>
+  </div>
+  <div class="dlg-body">
+    <p class="hint">Route scouting of other companies' sites through your free Cloudflare proxy Worker (<code>scout-proxy-worker.js</code>). The sites you research then see the proxy's servers instead of your IP address. Details are kept in memory only for this session.</p>
+    <label class="gsc-field">Worker URL<input type="url" id="scout-proxy-url" placeholder="https://your-scout-worker.workers.dev" autocomplete="off"></label>
+    <label class="gsc-field">Access secret<input type="password" id="scout-proxy-secret" placeholder="SCOUT_SECRET value" autocomplete="off"></label>
+    <div class="gsc-actions"><button type="button" class="btn btn-ghost btn-sm" id="scout-proxy-disconnect">Turn off</button><button type="button" class="btn btn-light btn-sm" id="scout-proxy-test">Test connection</button><button type="button" class="btn btn-primary btn-sm" id="scout-proxy-save">Save</button></div>
+    <p class="sitemap-detail-note" id="scout-proxy-status"></p>
+  </div>
+</dialog>
 
 <dialog id="log-dlg">
   <div class="dlg-head">

@@ -25,5 +25,7 @@ contextBridge.exposeInMainWorld('desktop', {
   projectList: (relativePath) => ipcRenderer.invoke('project:list', relativePath),
   projectRemove: (relativePath, recursive) => ipcRenderer.invoke('project:remove', { relativePath, recursive }),
   getPaths: () => ipcRenderer.invoke('app:getPaths'),
-  writeLog: (message, level) => ipcRenderer.invoke('app:writeLog', { message, level })
+  writeLog: (message, level) => ipcRenderer.invoke('app:writeLog', { message, level }),
+  setFullscreen: (flag) => ipcRenderer.invoke('window:setFullscreen', flag),
+  isFullscreen: () => ipcRenderer.invoke('window:isFullscreen')
 });

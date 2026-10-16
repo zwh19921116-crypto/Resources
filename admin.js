@@ -85,6 +85,8 @@ function showPanel(panelKey) {
   });
   if (panelKey === 'dashboard') renderDashboard();
   if (panelKey === 'settings') renderSettings();
+  if (panelKey === 'sitescout') renderScoutHistory();
+  if (panelKey === 'sitescout') updateScoutPrivacyState();
 }
 
 document.querySelectorAll('.side-nav-btn[data-panel]').forEach((btn) => btn.addEventListener('click', () => {
@@ -100,6 +102,7 @@ function buildSitemapXml() {
     `${SITE_URL}/`,
     `${SITE_URL}/resources.html`,
     `${SITE_URL}/all-resources.html`,
+    `${SITE_URL}/resource-pages/`,
     `${SITE_URL}/club.html`
   ];
   const resourceUrls = items.filter((item) => item.status !== 'draft').flatMap((item) => {
@@ -125,6 +128,2379 @@ $('btn-download-sitemap')?.addEventListener('click', () => {
   URL.revokeObjectURL(url);
   flash('Sitemap downloaded.', 'success');
 });
+
+const sitemapSources = [
+  { key: 'main', label: 'Main website', host: 'edgeducate.com.au', sitemap: 'https://edgeducate.com.au/sitemap.xml' },
+  { key: 'resources', label: 'Resources', host: 'resources.edgeducate.com.au', sitemap: `${SITE_URL}/sitemap.xml` }
+];
+
+let activeSitemapSources = sitemapSources;
+let sitemapRootInfo = { label: 'edgeducate.com.au', url: 'https://edgeducate.com.au/' };
+let sitemapScopeMine = true;
+let lastScanResults = {};
+let sitemapLinkProfile = [];
+let sitemapSocialProfile = [];
+let sitemapInboundProfile = new Map();
+let sitemapInboundReady = false;
+let sitemapSelectedPageUrl = '';
+let sitemapExternalExpansions = {};
+
+const SCOUT_PROXY_KEY = 'edg-scout-proxy';
+const scoutProxy = { url: '', secret: '' };
+try {
+  const saved = JSON.parse(localStorage.getItem(SCOUT_PROXY_KEY) || '{}');
+  if (saved && saved.url) scoutProxy.url = saved.url;
+  if (saved && saved.secret) scoutProxy.secret = saved.secret;
+} catch (e) { /* ignore */ }
+function saveScoutProxy() {
+  try { localStorage.setItem(SCOUT_PROXY_KEY, JSON.stringify(scoutProxy)); } catch (e) { /* ignore */ }
+}
+function scoutProxyEnabled() {
+  return Boolean(scoutProxy.url && scoutProxy.secret);
+}
+async function scoutFetch(targetUrl, accept) {
+  const acceptHeader = accept === 'xml' ? 'application/xml,text/xml' : 'text/html';
+  if (!sitemapScopeMine && scoutProxyEnabled()) {
+    const endpoint = `${scoutProxy.url.replace(/\/$/, '')}/fetch?url=${encodeURIComponent(targetUrl)}`;
+    return fetch(endpoint, { headers: { 'x-scout-secret': scoutProxy.secret } });
+  }
+  return fetch(targetUrl, { headers: { Accept: acceptHeader } });
+}
+
+function sitemapLinkMarkup(label, url, detail = '') {
+  return `<li><a class="sitemap-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}${detail ? `<small>${escapeHtml(detail)}</small>` : ''}</a></li>`;
+}
+
+// Canonical form for matching internal links to scanned page URLs (drops hash and trailing slash).
+function normalizeSitemapUrl(raw, base) {
+  try {
+    const u = base ? new URL(raw, base) : new URL(raw);
+    u.hash = '';
+    return u.href.replace(/\/$/, '').toLowerCase();
+  } catch (e) { return ''; }
+}
+
+let sitemapViewMode = 'list';
+
+// Labelled sections for the web-view floating menu. Each id is an existing toolbar control.
+const SITEMAP_TOOL_GROUPS = [
+  { label: 'Find', ids: ['sitemap-search', 'sitemap-filter-menu', 'sitemap-profile-menu'] },
+  { label: 'Insights', ids: ['btn-sitemap-suggest', 'btn-sitemap-keywords', 'btn-sitemap-analytics'] },
+  { label: 'Google Search', ids: ['btn-sitemap-gsc', 'btn-sitemap-schema'] },
+  { label: 'View', ids: ['btn-sitemap-fullscreen', 'sitemap-reset-view'] },
+  { label: 'Data', ids: ['btn-sitemap-scan'] }
+];
+
+function relocateSitemapToolbar(toCanvas) {
+  const scanBar = document.querySelector('.sitemap-scan-bar');
+  const meta = $('sitemap-scan-meta');
+  const controls = $('sitemap-toolbar-controls');
+  const viewTabs = document.querySelector('.sitemap-view-tabs');
+  const addressForm = $('sitemap-address-form');
+  const head = sitemapDialog ? sitemapDialog.querySelector('.dlg-head') : null;
+  const spacer = head ? head.querySelector('.spacer') : null;
+  const menu = $('sitemap-canvas-menu');
+  const menuBody = $('sitemap-canvas-menu-body');
+  if (!scanBar || !controls || !viewTabs || !menu || !menuBody) return;
+  if (toCanvas) {
+    const staleGroups = Array.from(menuBody.querySelectorAll('.sitemap-tool-group'));
+    if (addressForm) menuBody.appendChild(addressForm);
+    if (meta) menuBody.appendChild(meta);
+    SITEMAP_TOOL_GROUPS.forEach((group) => {
+      const section = document.createElement('div');
+      section.className = 'sitemap-tool-group';
+      const label = document.createElement('span');
+      label.className = 'sitemap-tool-group-label';
+      label.textContent = group.label;
+      section.appendChild(label);
+      group.ids.forEach((id) => { const el = $(id); if (el) section.appendChild(el); });
+      menuBody.appendChild(section);
+    });
+    staleGroups.forEach((node) => node.remove());
+    menuBody.appendChild(viewTabs);
+    menu.hidden = false;
+    scanBar.hidden = true;
+  } else {
+    if (addressForm && spacer) spacer.insertAdjacentElement('beforebegin', addressForm);
+    else if (addressForm && head) head.appendChild(addressForm);
+    if (meta) scanBar.appendChild(meta);
+    SITEMAP_TOOL_GROUPS.forEach((group) => {
+      group.ids.forEach((id) => { const el = $(id); if (el) controls.appendChild(el); });
+    });
+    scanBar.appendChild(controls);
+    scanBar.insertAdjacentElement('afterend', viewTabs);
+    menuBody.querySelectorAll('.sitemap-tool-group').forEach((node) => node.remove());
+    menu.hidden = true;
+    scanBar.hidden = false;
+  }
+}
+
+function setSitemapViewMode(mode) {
+  sitemapViewMode = mode === 'web' ? 'web' : 'list';
+  $('sitemap-domain-grid')?.classList.toggle('sitemap-web', sitemapViewMode === 'web');
+  if ($('sitemap-domain-grid')) $('sitemap-domain-grid').hidden = sitemapViewMode === 'web';
+  if ($('sitemap-network')) $('sitemap-network').hidden = sitemapViewMode !== 'web';
+  relocateSitemapToolbar(sitemapViewMode === 'web');
+  if (sitemapViewMode !== 'web') closeSitemapNodeDetail();
+  $('sitemap-list-view')?.setAttribute('aria-selected', String(sitemapViewMode === 'list'));
+  $('sitemap-web-view')?.setAttribute('aria-selected', String(sitemapViewMode === 'web'));
+}
+
+function networkNodeMarkup(id, label, url, detail, group, kind, x, y) {
+  return `<div class="sitemap-network-node ${kind} ${group}" role="button" tabindex="0" data-sitemap-group="${group}" data-node-id="${id}" data-node-x="${x}" data-node-y="${y}" data-url="${escapeAttr(url)}" data-label="${escapeAttr(label)}" data-kind="${kind}" style="left:${x}px;top:${y}px" title="${escapeAttr(label)}"><strong>${escapeHtml(label)}</strong><small>${escapeHtml(detail)}</small></div>`;
+}
+
+function sitemapHashString(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function sitemapGradeFromScore(score) {
+  return score >= 90 ? 'A' : score >= 80 ? 'B' : score >= 70 ? 'C' : score >= 60 ? 'D' : 'E';
+}
+
+const SOCIAL_PLATFORMS = [
+  { key: 'facebook', label: 'Facebook', match: /(^|\.)facebook\.com$|(^|\.)fb\.com$|(^|\.)fb\.me$/i },
+  { key: 'instagram', label: 'Instagram', match: /(^|\.)instagram\.com$/i },
+  { key: 'x', label: 'X / Twitter', match: /(^|\.)twitter\.com$|(^|\.)x\.com$|(^|\.)t\.co$/i },
+  { key: 'linkedin', label: 'LinkedIn', match: /(^|\.)linkedin\.com$|(^|\.)lnkd\.in$/i },
+  { key: 'youtube', label: 'YouTube', match: /(^|\.)youtube\.com$|(^|\.)youtu\.be$/i },
+  { key: 'tiktok', label: 'TikTok', match: /(^|\.)tiktok\.com$/i },
+  { key: 'pinterest', label: 'Pinterest', match: /(^|\.)pinterest\.[a-z.]+$/i },
+  { key: 'threads', label: 'Threads', match: /(^|\.)threads\.net$/i },
+  { key: 'whatsapp', label: 'WhatsApp', match: /(^|\.)wa\.me$|(^|\.)whatsapp\.com$/i },
+  { key: 'telegram', label: 'Telegram', match: /(^|\.)t\.me$|(^|\.)telegram\.(me|org)$/i },
+  { key: 'snapchat', label: 'Snapchat', match: /(^|\.)snapchat\.com$/i },
+  { key: 'reddit', label: 'Reddit', match: /(^|\.)reddit\.com$/i }
+];
+
+function classifySocialHost(host) {
+  const h = (host || '').toLowerCase().replace(/^www\./, '');
+  const found = SOCIAL_PLATFORMS.find((p) => p.match.test(h));
+  return found ? { key: found.key, label: found.label } : null;
+}
+
+const KEYWORD_STOPWORDS = new Set('the and for are but not you your yours our ours their they them this that these those with from into over under more most very can will just has have had how what when where who why which about page home click here read learn also your out off down all any one two three free best top new get see our we us it its his her she he on in at of to as is was be been being or an a i me my'.split(/\s+/));
+
+// Surfaces the terms a page is really optimised for: title + headings + meta, with title weighted.
+function extractKeywords(text, extra = []) {
+  const freq = new Map();
+  const add = (word, weight = 1) => {
+    const key = word.toLowerCase().trim();
+    if (!key) return;
+    freq.set(key, (freq.get(key) || 0) + weight);
+  };
+  (text || '').toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').split(/\s+/).forEach((w) => {
+    if (w.length >= 4 && !KEYWORD_STOPWORDS.has(w)) add(w);
+  });
+  (extra || []).forEach((k) => add(k, 3));
+  return [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([w]) => w);
+}
+
+const sitemapAuditCache = new Map();
+const sitemapStatusCache = new Map();
+const sitemapFailureCache = new Map();
+
+function sitemapUnavailableAnalytics(url) {
+  return {
+    live: false,
+    unavailable: true,
+    status: sitemapStatusCache.get(url) || 0,
+    error: sitemapFailureCache.get(url) || 'The page could not be fetched from this admin.'
+  };
+}
+
+async function fetchSitemapPageAudit(url) {
+  if (sitemapAuditCache.has(url)) return sitemapAuditCache.get(url);
+  try {
+    const res = await scoutFetch(url, 'html');
+    sitemapStatusCache.set(url, res.status);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const htmlText = await res.text();
+    sitemapFailureCache.delete(url);
+    const htmlBytes = htmlText.length;
+    const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+    let host = '';
+    try { host = new URL(url).host; } catch (e) { host = ''; }
+    const title = (doc.querySelector('title')?.textContent || '').trim();
+    const metaDesc = (doc.querySelector('meta[name="description"]')?.getAttribute('content') || '').trim();
+    const canonical = !!doc.querySelector('link[rel="canonical"]');
+    const h1 = doc.querySelectorAll('h1').length;
+    const headings = doc.querySelectorAll('h1,h2,h3').length;
+    const images = doc.querySelectorAll('img').length;
+    const imagesNoAlt = Array.from(doc.querySelectorAll('img')).filter((img) => !(img.getAttribute('alt') || '').trim()).length;
+    const internalAnchors = Array.from(doc.querySelectorAll('a[href]')).filter((a) => {
+      try { const u = new URL(a.getAttribute('href'), url); return u.host === host && /^https?:$/.test(u.protocol); } catch (e) { return false; }
+    });
+    const internalLinks = internalAnchors.length;
+    const internalLinkDetails = internalAnchors.map((a) => {
+      try { return { target: normalizeSitemapUrl(a.getAttribute('href'), url), text: (a.textContent || '').replace(/\s+/g, ' ').trim() }; } catch (e) { return null; }
+    }).filter((l) => l && l.target);
+    const externalAnchors = Array.from(doc.querySelectorAll('a[href]')).filter((a) => {
+      try { const u = new URL(a.getAttribute('href'), url); return /^https?:$/.test(u.protocol) && u.host && u.host !== host; } catch (e) { return false; }
+    });
+    const externalLinks = externalAnchors.length;
+    const externalDomains = [...new Set(externalAnchors.map((a) => {
+      try { return new URL(a.getAttribute('href'), url).host.replace(/^www\./, ''); } catch (e) { return null; }
+    }).filter(Boolean))];
+    const externalLinkDetails = externalAnchors.map((a) => {
+      try {
+        const u = new URL(a.getAttribute('href'), url);
+        return { domain: u.host.replace(/^www\./, ''), href: u.href, text: (a.textContent || '').replace(/\s+/g, ' ').trim() };
+      } catch (e) { return null; }
+    }).filter(Boolean);
+    const socialLinkDetails = [];
+    const seenSocial = new Set();
+    externalAnchors.forEach((a) => {
+      try {
+        const u = new URL(a.getAttribute('href'), url);
+        const platform = classifySocialHost(u.host);
+        if (!platform || seenSocial.has(u.href)) return;
+        seenSocial.add(u.href);
+        socialLinkDetails.push({ platform: platform.key, platformLabel: platform.label, href: u.href, text: (a.textContent || '').replace(/\s+/g, ' ').trim() });
+      } catch (e) { /* skip */ }
+    });
+    const sponsoredLinks = externalAnchors.filter((a) => /sponsored|ugc/i.test(a.getAttribute('rel') || '')).length;
+    const nofollowLinks = externalAnchors.filter((a) => /nofollow/i.test(a.getAttribute('rel') || '')).length;
+    const bodyText = (doc.body?.textContent || '').replace(/\s+/g, ' ').trim();
+    const words = bodyText ? bodyText.split(' ').length : 0;
+    const ldJson = Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map((s) => s.textContent || '');
+    const hasStructured = ldJson.length > 0;
+    const hasBreadcrumb = ldJson.some((t) => /BreadcrumbList/i.test(t));
+    const hasSearchAction = ldJson.some((t) => /SearchAction/i.test(t));
+    const noindex = (doc.querySelector('meta[name="robots"]')?.getAttribute('content') || '').toLowerCase().includes('noindex');
+    const lang = (doc.documentElement.getAttribute('lang') || '').trim();
+    const viewport = !!doc.querySelector('meta[name="viewport"]');
+    const https = /^https:/i.test(url);
+    const ogCount = doc.querySelectorAll('meta[property^="og:"]').length;
+    const ogTitle = (doc.querySelector('meta[property="og:title"]')?.getAttribute('content') || '').trim();
+    const ogDescription = (doc.querySelector('meta[property="og:description"]')?.getAttribute('content') || '').trim();
+    const ogRawImage = (doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || '').trim();
+    const ogUrl = (doc.querySelector('meta[property="og:url"]')?.getAttribute('content') || '').trim();
+    const ogType = (doc.querySelector('meta[property="og:type"]')?.getAttribute('content') || '').trim();
+    const twitter = !!doc.querySelector('meta[name^="twitter:"]');
+    const twitterCard = (doc.querySelector('meta[name="twitter:card"]')?.getAttribute('content') || '').trim();
+    const twitterTitle = (doc.querySelector('meta[name="twitter:title"]')?.getAttribute('content') || '').trim();
+    const twitterDescription = (doc.querySelector('meta[name="twitter:description"]')?.getAttribute('content') || '').trim();
+    const twitterRawImage = (doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content') || '').trim();
+    let ogImage = '';
+    if (ogRawImage) { try { ogImage = new URL(ogRawImage, url).href; } catch (e) { ogImage = ogRawImage; } }
+    let twitterImage = '';
+    if (twitterRawImage) { try { twitterImage = new URL(twitterRawImage, url).href; } catch (e) { twitterImage = twitterRawImage; } }
+    const favicon = !!doc.querySelector('link[rel~="icon"]');
+    const canonicalHref = doc.querySelector('link[rel="canonical"]')?.getAttribute('href') || '';
+    const h2 = doc.querySelectorAll('h2').length;
+    const scripts = doc.querySelectorAll('script').length;
+    const stylesheets = doc.querySelectorAll('link[rel="stylesheet"]').length;
+    const structuredTypes = [...new Set(ldJson.flatMap((t) => {
+      const matches = t.match(/"@type"\s*:\s*"([^"]+)"/g) || [];
+      return matches.map((s) => s.replace(/.*"([^"]+)"$/, '$1'));
+    }))].slice(0, 8);
+    const metaKeywords = (doc.querySelector('meta[name="keywords"]')?.getAttribute('content') || '')
+      .split(',').map((s) => s.trim()).filter(Boolean).slice(0, 20);
+    const headingText = Array.from(doc.querySelectorAll('h1,h2,h3')).map((h) => h.textContent || '').join(' ');
+    const keywords = extractKeywords(`${title} ${title} ${headingText} ${metaDesc}`, metaKeywords);
+    let score = 0;
+    score += title.length >= 30 && title.length <= 65 ? 20 : title ? 10 : 0;
+    score += metaDesc.length >= 70 && metaDesc.length <= 165 ? 18 : metaDesc ? 9 : 0;
+    score += h1 === 1 ? 14 : h1 > 1 ? 7 : 0;
+    score += canonical ? 10 : 0;
+    score += hasStructured ? 14 : 0;
+    score += words >= 300 ? 12 : words >= 120 ? 6 : 0;
+    score += internalLinks >= 3 ? 8 : 0;
+    score += noindex ? 0 : 4;
+    const seo = Math.min(100, score);
+    const audit = {
+      live: true, seo, grade: sitemapGradeFromScore(seo), title, titleLen: title.length,
+      metaDesc, metaLen: metaDesc.length, canonical, canonicalHref, h1, h2, headings, images, imagesNoAlt,
+      internalLinks, internalLinkDetails, words, hasStructured, hasBreadcrumb, hasSearchAction, noindex,
+      externalLinks, externalDomains, externalLinkDetails, sponsoredLinks, nofollowLinks,
+      lang, viewport, https, ogCount, ogTitle, ogDescription, ogImage, ogUrl, ogType,
+      twitter, twitterCard, twitterTitle, twitterDescription, twitterImage,
+      socialLinkDetails, favicon, structuredTypes, scripts, stylesheets, htmlBytes,
+      keywords, metaKeywords
+    };
+    sitemapAuditCache.set(url, audit);
+    return audit;
+  } catch (error) {
+    if (!sitemapStatusCache.has(url)) sitemapStatusCache.set(url, 0);
+    sitemapFailureCache.set(url, error && error.message ? error.message : 'Fetch failed');
+    sitemapAuditCache.set(url, null);
+    return null;
+  }
+}
+
+function sitemapKeywordsFromUrl(url) {
+  try {
+    const path = new URL(url).pathname.replace(/\.(html?|php|aspx)$/i, '').replace(/[-_/]+/g, ' ').trim();
+    return path || '';
+  } catch (e) { return ''; }
+}
+
+function sitemapRecommendations(url, data) {
+  const improvements = [];
+  const sitelinks = [];
+  if (data.live) {
+    if (!(data.titleLen >= 30 && data.titleLen <= 65)) improvements.push(`Title is ${data.titleLen} characters — aim for 30–65.`);
+    if (!(data.metaLen >= 70 && data.metaLen <= 165)) improvements.push(`Meta description is ${data.metaLen} characters — aim for 70–165.`);
+    if (data.h1 !== 1) improvements.push(`Use exactly one H1 heading (found ${data.h1}).`);
+    if (!data.canonical) improvements.push('Add a canonical link tag.');
+    if (data.words < 300) improvements.push(`Thin content (${data.words} words) — expand toward 300+.`);
+    if (data.imagesNoAlt > 0) improvements.push(`${data.imagesNoAlt} image(s) missing alt text.`);
+    if (!data.viewport) improvements.push('Add a mobile viewport meta tag.');
+    if (!data.https) improvements.push('Serve the page over HTTPS.');
+    if (data.ogCount === 0) improvements.push('Add Open Graph tags for social sharing.');
+    if (!data.lang) improvements.push('Set the <html lang> attribute.');
+    if (!data.hasStructured) improvements.push('Add structured data (JSON-LD).');
+    if (data.internalLinks < 3) improvements.push('Add more internal links with descriptive anchor text.');
+    if (!improvements.length) improvements.push('No major on-page issues found.');
+    sitelinks.push([data.hasBreadcrumb, 'BreadcrumbList schema on the page']);
+    sitelinks.push([data.hasSearchAction, 'WebSite + SearchAction schema (sitelinks search box)']);
+    sitelinks.push([data.titleLen > 0 && data.titleLen <= 65, 'Unique, descriptive page title']);
+    sitelinks.push([data.canonical, 'Canonical URL set']);
+    sitelinks.push([!data.noindex, 'Page is indexable']);
+    sitelinks.push([data.internalLinks >= 3, 'Strong internal linking with clear anchors']);
+  } else {
+    improvements.push('Page could not be fetched — turn on Private scouting or check the URL for live recommendations.');
+  }
+  const base = (data.live && data.title ? data.title : sitemapKeywordsFromUrl(url));
+  const keyword = base.split(/\s+/).filter((w) => w.length > 3).slice(0, 3).join(' ') || sitemapKeywordsFromUrl(url);
+  const g = (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+  const guestposts = keyword ? [
+    { label: `"${keyword}" write for us`, url: g(`"${keyword}" "write for us"`) },
+    { label: `"${keyword}" guest post`, url: g(`"${keyword}" "guest post"`) },
+    { label: `${keyword} — blogs to pitch`, url: g(`${keyword} blog "contribute"`) },
+    { label: `${keyword} — resource pages`, url: g(`${keyword} intitle:resources OR intitle:links`) }
+  ] : [];
+  return { improvements, sitelinks, guestposts };
+}
+
+function renderSitemapRecommendations(url, data) {
+  const box = $('sitemap-detail-recs');
+  if (!box) return;
+  $('sitemap-suggest-export')?.remove();
+  const { improvements, sitelinks, guestposts } = sitemapRecommendations(url, data);
+  $('sitemap-detail-recs-list').innerHTML = improvements.map((t) => `<li>${escapeHtml(t)}</li>`).join('');
+  const sitelinksEl = $('sitemap-detail-recs-sitelinks');
+  if (sitelinksEl) {
+    sitelinksEl.innerHTML = sitelinks.length
+      ? sitelinks.map(([ok, label]) => `<li class="${ok ? 'ok' : 'warn'}">${ok ? '✓' : '!'} ${escapeHtml(label)}</li>`).join('')
+      : '<li class="unknownc">Fetch the page to check sitelink requirements.</li>';
+  }
+  const guestEl = $('sitemap-detail-recs-guest');
+  if (guestEl) {
+    guestEl.innerHTML = guestposts.length
+      ? guestposts.map((gp) => `<li><a href="${escapeAttr(gp.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(gp.label)}</a></li>`).join('')
+      : '<li class="unknownc">No keyword available for suggestions.</li>';
+  }
+  const planWrap = $('sitemap-detail-recs-plan-wrap');
+  if (planWrap) planWrap.hidden = true;
+  box.hidden = false;
+}
+
+// Per-page analytics: SEO score gauge plus how each scored factor contributes toward 100.
+function renderSitemapDetailAnalytics(data) {
+  const box = $('sitemap-detail-analytics');
+  if (!box) return;
+  if (!data || !data.live) { box.hidden = true; return; }
+  box.hidden = false;
+  const fill = $('sda-gauge-fill');
+  if (fill) fill.style.width = `${Math.max(0, Math.min(100, data.seo))}%`;
+  if ($('sda-score')) $('sda-score').textContent = data.seo;
+  const factors = [
+    ['Title', data.titleLen >= 30 && data.titleLen <= 65 ? 20 : data.title ? 10 : 0, 20],
+    ['Meta desc', data.metaLen >= 70 && data.metaLen <= 165 ? 18 : data.metaDesc ? 9 : 0, 18],
+    ['H1', data.h1 === 1 ? 14 : data.h1 > 1 ? 7 : 0, 14],
+    ['Schema', data.hasStructured ? 14 : 0, 14],
+    ['Words', data.words >= 300 ? 12 : data.words >= 120 ? 6 : 0, 12],
+    ['Canonical', data.canonical ? 10 : 0, 10],
+    ['Internal links', data.internalLinks >= 3 ? 8 : 0, 8],
+    ['Indexable', data.noindex ? 0 : 4, 4]
+  ];
+  const bars = $('sda-bars');
+  if (bars) bars.innerHTML = factors.map(([label, got, max]) => {
+    const pct = Math.round((got / max) * 100);
+    const cls = got === max ? '' : got === 0 ? 'is-empty' : 'is-partial';
+    return `<div class="sda-bar"><span class="sda-bar-label">${label}</span><span class="sda-bar-track"><span class="sda-bar-fill ${cls}" style="width:${pct}%"></span></span><span class="sda-bar-val">${got}/${max}</span></div>`;
+  }).join('');
+}
+
+function renderSitemapDetail(url, data) {
+  const panel = $('sitemap-detail');
+  panel?.querySelector('.sitemap-detail-grade')?.removeAttribute('hidden');
+  $('sitemap-detail-metrics').hidden = false;
+  $('sitemap-detail-criteria').hidden = false;
+  $('sitemap-detail-open').hidden = false;
+  const expandWrap = $('sitemap-detail-expand');
+  if (expandWrap) { expandWrap.hidden = true; expandWrap.innerHTML = ''; }
+  const badge = $('sitemap-detail-grade');
+  badge.textContent = data.grade;
+  badge.dataset.grade = data.grade;
+  $('sitemap-detail-seo').textContent = data.seo;
+  let metrics;
+  let criteria;
+  if (data.live) {
+    metrics = [
+      ['Words', data.words],
+      ['Internal links', data.internalLinks],
+      ['Headings', data.headings],
+      ['Images', data.images]
+    ];
+    criteria = [
+      [`Title length ${data.titleLen} (30–65)`, data.titleLen >= 30 && data.titleLen <= 65],
+      [`Meta description ${data.metaLen} (70–165)`, data.metaLen >= 70 && data.metaLen <= 165],
+      ['Single H1 heading', data.h1 === 1],
+      ['Canonical tag set', data.canonical],
+      ['Structured data present', data.hasStructured],
+      ['Breadcrumb schema (sitelinks)', data.hasBreadcrumb],
+      ['Images have alt text', data.images === 0 || data.imagesNoAlt === 0],
+      ['Indexable (no noindex)', !data.noindex],
+      ['HTTPS secure', data.https],
+      ['Mobile viewport set', data.viewport],
+      ['Open Graph tags', data.ogCount > 0],
+      ['Language set', !!data.lang]
+    ];
+    $('sitemap-detail-note').textContent = 'Live on-page audit.';
+  } else {
+    metrics = [
+      ['Words', '—'],
+      ['Internal links', '—'],
+      ['Headings', '—'],
+      ['Images', '—']
+    ];
+    criteria = [
+      ['Title tag length (30–65)', null],
+      ['Meta description (70–165)', null],
+      ['Single H1 heading', null],
+      ['Canonical tag set', null],
+      ['Structured data present', null],
+      ['Breadcrumb schema (sitelinks)', null],
+      ['Images have alt text', null],
+      ['Indexable (no noindex)', null],
+      ['HTTPS secure', null],
+      ['Mobile viewport set', null],
+      ['Open Graph tags', null],
+      ['Language set', null]
+    ];
+    const status = data.status ? ` (HTTP ${data.status})` : '';
+    $('sitemap-detail-note').textContent = `${data.unavailable ? 'Unavailable' : 'Estimated'} — page could not be fetched${status}; checks are unverified. ${data.error || ''}`;
+  }
+  $('sitemap-detail-metrics').innerHTML = metrics
+    .map(([k, v]) => `<div class="sitemap-metric"><strong>${v}</strong><small>${escapeHtml(k)}</small></div>`).join('');
+  $('sitemap-detail-criteria').innerHTML = criteria
+    .map(([k, ok]) => {
+      const cls = ok === null ? 'unknownc' : ok ? 'ok' : 'warn';
+      const icon = ok === null ? '?' : ok ? '✓' : '!';
+      return `<li class="${cls}">${icon} ${escapeHtml(k)}</li>`;
+    }).join('');
+  renderSitemapDetailAnalytics(data);
+  renderSitemapRecommendations(url, data);
+  const facts = $('sitemap-detail-facts');
+  if (facts) {
+    if (data.live) {
+      facts.hidden = false;
+      const rows = [
+        ['Title', data.title || '—'],
+        ['Meta description', data.metaDesc || '—'],
+        ['Keywords', (data.keywords && data.keywords.length) ? data.keywords.join(', ') : '—'],
+        ['Meta keywords', (data.metaKeywords && data.metaKeywords.length) ? data.metaKeywords.join(', ') : 'none'],
+        ['Language', data.lang || 'not set'],
+        ['Canonical', data.canonicalHref || 'none'],
+        ['Headings', `H1 ×${data.h1} · H2 ×${data.h2} · total ${data.headings}`],
+        ['Images', `${data.images} (${data.imagesNoAlt} missing alt)`],
+        ['Mobile viewport', data.viewport ? 'yes' : 'no'],
+        ['HTTPS', data.https ? 'yes' : 'no'],
+        ['Open Graph tags', String(data.ogCount)],
+        ['Twitter card', data.twitter ? 'yes' : 'no'],
+        ['Favicon', data.favicon ? 'yes' : 'no'],
+        ['Schema types', data.structuredTypes.length ? data.structuredTypes.join(', ') : 'none'],
+        ['Scripts / styles', `${data.scripts} / ${data.stylesheets}`],
+        ['HTML size', `${Math.round(data.htmlBytes / 1024)} KB`]
+      ];
+      $('sitemap-detail-facts-list').innerHTML = rows
+        .map(([k, v]) => `<div class="sitemap-fact"><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(String(v))}</dd></div>`).join('');
+    } else {
+      facts.hidden = true;
+    }
+  }
+  const refs = $('sitemap-detail-refs');
+  if (refs) {
+    if (data.live) {
+      refs.hidden = false;
+      const refsTitle = $('sitemap-detail-refs-title');
+      if (refsTitle) refsTitle.textContent = 'Outbound references & links';
+      $('sitemap-detail-refs-metrics').innerHTML = [
+        ['External links', data.externalLinks],
+        ['Linked domains', data.externalDomains.length],
+        ['Sponsored / UGC', data.sponsoredLinks],
+        ['Nofollow', data.nofollowLinks]
+      ].map(([k, v]) => `<div class="sitemap-metric"><strong>${v}</strong><small>${escapeHtml(k)}</small></div>`).join('');
+      const domains = data.externalDomains.slice(0, 10);
+      $('sitemap-detail-refs-domains').innerHTML = domains.length
+        ? domains.map((d) => `<li>${escapeHtml(d)}</li>`).join('')
+        : '<li class="sitemap-refs-empty">No outbound links to other sites.</li>';
+    } else {
+      refs.hidden = true;
+    }
+  }
+  renderSitemapInboundSection(url, data);
+  renderSitemapSocialSection(url, data);
+  $('sitemap-detail-open').href = url;
+}
+
+function renderSitemapInboundSection(url, data) {
+  const box = $('sitemap-detail-inbound');
+  if (!box) return;
+  if (!sitemapInboundReady || !data.live) { box.hidden = true; return; }
+  const sources = sitemapInboundProfile.get(normalizeSitemapUrl(url)) || [];
+  box.hidden = false;
+  const metrics = $('sitemap-detail-inbound-metrics');
+  if (metrics) metrics.innerHTML = `<div class="sitemap-metric"><strong>${sources.length}</strong><small>Inbound link${sources.length === 1 ? '' : 's'}</small></div>`;
+  const list = $('sitemap-detail-inbound-list');
+  if (!list) return;
+  list.innerHTML = sources.length
+    ? sources.map((s) => {
+        let label = s.url;
+        try { const p = new URL(s.url); label = p.pathname === '/' ? p.hostname : p.pathname.replace(/\/$/, ''); } catch (e) { /* keep raw */ }
+        const anchor = s.text ? `<div class="sitemap-origin-anchor"><span class="sitemap-origin-text">${escapeHtml(s.text)}</span></div>` : '';
+        return `<li><button type="button" class="sitemap-origin-link" data-origin-url="${escapeAttr(s.url)}">${escapeHtml(label)}</button>${anchor}</li>`;
+      }).join('')
+    : '<li class="sitemap-refs-empty">Orphan page — no other scanned page links here.</li>';
+  list.querySelectorAll('.sitemap-origin-link').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = document.querySelector(`.sitemap-network-node[data-url="${CSS.escape(btn.dataset.originUrl)}"]`);
+      if (target) openSitemapNodeDetail(target);
+    });
+  });
+}
+
+function renderSitemapSocialSection(url, data) {
+  const social = $('sitemap-detail-social');
+  if (!social) return;
+  if (!data.live) { social.hidden = true; return; }
+  social.hidden = false;
+  $('sitemap-detail-social-title').textContent = 'Social media';
+  const shareTitle = data.ogTitle || data.twitterTitle || data.title || '—';
+  const shareDesc = data.ogDescription || data.twitterDescription || data.metaDesc || '';
+  const shareImg = data.ogImage || data.twitterImage || '';
+  let shareHost = '';
+  try { shareHost = new URL(data.ogUrl || url).host.replace(/^www\./, ''); } catch (e) { shareHost = ''; }
+  const card = $('sitemap-social-card');
+  if (card) {
+    card.hidden = false;
+    card.innerHTML = `${shareImg
+      ? `<div class="sitemap-social-card-img"><img src="${escapeAttr(shareImg)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('.sitemap-social-card-img').classList.add('is-broken')"></div>`
+      : '<div class="sitemap-social-card-img is-empty">No share image</div>'}<div class="sitemap-social-card-body"><span class="sitemap-social-card-host">${escapeHtml(shareHost)}</span><strong class="sitemap-social-card-title">${escapeHtml(shareTitle)}</strong><span class="sitemap-social-card-desc">${escapeHtml(shareDesc)}</span></div>`;
+  }
+  const checks = [
+    ['Open Graph title', !!data.ogTitle],
+    ['Open Graph description', !!data.ogDescription],
+    ['Open Graph image', !!data.ogImage],
+    ['Canonical / og:url set', !!(data.ogUrl || data.canonical)],
+    ['Twitter/X card type', !!data.twitterCard],
+    ['Twitter/X image', !!(data.twitterImage || data.ogImage)]
+  ];
+  const checksEl = $('sitemap-detail-social-checks');
+  if (checksEl) checksEl.innerHTML = checks.map(([label, ok]) => `<li class="${ok ? 'ok' : 'warn'}">${ok ? '\u2713' : '!'} ${escapeHtml(label)}</li>`).join('');
+  const socialLinks = data.socialLinkDetails || [];
+  const metrics = $('sitemap-social-metrics');
+  if (metrics) metrics.innerHTML = `<div class="sitemap-metric"><strong>${socialLinks.length}</strong><small>Social links</small></div><div class="sitemap-metric"><strong>${new Set(socialLinks.map((l) => l.platform)).size}</strong><small>Platforms</small></div>`;
+  const list = $('sitemap-social-links');
+  if (list) list.innerHTML = socialLinks.length
+    ? socialLinks.map((l) => `<li><span class="sitemap-social-platform-tag">${escapeHtml(l.platformLabel)}</span> <a href="${escapeAttr(l.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(l.href)}</a></li>`).join('')
+    : '<li class="sitemap-refs-empty">No social media links on this page.</li>';
+}
+
+function renderSocialProfileHub() {
+  const panel = $('sitemap-detail');
+  if (!panel) return;
+  panel.hidden = false;
+  panel.querySelector('.sitemap-detail-grade')?.setAttribute('hidden', '');
+  $('sitemap-detail-metrics').hidden = true;
+  $('sitemap-detail-criteria').hidden = true;
+  ['sitemap-detail-recs', 'sitemap-detail-facts', 'sitemap-detail-search', 'sitemap-detail-refs'].forEach((id) => { const el = $(id); if (el) el.hidden = true; });
+  $('sitemap-detail-analytics') && ($('sitemap-detail-analytics').hidden = true);
+  const expandWrap = $('sitemap-detail-expand');
+  if (expandWrap) { expandWrap.hidden = true; expandWrap.innerHTML = ''; }
+  $('sitemap-suggest-export')?.remove();
+  document.querySelectorAll('.sitemap-network-node.is-selected').forEach((n) => n.classList.remove('is-selected'));
+  const totalLinks = sitemapSocialProfile.reduce((sum, p) => sum + p.origins.reduce((t, o) => t + o.links.length, 0), 0);
+  $('sitemap-detail-kind').textContent = 'Social profile';
+  $('sitemap-detail-title').textContent = sitemapRootInfo.label;
+  $('sitemap-detail-url').textContent = `${sitemapSocialProfile.length} platform${sitemapSocialProfile.length === 1 ? '' : 's'} \u00b7 ${totalLinks} link${totalLinks === 1 ? '' : 's'} out`;
+  $('sitemap-detail-note').textContent = 'Social media links found across your pages.';
+  if ($('sitemap-detail-open')) $('sitemap-detail-open').hidden = true;
+  const social = $('sitemap-detail-social');
+  if (!social) return;
+  social.hidden = false;
+  const card = $('sitemap-social-card'); if (card) card.hidden = true;
+  const checksEl = $('sitemap-detail-social-checks'); if (checksEl) checksEl.innerHTML = '';
+  $('sitemap-detail-social-title').textContent = 'Social links out of your pages';
+  const metrics = $('sitemap-social-metrics');
+  if (metrics) metrics.innerHTML = sitemapSocialProfile.length
+    ? `<div class="sitemap-metric"><strong>${sitemapSocialProfile.length}</strong><small>Platforms</small></div><div class="sitemap-metric"><strong>${totalLinks}</strong><small>Links out</small></div>`
+    : '';
+  const list = $('sitemap-social-links');
+  if (list) {
+    list.innerHTML = sitemapSocialProfile.length
+      ? sitemapSocialProfile.map((p) => {
+        const origins = p.origins.map((o) => {
+          let label = o.url;
+          try { const u = new URL(o.url); label = u.pathname === '/' ? u.hostname : u.pathname.replace(/\/$/, ''); } catch (e) { /* keep raw */ }
+          const anchors = o.links.map((l) => `<div class="sitemap-origin-anchor"><span class="sitemap-origin-text">${escapeHtml(l.text || '(no link text)')}</span><a href="${escapeAttr(l.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(l.href)}</a></div>`).join('');
+          return `<div class="sitemap-social-origin"><button type="button" class="sitemap-origin-link" data-origin-url="${escapeAttr(o.url)}">${escapeHtml(label)}</button>${anchors}</div>`;
+        }).join('');
+        return `<li class="sitemap-social-platform"><strong class="sitemap-recs-label">${escapeHtml(p.label)} \u00b7 ${p.count} page${p.count === 1 ? '' : 's'}</strong>${origins}</li>`;
+      }).join('')
+      : '<li class="sitemap-refs-empty">No social media links found. Run a scan, then click Social.</li>';
+    list.querySelectorAll('.sitemap-origin-link').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = document.querySelector(`.sitemap-network-node[data-url="${CSS.escape(btn.dataset.originUrl)}"]`);
+        if (target) openSitemapNodeDetail(target);
+      });
+    });
+  }
+}
+
+// Walks a node back to the root, lighting each connecting edge and tile so the link's path to the site is visible.
+function highlightSitemapPath(world, nodeId) {
+  world.querySelectorAll('.sitemap-network-edge.is-active').forEach((e) => e.classList.remove('is-active'));
+  world.querySelectorAll('.sitemap-network-node.is-path').forEach((n) => n.classList.remove('is-path'));
+  const guard = new Set();
+  let current = nodeId;
+  world.querySelector(`[data-node-id="${current}"]`)?.classList.add('is-path');
+  while (current && !guard.has(current)) {
+    guard.add(current);
+    const edge = world.querySelector(`.sitemap-network-edge[data-edge-to="${current}"]`);
+    if (!edge) break;
+    edge.classList.add('is-active');
+    current = edge.dataset.edgeFrom;
+    world.querySelector(`[data-node-id="${current}"]`)?.classList.add('is-path');
+  }
+}
+
+function renderSitemapCardDetail(node) {
+  const panel = $('sitemap-detail');
+  if (!panel) return;
+  panel.hidden = false;
+  panel.querySelector('.sitemap-detail-grade')?.setAttribute('hidden', '');
+  $('sitemap-detail-metrics').hidden = true;
+  $('sitemap-detail-criteria').hidden = true;
+  ['sitemap-detail-recs', 'sitemap-detail-facts', 'sitemap-detail-search', 'sitemap-detail-refs', 'sitemap-detail-social'].forEach((id) => { const el = $(id); if (el) el.hidden = true; });
+  $('sitemap-detail-analytics') && ($('sitemap-detail-analytics').hidden = true);
+  const expandWrap = $('sitemap-detail-expand');
+  if (expandWrap) { expandWrap.hidden = true; expandWrap.innerHTML = ''; }
+  $('sitemap-suggest-export')?.remove();
+  const isSocial = node.dataset.kind === 'social-card';
+  $('sitemap-detail-kind').textContent = isSocial ? 'Social link' : 'External link';
+  $('sitemap-detail-title').textContent = node.dataset.label || '(no link text)';
+  $('sitemap-detail-url').textContent = node.dataset.url;
+  $('sitemap-detail-note').textContent = 'Highlighted in orange: how this link connects back through the page to the site.';
+  const open = $('sitemap-detail-open');
+  if (open) { open.hidden = false; open.href = node.dataset.url; }
+}
+
+async function openSitemapNodeDetail(node) {
+  const panel = $('sitemap-detail');
+  if (!panel) return;
+  const inboundBox = $('sitemap-detail-inbound');
+  if (inboundBox) inboundBox.hidden = true;
+  const url = node.dataset.url;
+  const kind = node.dataset.kind;
+  document.querySelectorAll('.sitemap-network-node.is-selected').forEach((n) => n.classList.remove('is-selected'));
+  document.querySelectorAll('.sitemap-network-node.is-path').forEach((n) => n.classList.remove('is-path'));
+  node.classList.add('is-selected');
+  if (kind === 'link-card' || kind === 'social-card') {
+    const world = node.closest('.sitemap-network-world');
+    if (world) highlightSitemapPath(world, node.dataset.nodeId);
+    renderSitemapCardDetail(node);
+    return;
+  }
+  if (kind === 'external' || kind === 'external-hub') { renderSitemapExternalDetail(node); return; }
+  sitemapSelectedPageUrl = url;
+  $('sitemap-detail-kind').textContent = kind === 'root' ? 'Homepage' : kind === 'domain' ? 'Domain hub' : kind === 'folder' ? 'Folder' : 'Page';
+  $('sitemap-detail-title').textContent = node.dataset.label;
+  $('sitemap-detail-url').textContent = url;
+  $('sitemap-detail-note').textContent = 'Analysing live page…';
+  panel.hidden = false;
+  renderSitemapSearchData(url);
+  const audit = await fetchSitemapPageAudit(url);
+  if ($('sitemap-detail').hidden || node.dataset.url !== url) return;
+  renderSitemapDetail(url, audit || sitemapUnavailableAnalytics(url));
+}
+
+function renderSitemapExternalDetail(node) {
+  const panel = $('sitemap-detail');
+  if (!panel) return;
+  const isHub = node.dataset.kind === 'external-hub';
+  const domain = node.dataset.label;
+  const entry = isHub ? null : sitemapLinkProfile.find((e) => e.domain === domain);
+  panel.hidden = false;
+  panel.querySelector('.sitemap-detail-grade')?.setAttribute('hidden', '');
+  $('sitemap-detail-metrics').hidden = true;
+  $('sitemap-detail-criteria').hidden = true;
+  ['sitemap-detail-recs', 'sitemap-detail-facts', 'sitemap-detail-search', 'sitemap-detail-social'].forEach((id) => { const el = $(id); if (el) el.hidden = true; });
+  $('sitemap-detail-analytics') && ($('sitemap-detail-analytics').hidden = true);
+  $('sitemap-detail-kind').textContent = isHub ? 'Outbound profile' : 'External domain';
+  $('sitemap-detail-title').textContent = domain;
+  $('sitemap-detail-url').textContent = isHub ? `${sitemapLinkProfile.length} external domains linked from your pages` : node.dataset.url;
+  $('sitemap-detail-note').textContent = 'Click a page to open its audit.';
+  const refs = $('sitemap-detail-refs');
+  const title = $('sitemap-detail-refs-title');
+  const metrics = $('sitemap-detail-refs-metrics');
+  const list = $('sitemap-detail-refs-domains');
+  const open = $('sitemap-detail-open');
+  if (refs) refs.hidden = false;
+  if (isHub) {
+    if (title) title.textContent = 'Linked external domains';
+    if (metrics) metrics.innerHTML = `<div class="sitemap-metric"><strong>${sitemapLinkProfile.length}</strong><small>Domains</small></div>`;
+    if (list) list.innerHTML = sitemapLinkProfile.length
+      ? sitemapLinkProfile.map((e, i) => `<li><button type="button" class="sitemap-origin-link" data-ext-id="ext-${i}">${escapeHtml(e.domain)} &middot; ${e.count} page${e.count === 1 ? '' : 's'}</button></li>`).join('')
+      : '<li class="sitemap-refs-empty">No outbound links found.</li>';
+    if (open) open.hidden = true;
+  } else {
+    const origins = entry ? entry.origins : [];
+    const totalLinks = origins.reduce((sum, o) => sum + o.links.length, 0);
+    if (title) title.textContent = 'Linked from your pages';
+    if (metrics) metrics.innerHTML = `<div class="sitemap-metric"><strong>${origins.length}</strong><small>Page${origins.length === 1 ? '' : 's'}</small></div><div class="sitemap-metric"><strong>${totalLinks}</strong><small>Link${totalLinks === 1 ? '' : 's'} total</small></div>`;
+    if (list) list.innerHTML = origins.length
+      ? origins.map((o) => {
+        let label = o.url;
+        try { const p = new URL(o.url); label = p.pathname === '/' ? p.hostname : p.pathname.replace(/\/$/, ''); } catch (e) { /* keep raw */ }
+        const anchors = o.links.map((l) => `<div class="sitemap-origin-anchor"><span class="sitemap-origin-text">${escapeHtml(l.text || '(no link text)')}</span><a href="${escapeAttr(l.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(l.href)}</a></div>`).join('');
+        return `<li><button type="button" class="sitemap-origin-link" data-origin-url="${escapeAttr(o.url)}">${escapeHtml(label)}</button>${anchors}</li>`;
+      }).join('')
+      : '<li class="sitemap-refs-empty">Origin pages unavailable — rebuild the link profile.</li>';
+    if (open) { open.hidden = false; open.href = node.dataset.url; }
+  }
+  if (list) list.querySelectorAll('.sitemap-origin-link').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const sel = btn.dataset.originUrl
+        ? `.sitemap-network-node[data-url="${CSS.escape(btn.dataset.originUrl)}"]`
+        : `.sitemap-network-node[data-node-id="${btn.dataset.extId}"]`;
+      const target = document.querySelector(sel);
+      if (target) openSitemapNodeDetail(target);
+    });
+  });
+  const expandWrap = $('sitemap-detail-expand');
+  if (expandWrap) {
+    if (isHub) {
+      expandWrap.hidden = true;
+      expandWrap.innerHTML = '';
+    } else {
+      expandWrap.hidden = false;
+      const expanded = sitemapExternalExpansions[domain];
+      expandWrap.innerHTML = `<button type="button" class="btn btn-ghost btn-sm" id="sitemap-ext-expand-btn">${expanded ? 'Collapse network' : 'Expand network →'}</button><p class="sitemap-detail-note" style="margin-top:.4rem">${expanded ? `Showing ${expanded.length} page${expanded.length === 1 ? '' : 's'} from ${escapeHtml(domain)}.` : `Crawl ${escapeHtml(domain)}'s public pages and branch them onto the map.`}</p>`;
+      $('sitemap-ext-expand-btn')?.addEventListener('click', () => toggleExternalExpansion(domain));
+    }
+  }
+}
+
+async function toggleExternalExpansion(domain) {
+  const state = $('sitemap-scan-state');
+  if (sitemapExternalExpansions[domain]) {
+    delete sitemapExternalExpansions[domain];
+    renderSiteMapVisual(lastScanResults);
+    reselectExternalNode(domain);
+    if (state) state.textContent = `Collapsed ${domain}.`;
+    return;
+  }
+  const btn = $('sitemap-ext-expand-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Expanding…'; }
+  if (state) state.textContent = `Expanding ${domain}… reading sitemap`;
+  let pages = [];
+  for (const host of [domain, `www.${domain}`]) {
+    try { pages = await scanSitemapUrl(`https://${host}/sitemap.xml`, 0); } catch (e) { pages = []; }
+    if (pages.length) break;
+  }
+  sitemapExternalExpansions[domain] = pages.slice(0, 14);
+  renderSiteMapVisual(lastScanResults);
+  reselectExternalNode(domain);
+  if (state) state.textContent = pages.length
+    ? `Expanded ${domain}: ${Math.min(pages.length, 14)} page${pages.length === 1 ? '' : 's'} added.`
+    : `No public sitemap found for ${domain}.`;
+}
+
+function reselectExternalNode(domain) {
+  const node = document.querySelector(`.sitemap-network-node[data-kind="external"][data-label="${CSS.escape(domain)}"]`);
+  if (node) openSitemapNodeDetail(node);
+}
+
+const gscConfig = { url: '', secret: '', property: 'sc-domain:edgeducate.com.au' };
+const GSC_DAILY_LIMIT = 100000;
+
+function gscCallsKey() {
+  return `edg-gsc-calls-${new Date().toISOString().slice(0, 10)}`;
+}
+function getGscCallsToday() {
+  try { return parseInt(localStorage.getItem(gscCallsKey()) || '0', 10) || 0; } catch (e) { return 0; }
+}
+function bumpGscCalls() {
+  const next = getGscCallsToday() + 1;
+  try { localStorage.setItem(gscCallsKey(), String(next)); } catch (e) { /* ignore */ }
+  updateGscUsage();
+  return next;
+}
+function updateGscUsage() {
+  const el = $('gsc-usage');
+  if (!el) return;
+  const used = getGscCallsToday();
+  const left = Math.max(0, GSC_DAILY_LIMIT - used);
+  el.textContent = `Worker calls today: ${used.toLocaleString()} used · ${left.toLocaleString()} left of ${GSC_DAILY_LIMIT.toLocaleString()} free/day.`;
+}
+
+function gscIsConnected() {
+  return Boolean(gscConfig.url && gscConfig.secret);
+}
+
+async function fetchGscPageData(pageUrl) {
+  if (!gscIsConnected()) return null;
+  bumpGscCalls();
+  const endpoint = `${gscConfig.url.replace(/\/$/, '')}/page?url=${encodeURIComponent(pageUrl)}&site=${encodeURIComponent(gscConfig.property)}&days=28`;
+  const res = await fetch(endpoint, { headers: { 'x-gsc-secret': gscConfig.secret } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+async function renderSitemapSearchData(pageUrl) {
+  const section = $('sitemap-detail-search');
+  if (!section) return;
+  if (!gscIsConnected()) { section.hidden = true; return; }
+  section.hidden = false;
+  $('sitemap-detail-search-metrics').innerHTML = '<div class="sitemap-metric"><strong>…</strong><small>Loading</small></div>';
+  $('sitemap-detail-queries').innerHTML = '';
+  try {
+    const data = await fetchGscPageData(pageUrl);
+    if (!data || $('sitemap-detail-url').textContent !== pageUrl) return;
+    const t = data.totals || { clicks: 0, impressions: 0, ctr: 0, position: 0 };
+    $('sitemap-detail-search-metrics').innerHTML = [
+      ['Clicks', t.clicks || 0],
+      ['Impressions', t.impressions || 0],
+      ['CTR', `${((t.ctr || 0) * 100).toFixed(1)}%`],
+      ['Avg position', (t.position || 0).toFixed(1)]
+    ].map(([k, v]) => `<div class="sitemap-metric"><strong>${v}</strong><small>${escapeHtml(k)}</small></div>`).join('');
+    const queries = data.queries || [];
+    $('sitemap-detail-queries').innerHTML = queries.length
+      ? queries.map((q) => `<li><span>${escapeHtml(q.query)}</span><span>${q.clicks} clk · #${q.position.toFixed(0)}</span></li>`).join('')
+      : '<li><span>No query data in this range.</span><span></span></li>';
+  } catch (error) {
+    $('sitemap-detail-search-metrics').innerHTML = `<div class="sitemap-metric"><strong>—</strong><small>${escapeHtml(error.message)}</small></div>`;
+  }
+}
+
+function openGscDialog() {
+  $('gsc-url').value = gscConfig.url;
+  $('gsc-secret').value = gscConfig.secret;
+  $('gsc-property').value = gscConfig.property;
+  $('gsc-status').textContent = gscIsConnected() ? 'Connected (session only).' : 'Not connected.';
+  updateGscUsage();
+  $('gsc-dlg')?.showModal();
+}
+
+function buildSitelinksSchema() {
+  const site = 'https://edgeducate.com.au';
+  const website = {
+    '@context': 'https://schema.org', '@type': 'WebSite', name: 'Edgeducate', url: `${site}/`,
+    potentialAction: { '@type': 'SearchAction', target: `${site}/?q={search_term_string}`, 'query-input': 'required name=search_term_string' }
+  };
+  const organization = {
+    '@context': 'https://schema.org', '@type': 'Organization', name: 'Edgeducate', url: `${site}/`,
+    logo: `${site}/assets/logo/logo.png`, sameAs: []
+  };
+  const breadcrumb = {
+    '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: `${site}/` },
+      { '@type': 'ListItem', position: 2, name: 'Resources', item: 'https://resources.edgeducate.com.au/' }
+    ]
+  };
+  return [website, organization, breadcrumb]
+    .map((obj) => `<script type="application/ld+json">\n${JSON.stringify(obj, null, 2)}\n</script>`)
+    .join('\n\n');
+}
+
+function openSitelinksSchemaDialog() {
+  const output = $('sitemap-schema-output');
+  if (output) output.value = buildSitelinksSchema();
+  $('sitemap-schema-dlg')?.showModal();
+}
+
+function closeSitemapNodeDetail() {
+  const panel = $('sitemap-detail');
+  if (panel) panel.hidden = true;
+  document.querySelectorAll('.sitemap-network-node.is-selected').forEach((n) => n.classList.remove('is-selected'));
+  document.querySelectorAll('.sitemap-network-edge.is-active').forEach((e) => e.classList.remove('is-active'));
+  const network = $('sitemap-network');
+  if (network) delete network.dataset.focus;
+}
+
+let sitemapNetworkView = { scale: 0.62, x: 40, y: 0 };
+
+function applySitemapNetworkTransform() {
+  const world = $('sitemap-network-world');
+  if (world) world.style.transform = `translate(${sitemapNetworkView.x}px,${sitemapNetworkView.y}px) scale(${sitemapNetworkView.scale})`;
+}
+
+function resetSitemapNetworkView() {
+  renderSiteMapVisual(lastScanResults);
+  fitSitemapNetworkView();
+}
+
+function fitSitemapNetworkView() {
+  const network = $('sitemap-network');
+  if (!network) return;
+  const w = network.clientWidth || 1000;
+  const h = network.clientHeight || 560;
+  const world = $('sitemap-network-world');
+  const nodes = world ? world.querySelectorAll('[data-node-x]') : [];
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  nodes.forEach((n) => {
+    const x = Number(n.dataset.nodeX);
+    const y = Number(n.dataset.nodeY);
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x);
+    maxY = Math.max(maxY, y);
+  });
+  if (!isFinite(minX)) { minX = 0; minY = 0; maxX = 1600; maxY = 1000; }
+  const pad = 130;
+  minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+  const bw = Math.max(maxX - minX, 1);
+  const bh = Math.max(maxY - minY, 1);
+  const scale = Math.min(w / bw, h / bh, 1.4);
+  sitemapNetworkView = { scale, x: (w - bw * scale) / 2 - minX * scale, y: (h - bh * scale) / 2 - minY * scale };
+  applySitemapNetworkTransform();
+}
+
+// Branch placement around the clock face (0deg = 3 o'clock, +deg clockwise). Matches the requested pattern for 1-6, even spacing beyond.
+function sitemapBranchAngles(n) {
+  const table = {
+    1: [0],
+    2: [-30, 30],
+    3: [180, -30, 30],
+    4: [-150, 120, -30, 30],
+    5: [-150, 120, -30, 30, -90],
+    6: [-150, 120, -30, 30, -90, 90]
+  };
+  const deg = table[n] || Array.from({ length: n }, (_, i) => (360 / n) * i);
+  return deg.map((d) => (d * Math.PI) / 180);
+}
+
+function sitemapMinAngularGap(angles) {
+  if (angles.length < 2) return 2 * Math.PI;
+  const sorted = [...angles].sort((a, b) => a - b);
+  let min = Infinity;
+  for (let i = 0; i < sorted.length; i++) {
+    const next = i + 1 < sorted.length ? sorted[i + 1] : sorted[0] + 2 * Math.PI;
+    min = Math.min(min, next - sorted[i]);
+  }
+  return min;
+}
+
+function sitemapPathLabel(url) {
+  try { const p = new URL(url); return p.pathname === '/' ? p.hostname : p.pathname.replace(/\/$/, ''); }
+  catch (e) { return url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') || '/'; }
+}
+
+// Group a domain's pages: pages sharing a first path segment (a folder) nest under one sub-hub.
+function buildBranchItems(pages, host) {
+  const firstSeg = (url) => {
+    try { return (new URL(url).pathname.split('/').filter(Boolean)[0]) || ''; } catch (e) { return ''; }
+  };
+  const map = new Map();
+  const order = [];
+  pages.forEach((url) => {
+    const seg = firstSeg(url);
+    const isFolder = seg && !seg.includes('.');
+    const key = isFolder ? `f:${seg}` : `d:${url}`;
+    if (!map.has(key)) { map.set(key, { seg, isFolder, urls: [] }); order.push(key); }
+    map.get(key).urls.push(url);
+  });
+  const items = [];
+  order.forEach((key) => {
+    const g = map.get(key);
+    if (g.isFolder && g.urls.length >= 2) {
+      items.push({ type: 'folder', seg: g.seg, label: `/${g.seg}`, url: `https://${host}/${g.seg}`, pages: g.urls.map((u) => ({ url: u, label: sitemapPathLabel(u) })) });
+    } else {
+      g.urls.forEach((u) => items.push({ type: 'page', url: u, label: sitemapPathLabel(u) }));
+    }
+  });
+  return items;
+}
+
+// Single-domain view: a clean left-to-right tree. Every page and every found link gets its own
+// row, so nothing overlaps, and full paths are shown. Links/social attach as cards beside their page.
+function renderSitemapTree(network, group) {
+  const source = group.source;
+  const pages = group.pages || [];
+  const items = buildBranchItems(pages, source.host);
+  const edges = [];
+  const hits = [];
+  const nodes = [];
+  const rowH = 60;
+  const colRoot = 120;
+  const colDomain = 340;
+  const colItem = 600;
+  const colChild = 880;
+  const cardStep = 280;
+  const pageCards = new Map();
+  const addCard = (u, c) => { if (!pageCards.has(u)) pageCards.set(u, []); pageCards.get(u).push(c); };
+  sitemapLinkProfile.forEach((it) => (it.origins || []).forEach((o) => (o.links || []).forEach((l) => addCard(o.url, { href: l.href, text: l.text, kind: 'link-card' }))));
+  sitemapSocialProfile.forEach((p) => (p.origins || []).forEach((o) => (o.links || []).forEach((l) => addCard(o.url, { href: l.href, text: l.text, kind: 'social-card' }))));
+  let row = 0;
+  let cardSeq = 0;
+  const line = (from, to, x1, y1, x2, y2, cls = '') => {
+    edges.push(`<line data-edge-from="${from}" data-edge-to="${to}" class="sitemap-network-edge ${cls} group-${source.key}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`);
+    hits.push(`<line data-edge-from="${from}" data-edge-to="${to}" class="sitemap-network-hit" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" />`);
+  };
+  const placePage = (url, label, x) => {
+    const cards = pageCards.get(url) || [];
+    const span = Math.max(1, cards.length);
+    const rows = [];
+    for (let i = 0; i < span; i++) rows.push(row++);
+    const y = Math.round(((rows[0] + rows[rows.length - 1]) / 2) * rowH);
+    const id = `node-${nodes.length}`;
+    const detail = cards.length ? `${cards.length} link${cards.length === 1 ? '' : 's'} out` : 'online page';
+    nodes.push(networkNodeMarkup(id, label, url, detail, source.key, 'page', x, y));
+    cards.forEach((c, i) => {
+      const cy = Math.round(rows[i] * rowH);
+      const cxp = x + cardStep;
+      const cid = `linkcard-${cardSeq++}`;
+      line(id, cid, x, y, cxp, cy, 'ext-edge');
+      const clabel = (c.text && c.text.trim()) ? c.text.trim() : '(no link text)';
+      nodes.push(networkNodeMarkup(cid, clabel, c.href, c.href, 'external', c.kind, cxp, cy));
+    });
+    return { id, x, y };
+  };
+  const domainId = 'site';
+  const childRecords = [];
+  items.forEach((item) => {
+    if (item.type === 'folder') {
+      const kids = item.pages.map((pg) => placePage(pg.url, pg.label, colChild));
+      const fy = Math.round((kids[0].y + kids[kids.length - 1].y) / 2);
+      const fid = `node-${nodes.length}`;
+      nodes.push(networkNodeMarkup(fid, item.label, item.url, `${item.pages.length} pages`, source.key, 'folder', colItem, fy));
+      kids.forEach((k) => line(fid, k.id, colItem, fy, colChild, k.y, 'domain-edge'));
+      childRecords.push({ id: fid, x: colItem, y: fy });
+    } else {
+      childRecords.push(placePage(item.url, item.label, colItem));
+    }
+  });
+  const domainY = childRecords.length ? Math.round(childRecords.reduce((a, c) => a + c.y, 0) / childRecords.length) : 0;
+  nodes.push(networkNodeMarkup(domainId, source.host, `https://${source.host}/`, `${pages.length} online pages`, source.key, 'domain', colDomain, domainY));
+  childRecords.forEach((c) => line(domainId, c.id, colDomain, domainY, c.x, c.y, 'domain-edge'));
+  nodes.push(networkNodeMarkup('root', sitemapRootInfo.label, sitemapRootInfo.url, 'Homepage', 'root', 'root', colRoot, domainY));
+  line('root', domainId, colRoot, domainY, colDomain, domainY, 'domain-edge');
+  network.classList.add('is-single-domain');
+  network.innerHTML = `<div class="sitemap-network-world" id="sitemap-network-world"><svg viewBox="0 0 1600 1000" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}${hits.join('')}</svg>${nodes.join('')}</div>`;
+  wireSitemapNetwork(network);
+}
+
+function renderSitemapNetwork(externalMaps) {
+  const network = $('sitemap-network');
+  if (!network) return;
+  // Full-circle "analog clock" web: searched page at the centre, branches evenly spaced all around.
+  const groups = activeSitemapSources.map((source) => ({ source, pages: externalMaps[source.key] || [] }));
+  const singleDomain = activeSitemapSources.length === 1;
+  if (singleDomain) { renderSitemapTree(network, groups[0] || { source: activeSitemapSources[0], pages: [] }); return; }
+  const cx = singleDomain ? 180 : 900;
+  const cy = singleDomain ? 500 : 640;
+  const edges = [];
+  const hits = [];
+  const nodes = [];
+  const urlToNode = new Map();
+
+  const branchCount = Math.max(groups.length, 1);
+  const branchAngles = sitemapBranchAngles(branchCount);
+  const minGapRad = sitemapMinAngularGap(branchAngles);
+  const allowedFanRad = minGapRad * 0.9; // each page-fan may open up to its nearest-neighbour gap
+  const nodeH = 34;
+  const nodeW = 150;
+  // Smallest spacing that still clears a neighbour either vertically or horizontally at this angle.
+  const pageSpacing = (theta) => {
+    const c = Math.abs(Math.cos(theta));
+    const s = Math.abs(Math.sin(theta));
+    const vert = c > 0.04 ? nodeH / c : Infinity;
+    const horiz = s > 0.04 ? nodeW / s : Infinity;
+    return Math.max(50, Math.min(vert, horiz) * 1.12);
+  };
+  const layout = groups.map(({ source, pages }, k) => ({ source, pages, items: buildBranchItems(pages, source.host), ang: branchAngles[k] }));
+  const singleCenters = new Map();
+  if (singleDomain && layout[0]) {
+    const singleGap = 52;
+    const itemHeights = layout[0].items.map((item) => item.type === 'folder' ? Math.max(singleGap, item.pages.length * 40) : singleGap);
+    const totalHeight = itemHeights.reduce((sum, height) => sum + height, 0) + Math.max(itemHeights.length - 1, 0) * singleGap;
+    let cursor = cy - totalHeight / 2;
+    itemHeights.forEach((height, index) => {
+      singleCenters.set(index, cursor + height / 2);
+      cursor += height + singleGap;
+    });
+  }
+  const dialRadius = (m) => Math.max(120, Math.round((150 * m) / (2 * Math.PI)));
+  const folderReach = (m) => (m <= 8 ? dialRadius(m) + 80 : Math.max(240, ((m - 1) * 46) / 2 + 60));
+  // Per-item spacing for a domain: folders need extra room so their dial clears ring neighbours.
+  const domainSpacing = (items, ang) => {
+    const half = allowedFanRad / 2;
+    const base = Math.max(pageSpacing(ang - half), pageSpacing(ang), pageSpacing(ang + half));
+    const folderNeed = items.reduce((mx, it) => (it.type === 'folder' ? Math.max(mx, dialRadius(it.pages.length) + 160) : mx), 0);
+    return Math.max(base, folderNeed);
+  };
+  let pageR = 300;
+  let maxReach = 0;
+  layout.forEach(({ items, ang }) => {
+    items.forEach((it) => { if (it.type === 'folder') maxReach = Math.max(maxReach, folderReach(it.pages.length)); });
+    const n = items.length;
+    if (n < 2) return;
+    pageR = Math.max(pageR, ((n - 1) * domainSpacing(items, ang)) / allowedFanRad);
+  });
+  pageR = Math.round(pageR);
+  const domainR = Math.max(200, Math.round(pageR * 0.34));
+  const extR = pageR + maxReach + 160;
+  const childR = extR + 280;
+  const polar = (r, ang) => ({ x: Math.round(cx + r * Math.cos(ang)), y: Math.round(cy + r * Math.sin(ang)) });
+
+  nodes.push(networkNodeMarkup('root', sitemapRootInfo.label, sitemapRootInfo.url, 'Homepage', 'root', 'root', cx, cy));
+  urlToNode.set(sitemapRootInfo.url, { id: 'root', x: cx, y: cy, ang: 0 });
+
+  layout.forEach(({ source, pages, items, ang: hubAng }) => {
+    const dPos = polar(domainR, hubAng);
+    edges.push(`<line data-edge-from="root" data-edge-to="${source.key}" class="sitemap-network-edge domain-edge group-${source.key}" x1="${cx}" y1="${cy}" x2="${dPos.x}" y2="${dPos.y}" />`);
+    hits.push(`<line data-edge-from="root" data-edge-to="${source.key}" class="sitemap-network-hit" x1="${cx}" y1="${cy}" x2="${dPos.x}" y2="${dPos.y}" />`);
+    nodes.push(networkNodeMarkup(source.key, source.host, `https://${source.host}/`, `${pages.length} online pages`, source.key, 'domain', dPos.x, dPos.y));
+    urlToNode.set(`https://${source.host}/`, { id: source.key, x: dPos.x, y: dPos.y, ang: hubAng });
+    const n = items.length;
+    const sp = n > 1 ? domainSpacing(items, hubAng) : 0;
+    const hubFan = n > 1 ? Math.min(allowedFanRad, ((n - 1) * sp) / pageR) : 0;
+    const start = hubAng - hubFan / 2;
+    const stepA = n > 1 ? hubFan / (n - 1) : 0;
+    items.forEach((item, index) => {
+      const ang = n === 1 ? hubAng : start + index * stepA;
+      const pos = singleDomain
+        ? { x: Math.round(cx + domainR + 250), y: Math.round(singleCenters.get(index) ?? cy) }
+        : polar(pageR, ang);
+      if (item.type === 'page') {
+        const nodeId = `${source.key}-page-${index}`;
+        edges.push(`<line data-edge-from="${source.key}" data-edge-to="${nodeId}" class="sitemap-network-edge group-${source.key}" x1="${dPos.x}" y1="${dPos.y}" x2="${pos.x}" y2="${pos.y}" />`);
+        hits.push(`<line data-edge-from="${source.key}" data-edge-to="${nodeId}" class="sitemap-network-hit" x1="${dPos.x}" y1="${dPos.y}" x2="${pos.x}" y2="${pos.y}" />`);
+        nodes.push(networkNodeMarkup(nodeId, item.label, item.url, 'online page', source.key, 'page', pos.x, pos.y));
+        urlToNode.set(item.url, { id: nodeId, x: pos.x, y: pos.y, ang });
+        return;
+      }
+      // Folder sub-hub: children orbit it as a dial, or list down the right when there are many.
+      const fid = `${source.key}-folder-${index}`;
+      edges.push(`<line data-edge-from="${source.key}" data-edge-to="${fid}" class="sitemap-network-edge domain-edge group-${source.key}" x1="${dPos.x}" y1="${dPos.y}" x2="${pos.x}" y2="${pos.y}" />`);
+      hits.push(`<line data-edge-from="${source.key}" data-edge-to="${fid}" class="sitemap-network-hit" x1="${dPos.x}" y1="${dPos.y}" x2="${pos.x}" y2="${pos.y}" />`);
+      nodes.push(networkNodeMarkup(fid, item.label, item.url, `${item.pages.length} pages`, source.key, 'folder', pos.x, pos.y));
+      const m = item.pages.length;
+      const placeChild = (ci) => {
+        if (singleDomain) {
+          const gap = 40;
+          const startY = pos.y - ((m - 1) * gap) / 2;
+          return { x: pos.x + 220 + index * 180, y: Math.round(startY + ci * gap) };
+        }
+        if (m <= 8) {
+          const localR = dialRadius(m);
+          const cang = hubAng + (2 * Math.PI / m) * ci;
+          return { x: Math.round(pos.x + localR * Math.cos(cang)), y: Math.round(pos.y + localR * Math.sin(cang)) };
+        }
+        const gap = 46;
+        const startY = pos.y - ((m - 1) * gap) / 2;
+        return { x: pos.x + 230, y: Math.round(startY + ci * gap) };
+      };
+      item.pages.forEach((pg, ci) => {
+        const cp = placeChild(ci);
+        const cid = `${fid}-page-${ci}`;
+        edges.push(`<line data-edge-from="${fid}" data-edge-to="${cid}" class="sitemap-network-edge group-${source.key}" x1="${pos.x}" y1="${pos.y}" x2="${cp.x}" y2="${cp.y}" />`);
+        hits.push(`<line data-edge-from="${fid}" data-edge-to="${cid}" class="sitemap-network-hit" x1="${pos.x}" y1="${pos.y}" x2="${cp.x}" y2="${cp.y}" />`);
+        nodes.push(networkNodeMarkup(cid, pg.label, pg.url, 'online page', source.key, 'page', cp.x, cp.y));
+        urlToNode.set(pg.url, { id: cid, x: cp.x, y: cp.y, ang: hubAng });
+      });
+    });
+  });
+
+  // External domains continue radially outward from the page(s) that link to them.
+  if (!singleDomain && sitemapLinkProfile.length) {
+    const extMinRad = 160 / extR;
+    const childMinRad = 150 / childR;
+    const extItems = sitemapLinkProfile.map((item, i) => {
+      let sin = 0;
+      let cos = 0;
+      let count = 0;
+      (item.origins || []).forEach((o) => {
+        const a = urlToNode.get(o.url)?.ang;
+        if (typeof a === 'number') { sin += Math.sin(a); cos += Math.cos(a); count += 1; }
+      });
+      const ang = count ? Math.atan2(sin, cos) : (branchAngles[0] || 0);
+      return { item, i, ang };
+    }).sort((a, b) => a.ang - b.ang);
+    let lastAng = -Infinity;
+    extItems.forEach(({ item, i, ang }) => {
+      const a = Math.max(ang, lastAng + extMinRad);
+      lastAng = a;
+      const ePos = polar(extR, a);
+      const id = `ext-${i}`;
+      (item.origins || []).forEach((o) => {
+        const pos = urlToNode.get(o.url);
+        const fromId = pos ? pos.id : 'root';
+        const fx = pos ? pos.x : cx;
+        const fy = pos ? pos.y : cy;
+        edges.push(`<line data-edge-from="${fromId}" data-edge-to="${id}" class="sitemap-network-edge ext-edge group-external" x1="${fx}" y1="${fy}" x2="${ePos.x}" y2="${ePos.y}" />`);
+        hits.push(`<line data-edge-from="${fromId}" data-edge-to="${id}" class="sitemap-network-hit" x1="${fx}" y1="${fy}" x2="${ePos.x}" y2="${ePos.y}" />`);
+      });
+      nodes.push(networkNodeMarkup(id, item.domain, `https://${item.domain}/`, `${item.count} link${item.count === 1 ? '' : 's'} out`, 'external', 'external', ePos.x, ePos.y));
+      const expansion = sitemapExternalExpansions[item.domain];
+      if (expansion && expansion.length) {
+        const first = a - ((expansion.length - 1) * childMinRad) / 2;
+        expansion.forEach((curl, ci) => {
+          const cPos = polar(childR, first + ci * childMinRad);
+          const cid = `${id}-child-${ci}`;
+          edges.push(`<line data-edge-from="${id}" data-edge-to="${cid}" class="sitemap-network-edge ext-edge group-external" x1="${ePos.x}" y1="${ePos.y}" x2="${cPos.x}" y2="${cPos.y}" />`);
+          hits.push(`<line data-edge-from="${id}" data-edge-to="${cid}" class="sitemap-network-hit" x1="${ePos.x}" y1="${ePos.y}" x2="${cPos.x}" y2="${cPos.y}" />`);
+          let clabel = curl;
+          try { const cp = new URL(curl); clabel = cp.pathname === '/' ? cp.hostname : cp.pathname.replace(/\/$/, ''); } catch (e) { /* keep raw */ }
+          nodes.push(networkNodeMarkup(cid, clabel, curl, 'page', 'external', 'page', cPos.x, cPos.y));
+        });
+      }
+    });
+  }
+  network.classList.toggle('is-single-domain', singleDomain);
+  // Found links/social records hang off the exact page they were discovered on, as cards.
+  if (singleDomain && (sitemapLinkProfile.length || sitemapSocialProfile.length)) {
+    const pageCards = new Map();
+    const addCard = (pageUrl, card) => {
+      if (!pageCards.has(pageUrl)) pageCards.set(pageUrl, []);
+      pageCards.get(pageUrl).push(card);
+    };
+    sitemapLinkProfile.forEach((item) => (item.origins || []).forEach((o) => (o.links || []).forEach((l) => addCard(o.url, { href: l.href, text: l.text, kind: 'link-card', group: item.domain }))));
+    sitemapSocialProfile.forEach((p) => (p.origins || []).forEach((o) => (o.links || []).forEach((l) => addCard(o.url, { href: l.href, text: l.text, kind: 'social-card', group: p.label }))));
+    let cardSeq = 0;
+    pageCards.forEach((cards, pageUrl) => {
+      const parent = urlToNode.get(pageUrl);
+      if (!parent) return;
+      const gap = 46;
+      const startY = parent.y - ((cards.length - 1) * gap) / 2;
+      cards.forEach((card, idx) => {
+        const cardX = parent.x + 280;
+        const cardY = Math.round(startY + idx * gap);
+        const id = `linkcard-${cardSeq++}`;
+        edges.push(`<line data-edge-from="${parent.id}" data-edge-to="${id}" class="sitemap-network-edge ext-edge group-external" x1="${parent.x}" y1="${parent.y}" x2="${cardX}" y2="${cardY}" />`);
+        hits.push(`<line data-edge-from="${parent.id}" data-edge-to="${id}" class="sitemap-network-hit" x1="${parent.x}" y1="${parent.y}" x2="${cardX}" y2="${cardY}" />`);
+        const label = (card.text && card.text.trim()) ? card.text.trim() : '(no link text)';
+        nodes.push(networkNodeMarkup(id, label, card.href, card.href, 'external', card.kind, cardX, cardY));
+      });
+    });
+  }
+  network.innerHTML = `<div class="sitemap-network-world" id="sitemap-network-world"><svg viewBox="0 0 1600 1000" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}${hits.join('')}</svg>${nodes.join('')}</div>`;
+  wireSitemapNetwork(network);
+}
+
+function wireSitemapNetwork(network) {
+  if (network.clientWidth) fitSitemapNetworkView(); else applySitemapNetworkTransform();
+  const world = network.querySelector('.sitemap-network-world');
+  const nodeElements = world.querySelectorAll('[data-sitemap-group]');
+  nodeElements.forEach((node) => {
+    node.addEventListener('mouseenter', () => network.dataset.focus = node.dataset.sitemapGroup);
+    node.addEventListener('mouseleave', () => delete network.dataset.focus);
+    node.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openSitemapNodeDetail(node); }
+    });
+    node.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      node.setPointerCapture(event.pointerId);
+      const start = { x: event.clientX, y: event.clientY, nodeX: Number(node.dataset.nodeX), nodeY: Number(node.dataset.nodeY) };
+      let moved = false;
+      const move = (moveEvent) => {
+        if (!moved && Math.abs(moveEvent.clientX - start.x) + Math.abs(moveEvent.clientY - start.y) < 5) return;
+        moved = true;
+        const nextX = start.nodeX + (moveEvent.clientX - start.x) / sitemapNetworkView.scale;
+        const nextY = start.nodeY + (moveEvent.clientY - start.y) / sitemapNetworkView.scale;
+        node.style.left = `${nextX}px`;
+        node.style.top = `${nextY}px`;
+        node.dataset.nodeX = nextX;
+        node.dataset.nodeY = nextY;
+        world.querySelectorAll(`[data-edge-from="${node.dataset.nodeId}"], [data-edge-to="${node.dataset.nodeId}"]`).forEach((edge) => {
+          const from = world.querySelector(`[data-node-id="${edge.dataset.edgeFrom}"]`);
+          const to = world.querySelector(`[data-node-id="${edge.dataset.edgeTo}"]`);
+          if (from && to) {
+            edge.setAttribute('x1', from.dataset.nodeX);
+            edge.setAttribute('y1', from.dataset.nodeY);
+            edge.setAttribute('x2', to.dataset.nodeX);
+            edge.setAttribute('y2', to.dataset.nodeY);
+          }
+        });
+      };
+      const stop = () => {
+        window.removeEventListener('pointermove', move);
+        if (!moved) openSitemapNodeDetail(node);
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', stop, { once: true });
+    });
+  });
+  world.querySelectorAll('.sitemap-network-hit').forEach((line) => {
+    line.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const toNode = world.querySelector(`[data-node-id="${line.dataset.edgeTo}"]`);
+      const fromNode = world.querySelector(`[data-node-id="${line.dataset.edgeFrom}"]`);
+      world.querySelectorAll('.sitemap-network-edge.is-active').forEach((e) => e.classList.remove('is-active'));
+      world.querySelector(`.sitemap-network-edge[data-edge-from="${line.dataset.edgeFrom}"][data-edge-to="${line.dataset.edgeTo}"]`)?.classList.add('is-active');
+      if (toNode) {
+        network.dataset.focus = toNode.dataset.sitemapGroup;
+        $('sitemap-scan-state').textContent = `Link: ${fromNode ? fromNode.dataset.label : line.dataset.edgeFrom} → ${toNode.dataset.label}`;
+        openSitemapNodeDetail(toNode);
+      }
+    });
+  });
+  let panStart;
+  const stopPan = () => {
+    panStart = null;
+    network.classList.remove('is-panning');
+    window.removeEventListener('pointermove', movePan);
+    window.removeEventListener('pointerup', stopPan);
+  };
+  const movePan = (event) => {
+    if (!panStart) return;
+    sitemapNetworkView.x = panStart.viewX + event.clientX - panStart.x;
+    sitemapNetworkView.y = panStart.viewY + event.clientY - panStart.y;
+    applySitemapNetworkTransform();
+  };
+  network.onpointerdown = (event) => {
+    if (event.target.closest('.sitemap-network-node')) return;
+    if (event.button !== 0) return;
+    event.preventDefault();
+    if (!event.target.classList.contains('sitemap-network-hit')) {
+      network.querySelectorAll('.sitemap-network-edge.is-active').forEach((e) => e.classList.remove('is-active'));
+      network.querySelectorAll('.sitemap-network-node.is-path').forEach((n) => n.classList.remove('is-path'));
+      delete network.dataset.focus;
+    }
+    network.classList.add('is-panning');
+    panStart = { x: event.clientX, y: event.clientY, viewX: sitemapNetworkView.x, viewY: sitemapNetworkView.y };
+    window.addEventListener('pointermove', movePan);
+    window.addEventListener('pointerup', stopPan, { once: true });
+  };
+  network.onwheel = (event) => {
+    event.preventDefault();
+    const rect = network.getBoundingClientRect();
+    const factor = event.deltaY > 0 ? .9 : 1.1;
+    const nextScale = Math.min(6, Math.max(.05, sitemapNetworkView.scale * factor));
+    const cursorX = event.clientX - rect.left;
+    const cursorY = event.clientY - rect.top;
+    sitemapNetworkView.x = cursorX - (cursorX - sitemapNetworkView.x) * (nextScale / sitemapNetworkView.scale);
+    sitemapNetworkView.y = cursorY - (cursorY - sitemapNetworkView.y) * (nextScale / sitemapNetworkView.scale);
+    sitemapNetworkView.scale = nextScale;
+    applySitemapNetworkTransform();
+  };
+}
+
+function renderSiteMapVisual(externalMaps = {}) {
+  const grid = $('sitemap-domain-grid');
+  if (!grid) return;
+  grid.classList.toggle('sitemap-web', sitemapViewMode === 'web');
+  grid.innerHTML = activeSitemapSources.map((source) => {
+    const discovered = externalMaps[source.key];
+    const hasScanResult = Object.prototype.hasOwnProperty.call(externalMaps, source.key);
+    const links = discovered?.length
+      ? discovered.map((url) => sitemapLinkMarkup(url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') || '/', url))
+      : [sitemapLinkMarkup('Open domain', `https://${source.host}/`, hasScanResult ? 'No sitemap URLs found' : 'Run an online scan to discover pages')];
+    const count = discovered?.length || 0;
+    return `<section class="sitemap-domain"><div class="sitemap-domain-head"><strong>${escapeHtml(source.label)}</strong><small>${count} ${count === 1 ? 'page' : 'pages'}</small></div><div class="sitemap-domain-body"><ul>${links.join('')}</ul></div></section>`;
+  }).join('');
+  renderSitemapNetwork(externalMaps);
+  setSitemapViewMode(sitemapViewMode);
+}
+
+function sitemapFilterMatch(value, audit, status) {
+  if (value.startsWith('score:')) {
+    if (!audit || typeof audit.seo !== 'number') return false;
+    const low = Number(value.slice(6));
+    const high = low >= 90 ? 100 : low + 9;
+    return audit.seo >= low && audit.seo <= high;
+  }
+  switch (value) {
+    case 'issues': return !!(audit && audit.seo < 50);
+    case 'broken': return status !== undefined && (status === 0 || status >= 400);
+    case 'notitle': return !!(audit && audit.titleLen === 0);
+    case 'nometa': return !!(audit && audit.metaLen === 0);
+    case 'noschema': return !!(audit && !audit.hasStructured);
+    case 'nobreadcrumb': return !!(audit && !audit.hasBreadcrumb);
+    default: return true;
+  }
+}
+
+function sitemapIsOrphanPage(url) {
+  return sitemapInboundReady && !sitemapInboundProfile.has(normalizeSitemapUrl(url));
+}
+
+function resetSitemapFilterUI() {
+  document.querySelectorAll('.sitemap-filter-check').forEach((c) => { c.checked = false; });
+  if ($('chk-linkprofile')) $('chk-linkprofile').checked = false;
+  if ($('chk-inbound')) $('chk-inbound').checked = false;
+  if ($('chk-social')) $('chk-social').checked = false;
+  if ($('sitemap-search')) $('sitemap-search').value = '';
+}
+
+async function applySitemapFilter() {
+  const network = $('sitemap-network');
+  const world = $('sitemap-network-world');
+  if (!world) return;
+  const checks = [...document.querySelectorAll('.sitemap-filter-check:checked')].map((c) => c.value);
+  const search = ($('sitemap-search')?.value || '').trim().toLowerCase();
+  const pageNodes = [...world.querySelectorAll('.sitemap-network-node.page')];
+  const state = $('sitemap-scan-state');
+  if (!checks.length && !search) {
+    world.querySelectorAll('.is-hidden').forEach((el) => el.classList.remove('is-hidden'));
+    if (state) state.textContent = 'Showing all pages.';
+    fitSitemapNetworkView();
+    return;
+  }
+  if (checks.length) {
+    let done = 0;
+    for (const node of pageNodes) {
+      await fetchSitemapPageAudit(node.dataset.url);
+      done += 1;
+      if (state) state.textContent = `Checking pages… ${done}/${pageNodes.length}`;
+    }
+  }
+  if (checks.includes('orphan') && !sitemapInboundReady) await buildInboundProfile();
+  let shown = 0;
+  pageNodes.forEach((node) => {
+    const audit = sitemapAuditCache.get(node.dataset.url);
+    const status = sitemapStatusCache.get(node.dataset.url);
+    const filterMatch = !checks.length || checks.some((c) => (c === 'orphan' ? sitemapIsOrphanPage(node.dataset.url) : sitemapFilterMatch(c, audit, status)));
+    const text = `${node.dataset.url} ${node.dataset.label}`.toLowerCase();
+    const searchMatch = !search || text.includes(search);
+    const match = filterMatch && searchMatch;
+    node.classList.toggle('is-hidden', !match);
+    if (match) shown += 1;
+  });
+  world.querySelectorAll('.sitemap-network-edge, .sitemap-network-hit').forEach((edge) => {
+    const toNode = world.querySelector(`[data-node-id="${edge.dataset.edgeTo}"]`);
+    const hide = toNode && toNode.classList.contains('page') && toNode.classList.contains('is-hidden');
+    edge.classList.toggle('is-hidden', !!hide);
+  });
+  world.querySelectorAll('.sitemap-network-node.external').forEach((n) => n.classList.add('is-hidden'));
+  if (state) state.textContent = `Filter: ${shown} page${shown === 1 ? '' : 's'} match.`;
+  if (network) delete network.dataset.focus;
+  fitSitemapNetworkView();
+}
+
+async function buildSitemapLinkProfile() {
+  const state = $('sitemap-scan-state');
+  const button = $('chk-linkprofile');
+  const pageUrls = [];
+  activeSitemapSources.forEach((s) => (lastScanResults[s.key] || []).forEach((u) => pageUrls.push(u)));
+  if (!pageUrls.length) { if (state) state.textContent = 'Run a scan first, then build the link profile.'; return; }
+  const sample = pageUrls.slice(0, 40);
+  if (button) button.disabled = true;
+  const originMap = new Map();
+  let done = 0;
+  for (const url of sample) {
+    const audit = await fetchSitemapPageAudit(url);
+    if (audit && audit.live) (audit.externalLinkDetails || []).forEach((l) => {
+      if (classifySocialHost(l.domain)) return; // social lives under the Social profile, not here
+      if (!originMap.has(l.domain)) originMap.set(l.domain, new Map());
+      const pages = originMap.get(l.domain);
+      if (!pages.has(url)) pages.set(url, []);
+      pages.get(url).push({ href: l.href, text: l.text });
+    });
+    done += 1;
+    if (state) state.textContent = `Building link profile… ${done}/${sample.length} pages`;
+  }
+  sitemapLinkProfile = [...originMap.entries()]
+    .map(([domain, pages]) => ({
+      domain,
+      count: pages.size,
+      origins: [...pages.entries()].map(([pageUrl, links]) => ({ url: pageUrl, links }))
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 24);
+  if (button) button.disabled = false;
+  renderSiteMapVisual(lastScanResults);
+  if (state) {
+    state.textContent = sitemapLinkProfile.length
+      ? `Link profile: ${sitemapLinkProfile.length} external domains linked from ${sample.length} pages.`
+      : 'No outbound links found in the sampled pages.';
+  }
+}
+
+async function buildInboundProfile() {
+  const state = $('sitemap-scan-state');
+  const button = $('chk-inbound');
+  const pageUrls = [];
+  activeSitemapSources.forEach((s) => (lastScanResults[s.key] || []).forEach((u) => pageUrls.push(u)));
+  if (!pageUrls.length) { if (state) state.textContent = 'Run a scan first, then map inbound links.'; return; }
+  const sample = pageUrls.slice(0, 40);
+  if (button) button.disabled = true;
+  const normToUrl = new Map();
+  sample.forEach((u) => normToUrl.set(normalizeSitemapUrl(u), u));
+  const inbound = new Map();
+  let done = 0;
+  for (const srcUrl of sample) {
+    const audit = await fetchSitemapPageAudit(srcUrl);
+    if (audit && audit.live) (audit.internalLinkDetails || []).forEach((l) => {
+      const targetUrl = normToUrl.get(l.target);
+      if (!targetUrl || targetUrl === srcUrl) return;
+      if (!inbound.has(targetUrl)) inbound.set(targetUrl, new Map());
+      const sources = inbound.get(targetUrl);
+      if (!sources.has(srcUrl)) sources.set(srcUrl, l.text || '');
+    });
+    done += 1;
+    if (state) state.textContent = `Mapping inbound links\u2026 ${done}/${sample.length} pages`;
+  }
+  sitemapInboundProfile = new Map(
+    [...inbound.entries()].map(([target, sources]) => [
+      normalizeSitemapUrl(target),
+      [...sources.entries()].map(([url, text]) => ({ url, text }))
+    ])
+  );
+  sitemapInboundReady = true;
+  if (button) button.disabled = false;
+  const orphanCount = sample.filter((u) => !sitemapInboundProfile.has(normalizeSitemapUrl(u))).length;
+  let topCount = 0;
+  sitemapInboundProfile.forEach((srcs) => { if (srcs.length > topCount) topCount = srcs.length; });
+  if (sitemapSelectedPageUrl) {
+    const cached = sitemapAuditCache.get(sitemapSelectedPageUrl);
+    const panel = $('sitemap-detail');
+    if (cached && panel && !panel.hidden && $('sitemap-detail-kind')?.textContent !== 'Outbound profile') {
+      renderSitemapInboundSection(sitemapSelectedPageUrl, cached);
+    }
+  }
+  if (state) {
+    state.textContent = sitemapInboundProfile.size
+      ? `Inbound links mapped across ${sample.length} pages: ${orphanCount} orphan page${orphanCount === 1 ? '' : 's'} (no internal links in), top page has ${topCount} inbound.`
+      : 'No internal links found between the sampled pages.';
+  }
+}
+
+async function buildSocialProfile() {
+  const state = $('sitemap-scan-state');
+  const button = $('chk-social');
+  const pageUrls = [];
+  activeSitemapSources.forEach((s) => (lastScanResults[s.key] || []).forEach((u) => pageUrls.push(u)));
+  if (!pageUrls.length) { if (state) state.textContent = 'Run a scan first, then find social links.'; return; }
+  const sample = pageUrls.slice(0, 40);
+  if (button) button.disabled = true;
+  const platformMap = new Map();
+  let done = 0;
+  for (const url of sample) {
+    const audit = await fetchSitemapPageAudit(url);
+    if (audit && audit.live) (audit.socialLinkDetails || []).forEach((l) => {
+      if (!platformMap.has(l.platform)) platformMap.set(l.platform, { label: l.platformLabel, pages: new Map() });
+      const entry = platformMap.get(l.platform);
+      if (!entry.pages.has(url)) entry.pages.set(url, []);
+      entry.pages.get(url).push({ href: l.href, text: l.text });
+    });
+    done += 1;
+    if (state) state.textContent = `Finding social links\u2026 ${done}/${sample.length} pages`;
+  }
+  sitemapSocialProfile = [...platformMap.entries()]
+    .map(([platform, entry]) => ({
+      platform,
+      label: entry.label,
+      count: entry.pages.size,
+      origins: [...entry.pages.entries()].map(([pageUrl, links]) => ({ url: pageUrl, links }))
+    }))
+    .sort((a, b) => b.count - a.count);
+  if (button) button.disabled = false;
+  if (state) {
+    state.textContent = sitemapSocialProfile.length
+      ? `Social profile: ${sitemapSocialProfile.length} platform${sitemapSocialProfile.length === 1 ? '' : 's'} linked from ${sample.length} pages.`
+      : 'No social media links found in the sampled pages.';
+  }
+  renderSiteMapVisual(lastScanResults);
+}
+
+async function buildKeywordAnalysis() {
+  const state = $('sitemap-scan-state');
+  const button = $('btn-sitemap-keywords');
+  const pageUrls = [];
+  activeSitemapSources.forEach((s) => (lastScanResults[s.key] || []).forEach((u) => pageUrls.push(u)));
+  if (!pageUrls.length) { if (state) state.textContent = 'Run a scan first, then analyse keywords.'; return; }
+  const sample = pageUrls.slice(0, 40);
+  if (button) button.disabled = true;
+  const freq = new Map();
+  let live = 0;
+  let done = 0;
+  for (const url of sample) {
+    const audit = await fetchSitemapPageAudit(url);
+    if (audit && audit.live) {
+      live += 1;
+      (audit.keywords || []).forEach((k) => {
+        if (!freq.has(k)) freq.set(k, new Set());
+        freq.get(k).add(url);
+      });
+    }
+    done += 1;
+    if (state) state.textContent = `Analysing keywords… ${done}/${sample.length} pages`;
+  }
+  if (button) button.disabled = false;
+  const rows = [...freq.entries()]
+    .map(([word, pages]) => ({ word, pages: pages.size }))
+    .sort((a, b) => b.pages - a.pages || a.word.localeCompare(b.word))
+    .slice(0, 40);
+  renderKeywordAnalysis(rows, live, sample.length);
+  if (state) state.textContent = `Keyword analysis ready from ${live} of ${sample.length} sampled pages.`;
+}
+
+function renderKeywordAnalysis(rows, live, total) {
+  const panel = $('sitemap-detail');
+  if (!panel) return;
+  panel.hidden = false;
+  panel.querySelector('.sitemap-detail-grade')?.setAttribute('hidden', '');
+  $('sitemap-detail-metrics').hidden = false;
+  $('sitemap-detail-criteria').hidden = true;
+  ['sitemap-detail-recs', 'sitemap-detail-facts', 'sitemap-detail-search', 'sitemap-detail-refs', 'sitemap-detail-social'].forEach((id) => { const el = $(id); if (el) el.hidden = true; });
+  $('sitemap-detail-analytics') && ($('sitemap-detail-analytics').hidden = true);
+  const expandWrap = $('sitemap-detail-expand');
+  if (expandWrap) { expandWrap.hidden = true; expandWrap.innerHTML = ''; }
+  $('sitemap-suggest-export')?.remove();
+  if ($('sitemap-detail-open')) $('sitemap-detail-open').hidden = true;
+  document.querySelectorAll('.sitemap-network-node.is-selected').forEach((n) => n.classList.remove('is-selected'));
+  $('sitemap-detail-kind').textContent = 'Keyword analysis';
+  $('sitemap-detail-title').textContent = sitemapRootInfo.label;
+  $('sitemap-detail-url').textContent = `Top keywords across ${live} of ${total} sampled pages`;
+  $('sitemap-detail-note').textContent = 'Most common on-page keywords (title, headings, meta). The number is how many pages use each term.';
+  $('sitemap-detail-metrics').innerHTML = rows.length
+    ? rows.map((r) => `<div class="sitemap-metric"><strong>${r.pages}</strong><small>${escapeHtml(r.word)}</small></div>`).join('')
+    : '<div class="sitemap-metric"><strong>0</strong><small>No keywords found</small></div>';
+}
+
+let sitemapAnalyticsShown = false;
+
+async function toggleSitemapAnalytics() {
+  const box = $('sitemap-analytics');
+  const button = $('btn-sitemap-analytics');
+  if (sitemapAnalyticsShown) {
+    sitemapAnalyticsShown = false;
+    if (box) box.hidden = true;
+    button?.classList.remove('is-active');
+    return;
+  }
+  const state = $('sitemap-scan-state');
+  const pageUrls = [];
+  activeSitemapSources.forEach((s) => (lastScanResults[s.key] || []).forEach((u) => pageUrls.push(u)));
+  if (!pageUrls.length) { if (state) state.textContent = 'Run a scan first, then open analytics.'; return; }
+  const sample = pageUrls.slice(0, 40);
+  if (button) button.disabled = true;
+  const audits = [];
+  let done = 0;
+  for (const url of sample) {
+    const audit = await fetchSitemapPageAudit(url);
+    if (audit && audit.live) audits.push(audit);
+    done += 1;
+    if (state) state.textContent = `Building analytics… ${done}/${sample.length} pages`;
+  }
+  if (button) button.disabled = false;
+  renderSitemapAnalytics(sample.length, audits);
+  sitemapAnalyticsShown = true;
+  if (box) box.hidden = false;
+  button?.classList.add('is-active');
+  if (state) state.textContent = `Analytics from ${audits.length} of ${sample.length} sampled pages.`;
+}
+
+function renderSitemapAnalytics(sampled, audits) {
+  const body = $('sitemap-analytics-body');
+  if (!body) return;
+  const live = audits.length;
+  const totalPages = activeSitemapSources.reduce((sum, s) => sum + (lastScanResults[s.key] || []).length, 0);
+  const avg = (fn) => live ? Math.round(audits.reduce((s, a) => s + fn(a), 0) / live) : 0;
+  const pct = (fn) => live ? Math.round((audits.filter(fn).length / live) * 100) : 0;
+  const avgScore = avg((a) => a.seo);
+  const avgWords = avg((a) => a.words);
+  const bands = Array.from({ length: 10 }, () => 0);
+  audits.forEach((a) => { bands[Math.min(9, Math.max(0, Math.floor(a.seo / 10)))] += 1; });
+  const maxBand = Math.max(1, ...bands);
+  const chartW = 280;
+  const chartH = 104;
+  const n = 10;
+  const bw = chartW / n;
+  const bars = bands.map((c, i) => {
+    const h = Math.round((c / maxBand) * (chartH - 22));
+    const x = i * bw;
+    const y = chartH - 16 - h;
+    const color = i >= 7 ? '#39d98a' : i >= 5 ? '#ffd166' : '#ff6b6b';
+    const countLabel = c ? `<text x="${x + bw / 2}" y="${y - 2}" text-anchor="middle" font-size="7" fill="#cfe0f0">${c}</text>` : '';
+    return `<rect x="${x + 2.5}" y="${y}" width="${bw - 5}" height="${h}" rx="2" fill="${color}"></rect>${countLabel}<text x="${x + bw / 2}" y="${chartH - 4}" text-anchor="middle" font-size="7" fill="#9ec2e8">${i * 10}</text>`;
+  }).join('');
+  const chart = `<svg viewBox="0 0 ${chartW} ${chartH}" class="an-chart" preserveAspectRatio="xMidYMid meet">${bars}</svg>`;
+  const coverage = [
+    ['Title', pct((a) => a.title)],
+    ['Meta desc', pct((a) => a.metaDesc)],
+    ['Single H1', pct((a) => a.h1 === 1)],
+    ['Canonical', pct((a) => a.canonical)],
+    ['Schema', pct((a) => a.hasStructured)],
+    ['Mobile', pct((a) => a.viewport)],
+    ['HTTPS', pct((a) => a.https)],
+    ['Open Graph', pct((a) => a.ogCount > 0)]
+  ];
+  const coverageBars = coverage.map(([label, p]) => `<div class="an-bar"><span class="an-bar-label">${label}</span><span class="an-bar-track"><span class="an-bar-fill" style="width:${p}%"></span></span><span class="an-bar-val">${p}%</span></div>`).join('');
+  const extTotal = audits.reduce((s, a) => s + (a.externalLinks || 0), 0);
+  const extDomains = new Set();
+  audits.forEach((a) => (a.externalDomains || []).forEach((d) => extDomains.add(d)));
+  const socialTotal = audits.reduce((s, a) => s + ((a.socialLinkDetails || []).length), 0);
+  const avgInternal = avg((a) => a.internalLinks);
+  const tiles = [
+    [totalPages, 'Pages found'],
+    [live, 'Pages audited'],
+    [avgScore, 'Avg SEO score'],
+    [avgWords, 'Avg words'],
+    [extDomains.size, 'External domains'],
+    [socialTotal, 'Social links']
+  ];
+  body.innerHTML = `
+    <div class="an-tiles">${tiles.map(([v, l]) => `<div class="an-tile"><strong>${v}</strong><small>${l}</small></div>`).join('')}</div>
+    <div class="an-section-title">SEO score distribution</div>
+    ${chart}
+    <div class="an-legend"><span><i style="background:#39d98a"></i>70–100</span><span><i style="background:#ffd166"></i>50–69</span><span><i style="background:#ff6b6b"></i>0–49</span></div>
+    <div class="an-section-title">On-page coverage</div>
+    ${coverageBars}
+    <div class="an-section-title">Links</div>
+    <div class="an-bar"><span class="an-bar-label">External</span><span class="an-bar-track"><span class="an-bar-fill" style="width:${Math.min(100, extTotal)}%"></span></span><span class="an-bar-val">${extTotal}</span></div>
+    <div class="an-bar"><span class="an-bar-label">Avg internal</span><span class="an-bar-track"><span class="an-bar-fill" style="width:${Math.min(100, avgInternal * 10)}%"></span></span><span class="an-bar-val">${avgInternal}</span></div>`;
+}
+
+async function buildSiteSuggestions() {
+  const state = $('sitemap-scan-state');
+  const button = $('btn-sitemap-suggest');
+  const pageUrls = [];
+  activeSitemapSources.forEach((s) => (lastScanResults[s.key] || []).forEach((u) => pageUrls.push(u)));
+  if (!pageUrls.length) { if (state) state.textContent = 'Run a scan first, then get suggestions.'; return; }
+  const sample = pageUrls.slice(0, 40);
+  if (button) button.disabled = true;
+  const perPage = [];
+  const counts = {
+    total: 0, live: 0, notitle: 0, badtitle: 0, nometa: 0, badmeta: 0, noh1: 0, multih1: 0,
+    nocanon: 0, thin: 0, noalt: 0, noviewport: 0, nohttps: 0, noog: 0, nolang: 0, noschema: 0,
+    fewlinks: 0, nobreadcrumb: 0, nosearchaction: 0, nosocialmeta: 0, notwcard: 0, nosociallink: 0
+  };
+  let done = 0;
+  for (const url of sample) {
+    const audit = await fetchSitemapPageAudit(url);
+    counts.total += 1;
+    if (audit && audit.live) {
+      counts.live += 1;
+      if (!audit.title) counts.notitle += 1; else if (!(audit.titleLen >= 30 && audit.titleLen <= 65)) counts.badtitle += 1;
+      if (!audit.metaDesc) counts.nometa += 1; else if (!(audit.metaLen >= 70 && audit.metaLen <= 165)) counts.badmeta += 1;
+      if (audit.h1 === 0) counts.noh1 += 1; else if (audit.h1 > 1) counts.multih1 += 1;
+      if (!audit.canonical) counts.nocanon += 1;
+      if (audit.words < 300) counts.thin += 1;
+      if (audit.imagesNoAlt > 0) counts.noalt += 1;
+      if (!audit.viewport) counts.noviewport += 1;
+      if (!audit.https) counts.nohttps += 1;
+      if (audit.ogCount === 0) counts.noog += 1;
+      if (!audit.ogTitle || !audit.ogDescription || !audit.ogImage) counts.nosocialmeta += 1;
+      if (!audit.twitterCard) counts.notwcard += 1;
+      if (!(audit.socialLinkDetails && audit.socialLinkDetails.length)) counts.nosociallink += 1;
+      if (!audit.lang) counts.nolang += 1;
+      if (!audit.hasStructured) counts.noschema += 1;
+      if (audit.internalLinks < 3) counts.fewlinks += 1;
+      if (!audit.hasBreadcrumb) counts.nobreadcrumb += 1;
+      if (!audit.hasSearchAction) counts.nosearchaction += 1;
+      const steps = pageImprovementSteps(audit);
+      if (steps.length) perPage.push({ url, steps });
+    }
+    done += 1;
+    if (state) state.textContent = `Analysing suggestions… ${done}/${sample.length} pages`;
+  }
+  if (button) button.disabled = false;
+  renderSiteSuggestions(counts, perPage);
+  if (state) state.textContent = `Suggestions ready from ${counts.live} of ${counts.total} sampled pages.`;
+}
+
+function pageImprovementSteps(d) {
+  const steps = [];
+  if (!d.title) steps.push('Add a page title'); else if (!(d.titleLen >= 30 && d.titleLen <= 65)) steps.push(`Adjust title to 30–65 characters (now ${d.titleLen})`);
+  if (!d.metaDesc) steps.push('Add a meta description'); else if (!(d.metaLen >= 70 && d.metaLen <= 165)) steps.push(`Adjust meta description to 70–165 characters (now ${d.metaLen})`);
+  if (d.h1 === 0) steps.push('Add an H1 heading'); else if (d.h1 > 1) steps.push(`Reduce to one H1 heading (now ${d.h1})`);
+  if (!d.canonical) steps.push('Add a canonical tag');
+  if (d.words < 300) steps.push(`Expand content to 300+ words (now ${d.words})`);
+  if (d.imagesNoAlt > 0) steps.push(`Add alt text to ${d.imagesNoAlt} image(s)`);
+  if (!d.viewport) steps.push('Add a mobile viewport tag');
+  if (!d.https) steps.push('Serve the page over HTTPS');
+  if (d.ogCount === 0) steps.push('Add Open Graph tags');
+  if (!d.lang) steps.push('Set the html lang attribute');
+  if (!d.hasStructured) steps.push('Add structured data (JSON-LD)');
+  if (d.internalLinks < 3) steps.push('Add more internal links with descriptive anchors');
+  if (!d.hasBreadcrumb) steps.push('Add BreadcrumbList schema (sitelinks)');
+  return steps;
+}
+
+function renderSiteSuggestions(counts, perPage = []) {
+  const panel = $('sitemap-detail');
+  if (!panel) return;
+  panel.hidden = false;
+  panel.querySelector('.sitemap-detail-grade')?.setAttribute('hidden', '');
+  $('sitemap-detail-metrics').hidden = true;
+  $('sitemap-detail-criteria').hidden = true;
+  ['sitemap-detail-facts', 'sitemap-detail-search', 'sitemap-detail-refs', 'sitemap-detail-social'].forEach((id) => { const el = $(id); if (el) el.hidden = true; });
+  $('sitemap-detail-analytics') && ($('sitemap-detail-analytics').hidden = true);
+  const expandWrap = $('sitemap-detail-expand');
+  if (expandWrap) { expandWrap.hidden = true; expandWrap.innerHTML = ''; }
+  if ($('sitemap-detail-open')) $('sitemap-detail-open').hidden = true;
+  document.querySelectorAll('.sitemap-network-node.is-selected').forEach((n) => n.classList.remove('is-selected'));
+  $('sitemap-detail-kind').textContent = 'Site suggestions';
+  $('sitemap-detail-title').textContent = sitemapRootInfo.label;
+  $('sitemap-detail-url').textContent = `Based on ${counts.live} of ${counts.total} sampled pages`;
+  $('sitemap-detail-note').textContent = 'Site-wide improvement ideas and outreach.';
+  const items = [];
+  const add = (n, msg) => { if (n > 0) items.push({ n, msg: `${msg} (${n} page${n === 1 ? '' : 's'})` }); };
+  add(counts.notitle, 'Add a page title where missing');
+  add(counts.badtitle, 'Tighten titles to 30–65 characters');
+  add(counts.nometa, 'Add a meta description');
+  add(counts.badmeta, 'Adjust meta descriptions to 70–165 characters');
+  add(counts.noh1, 'Add a single H1 heading');
+  add(counts.multih1, 'Reduce to one H1 heading');
+  add(counts.nocanon, 'Add a canonical tag');
+  add(counts.thin, 'Expand thin content toward 300+ words');
+  add(counts.noalt, 'Add alt text to images');
+  add(counts.noviewport, 'Add a mobile viewport tag');
+  add(counts.nohttps, 'Serve pages over HTTPS');
+  add(counts.noog, 'Add Open Graph tags for social sharing');
+  add(counts.nosocialmeta, 'Complete Open Graph title, description, and image for share previews');
+  add(counts.notwcard, 'Add a Twitter/X card type for social previews');
+  add(counts.nosociallink, 'Link to your social media profiles from the page');
+  add(counts.nolang, 'Set the html lang attribute');
+  add(counts.noschema, 'Add structured data (JSON-LD)');
+  add(counts.fewlinks, 'Add more internal links with descriptive anchors');
+  items.sort((a, b) => b.n - a.n);
+  const improvements = items.length ? items.map((i) => i.msg) : ['No major on-page issues found across sampled pages.'];
+  const box = $('sitemap-detail-recs');
+  if (!box) return;
+  box.hidden = false;
+  let exportBtn = $('sitemap-suggest-export');
+  if (!exportBtn) {
+    exportBtn = document.createElement('button');
+    exportBtn.id = 'sitemap-suggest-export';
+    exportBtn.type = 'button';
+    exportBtn.className = 'btn btn-primary btn-sm';
+    exportBtn.textContent = 'Export PDF';
+    exportBtn.style.margin = '0 0 .7rem';
+    box.insertBefore(exportBtn, $('sitemap-detail-recs-list'));
+  }
+  exportBtn.onclick = exportSuggestionsPdf;
+  $('sitemap-detail-recs-list').innerHTML = improvements.map((t) => `<li>${escapeHtml(t)}</li>`).join('');
+  const sitelinks = [
+    [counts.live > 0 && counts.nobreadcrumb === 0, `Breadcrumb schema on every page (${counts.live - counts.nobreadcrumb}/${counts.live})`],
+    [counts.live > 0 && counts.nosearchaction < counts.live, 'SearchAction (sitelinks search box) present on the site'],
+    [counts.notitle === 0, 'Every sampled page has a title'],
+    [counts.nocanon === 0, 'Canonical set on every sampled page'],
+    [counts.noschema === 0, 'Structured data on every sampled page']
+  ];
+  $('sitemap-detail-recs-sitelinks').innerHTML = sitelinks.map(([ok, label]) => `<li class="${ok ? 'ok' : 'warn'}">${ok ? '✓' : '!'} ${escapeHtml(label)}</li>`).join('');
+  const brand = sitemapRootInfo.label.replace(/\.(com|org|net|edu|gov|io|co)(\.[a-z]{2})?$/i, '').replace(/[.-]/g, ' ').trim() || sitemapRootInfo.label;
+  const g = (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+  const guest = [
+    { label: `"${brand}" — write for us`, url: g(`${brand} "write for us"`) },
+    { label: `${brand} — guest post`, url: g(`${brand} "guest post"`) },
+    { label: `${brand} — blogs to contribute`, url: g(`${brand} blog "contribute"`) },
+    { label: `${brand} — resource & link pages`, url: g(`${brand} intitle:resources OR intitle:links`) }
+  ];
+  $('sitemap-detail-recs-guest').innerHTML = guest.map((x) => `<li><a href="${escapeAttr(x.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(x.label)}</a></li>`).join('');
+  const planWrap = $('sitemap-detail-recs-plan-wrap');
+  const plan = $('sitemap-detail-recs-plan');
+  if (planWrap && plan) {
+    planWrap.hidden = false;
+    plan.innerHTML = perPage.length
+      ? perPage.map((p) => `<div class="sitemap-plan-page"><div class="sitemap-plan-name">${escapeHtml(sitemapPathLabel(p.url))}</div><ul>${p.steps.map((s) => `<li>${escapeHtml(s)}</li>`).join('')}</ul></div>`).join('')
+      : '<p class="sitemap-plan-ok">Every sampled page passed the on-page checks.</p>';
+  }
+  lastSuggestionReport = {
+    site: sitemapRootInfo.label,
+    summary: `Based on ${counts.live} of ${counts.total} sampled pages`,
+    improvements,
+    sitelinks: sitelinks.map(([ok, label]) => `${ok ? '✓' : '✗'} ${label}`),
+    guest,
+    perPage: perPage.map((p) => ({ name: sitemapPathLabel(p.url), url: p.url, steps: p.steps }))
+  };
+}
+
+let lastSuggestionReport = null;
+
+function exportSuggestionsPdf() {
+  if (!lastSuggestionReport) return;
+  const r = lastSuggestionReport;
+  const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const section = (title, listItems) => `<h2>${esc(title)}</h2><ul>${listItems.join('')}</ul>`;
+  const improvements = r.improvements.map((t) => `<li>${esc(t)}</li>`).join('');
+  const sitelinks = r.sitelinks.map((t) => `<li>${esc(t)}</li>`).join('');
+  const guest = r.guest.map((x) => `<li>${esc(x.label)} — <span class="u">${esc(x.url)}</span></li>`).join('');
+  const plan = r.perPage.length
+    ? r.perPage.map((p) => `<div class="page"><h3>${esc(p.name)}</h3><ul>${p.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>`).join('')
+    : '<p>Every sampled page passed the on-page checks.</p>';
+  const doc = `<!doctype html><html><head><meta charset="utf-8"><title>SEO Suggestions — ${esc(r.site)}</title>
+<style>
+  *{box-sizing:border-box}body{font:13px/1.5 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1a2b3c;margin:32px;max-width:820px}
+  h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:22px 0 8px;border-bottom:1px solid #d7e2ee;padding-bottom:4px}
+  h3{font-size:13px;margin:12px 0 4px;color:#0f4f8a}
+  .meta{color:#5a6b7c;margin:0 0 8px}ul{margin:0 0 8px;padding-left:18px}li{margin:2px 0}
+  .page{break-inside:avoid;margin:0 0 6px;padding:6px 8px;background:#f5f8fb;border-radius:6px}
+  .u{color:#3170b8;word-break:break-all}
+  @media print{body{margin:14mm}a{color:inherit;text-decoration:none}}
+</style></head><body>
+  <h1>SEO Suggestions — ${esc(r.site)}</h1>
+  <p class="meta">${esc(r.summary)} · Generated ${esc(new Date().toLocaleString())}</p>
+  ${section('Improvements required', [improvements])}
+  ${section('Sitelink readiness', [sitelinks])}
+  ${section('Guest-post opportunities', [guest])}
+  <h2>Step-by-step by page</h2>
+  ${plan}
+  <script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script>
+</body></html>`;
+  const win = window.open('', '_blank');
+  if (!win) { const state = $('sitemap-scan-state'); if (state) state.textContent = 'Allow pop-ups to export the PDF.'; return; }
+  win.document.open();
+  win.document.write(doc);
+  win.document.close();
+}
+
+async function scanSitemapSource(source) {
+  let lastError;
+  const tried = new Set();
+  const attempt = async (sm) => {
+    if (!sm || tried.has(sm)) return null;
+    tried.add(sm);
+    try {
+      const pages = await scanSitemapUrl(sm, 0);
+      if (pages && pages.length) return pages;
+    } catch (error) { lastError = error; }
+    return null;
+  };
+  const primary = await attempt(source.sitemap);
+  if (primary) return primary;
+  for (const candidate of await sitemapCandidates(source.host)) {
+    const pages = await attempt(candidate);
+    if (pages) return pages;
+  }
+  throw lastError || new Error('No readable sitemap found');
+}
+
+// Discover likely sitemap URLs: robots.txt hints first, then common paths on www/apex.
+async function sitemapCandidates(host) {
+  const bare = host.replace(/^www\./, '');
+  const hosts = [...new Set([host, `www.${bare}`, bare])];
+  const list = [];
+  for (const h of hosts) {
+    try {
+      const res = await scoutFetch(`https://${h}/robots.txt`, 'html');
+      if (res.ok) {
+        const txt = await res.text();
+        [...txt.matchAll(/^\s*sitemap:\s*(\S+)/gim)].forEach((m) => list.push(m[1].trim()));
+      }
+    } catch (error) { /* robots.txt is optional */ }
+  }
+  const paths = ['/sitemap.xml', '/sitemap_index.xml', '/sitemap-index.xml', '/sitemap/sitemap.xml', '/sitemap1.xml'];
+  for (const h of hosts) for (const p of paths) list.push(`https://${h}${p}`);
+  return [...new Set(list)];
+}
+
+async function scanSitemapUrl(sitemapUrl, depth) {
+  const response = await scoutFetch(sitemapUrl, 'xml');
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const xml = new DOMParser().parseFromString(await response.text(), 'application/xml');
+  const rootName = (xml.documentElement && xml.documentElement.nodeName.toLowerCase()) || '';
+  // A sitemap index lists child sitemaps rather than pages — expand them to get real URLs.
+  if (rootName.includes('sitemapindex') && depth < 2) {
+    const childSitemaps = Array.from(xml.querySelectorAll('sitemap > loc'))
+      .map((n) => n.textContent.trim()).filter(Boolean);
+    const pages = [];
+    for (const child of childSitemaps.slice(0, 15)) {
+      try {
+        pages.push(...await scanSitemapUrl(child, depth + 1));
+      } catch (e) { /* skip unreadable child sitemap */ }
+      if (pages.length >= 400) break;
+    }
+    return pages.slice(0, 400);
+  }
+  const urlLocs = Array.from(xml.querySelectorAll('url > loc'))
+    .map((n) => n.textContent.trim()).filter(Boolean);
+  if (urlLocs.length) return urlLocs.slice(0, 400);
+  return Array.from(xml.querySelectorAll('loc'))
+    .map((n) => n.textContent.trim()).filter(Boolean).slice(0, 400);
+}
+
+const sitemapDialog = $('sitemap-dlg');
+
+function applySitemapScope() {
+  if ($('sitemap-dlg-title')) $('sitemap-dlg-title').textContent = sitemapScopeMine ? 'Site map visual' : `SiteScout — ${sitemapRootInfo.label}`;
+  if ($('sitemap-address')) $('sitemap-address').value = sitemapRootInfo.label;
+  if ($('btn-sitemap-gsc')) $('btn-sitemap-gsc').hidden = !sitemapScopeMine;
+  if ($('btn-sitemap-schema')) $('btn-sitemap-schema').hidden = !sitemapScopeMine;
+}
+
+function openSitemapModal() {
+  setSitemapViewMode('web');
+  applySitemapScope();
+  sitemapLinkProfile = [];
+  sitemapSocialProfile = [];
+  sitemapInboundProfile = new Map();
+  sitemapInboundReady = false;
+  sitemapExternalExpansions = {};
+  lastScanResults = {};
+  resetSitemapFilterUI();
+  renderSiteMapVisual();
+  sitemapDialog?.classList.add('is-fullscreen');
+  if ($('sitemap-analytics')) $('sitemap-analytics').hidden = true;
+  sitemapAnalyticsShown = false;
+  $('btn-sitemap-analytics')?.classList.remove('is-active');
+  if ($('btn-sitemap-fullscreen')) $('btn-sitemap-fullscreen').textContent = 'Full screen';
+  if ($('sitemap-scan-state')) $('sitemap-scan-state').textContent = 'No online sitemap scan has run yet.';
+  if (sitemapDialog && !sitemapDialog.open) sitemapDialog.showModal();
+  fitSitemapNetworkView();
+}
+
+function openMySiteMap() {
+  activeSitemapSources = sitemapSources;
+  sitemapRootInfo = { label: 'edgeducate.com.au', url: 'https://edgeducate.com.au/' };
+  sitemapScopeMine = true;
+  openSitemapModal();
+  return runSitemapScan();
+}
+
+function normaliseScoutHost(input) {
+  let host = (input || '').trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').replace(/^www\./i, '');
+  return host.toLowerCase();
+}
+
+function isOwnedHost(host) {
+  return host === 'edgeducate.com.au' || host.endsWith('.edgeducate.com.au');
+}
+
+async function openScoutSiteMap(input) {
+  const host = normaliseScoutHost(input);
+  if (!host || !host.includes('.')) return false;
+  rememberScoutSite(host);
+  if (isOwnedHost(host)) {
+    await openMySiteMap();
+    return true;
+  }
+  // Researching another company's site must go through a verified private-mode proxy first.
+  const status = $('scout-status');
+  if (!scoutProxyEnabled()) {
+    if (status) status.textContent = 'Turn on private scouting before researching other sites.';
+    openScoutProxyDialog();
+    return false;
+  }
+  if (status) status.textContent = `Checking private mode before scouting ${host}…`;
+  const check = await verifyScoutProxyCreds(scoutProxy.url, scoutProxy.secret);
+  if (!check.ok) {
+    if (status) status.textContent = `Can't scout ${host}: ${check.reason}. Fix private mode first.`;
+    openScoutProxyDialog();
+    return false;
+  }
+  if (status) status.textContent = '';
+  activeSitemapSources = [{ key: 'site', label: host, host, sitemap: `https://${host}/sitemap.xml` }];
+  sitemapRootInfo = { label: host, url: `https://${host}/` };
+  sitemapScopeMine = false;
+  openSitemapModal();
+  await runSitemapScan();
+  return true;
+}
+
+async function runSitemapScan() {
+  const scanButton = $('btn-sitemap-scan');
+  const state = $('sitemap-scan-state');
+  if (scanButton) scanButton.disabled = true;
+  if (state) state.textContent = 'Scanning public sitemap files...';
+  resetSitemapFilterUI();
+  const results = {};
+  const failures = [];
+  for (const source of activeSitemapSources) {
+    try {
+      results[source.key] = await scanSitemapSource(source);
+    } catch (error) {
+      failures.push(`${source.host}: ${error.message}`);
+    }
+  }
+  sitemapLinkProfile = [];
+  sitemapSocialProfile = [];
+  sitemapInboundProfile = new Map();
+  sitemapInboundReady = false;
+  sitemapExternalExpansions = {};
+  lastScanResults = results;
+  renderSiteMapVisual(results);
+  if (scanButton) scanButton.disabled = false;
+  if (state) {
+    state.textContent = failures.length
+      ? `Scan finished with ${failures.length} unavailable source${failures.length === 1 ? '' : 's'}. ${failures.join(' ')}.`
+      : 'Scan complete. Pages shown were read from the published sitemap.';
+  }
+}
+
+const SCOUT_RECENT_KEY = 'edg-scout-recent';
+function getScoutHistory() {
+  try { return JSON.parse(localStorage.getItem(SCOUT_RECENT_KEY) || '[]'); } catch (e) { return []; }
+}
+function rememberScoutSite(host) {
+  const list = [host, ...getScoutHistory().filter((h) => h !== host)].slice(0, 12);
+  try { localStorage.setItem(SCOUT_RECENT_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
+  renderScoutHistory();
+}
+function removeScoutSite(host) {
+  try { localStorage.setItem(SCOUT_RECENT_KEY, JSON.stringify(getScoutHistory().filter((h) => h !== host))); } catch (e) { /* ignore */ }
+  renderScoutHistory();
+}
+function clearScoutHistory() {
+  try { localStorage.removeItem(SCOUT_RECENT_KEY); } catch (e) { /* ignore */ }
+  renderScoutHistory();
+}
+function renderScoutHistory() {
+  const wrap = $('scout-recent');
+  if (!wrap) return;
+  const list = getScoutHistory();
+  wrap.innerHTML = list.length
+    ? list.map((h) => `<span class="scout-chip"><button type="button" class="scout-chip-go" data-host="${escapeAttr(h)}">${escapeHtml(h)}</button><button type="button" class="scout-chip-rm" data-host="${escapeAttr(h)}" aria-label="Remove ${escapeAttr(h)}">&times;</button></span>`).join('')
+    : '<span class="scout-recent-empty">No sites scouted yet.</span>';
+  wrap.querySelectorAll('.scout-chip-go').forEach((chip) => chip.addEventListener('click', () => openScoutSiteMap(chip.dataset.host)));
+  wrap.querySelectorAll('.scout-chip-rm').forEach((btn) => btn.addEventListener('click', () => removeScoutSite(btn.dataset.host)));
+  const clearBtn = $('scout-clear');
+  if (clearBtn) clearBtn.hidden = list.length === 0;
+}
+
+$('scout-clear')?.addEventListener('click', clearScoutHistory);
+
+$('btn-open-sitemap-visual')?.addEventListener('click', openMySiteMap);
+$('scout-my-site')?.addEventListener('click', openMySiteMap);
+$('scout-form')?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const input = $('scout-domain');
+  const status = $('scout-status');
+  const host = normaliseScoutHost(input.value);
+  if (!host || !host.includes('.')) {
+    if (status) status.textContent = 'Enter a valid domain, e.g. example.com';
+    return;
+  }
+  if (status) status.textContent = '';
+  input.value = '';
+  openScoutSiteMap(host);
+});
+
+function updateScoutPrivacyState() {
+  const state = $('scout-privacy-state');
+  const button = $('btn-scout-proxy');
+  if (state) {
+    state.textContent = scoutProxyEnabled()
+      ? 'Private mode is always on — researched sites see the proxy, not your IP.'
+      : 'Set up private scouting once — then it stays on for every search.';
+    state.classList.toggle('is-on', scoutProxyEnabled());
+  }
+  if (button) button.textContent = scoutProxyEnabled() ? 'Private scouting: On' : 'Set up private scouting';
+}
+
+function openScoutProxyDialog() {
+  $('scout-proxy-url').value = scoutProxy.url;
+  $('scout-proxy-secret').value = scoutProxy.secret;
+  $('scout-proxy-status').textContent = scoutProxyEnabled() ? 'Private mode active (session only).' : 'Not set up.';
+  $('scout-proxy-dlg')?.showModal();
+}
+
+async function verifyScoutProxyCreds(url, secret) {
+  if (!url || !secret) return { ok: false, reason: 'Enter both a Worker URL and secret.' };
+  try {
+    const endpoint = `${url.replace(/\/$/, '')}/fetch?url=${encodeURIComponent('https://example.com/')}`;
+    const res = await fetch(endpoint, { headers: { 'x-scout-secret': secret } });
+    if (res.status === 401) return { ok: false, reason: 'the secret is wrong (401)' };
+    if (res.status === 404) return { ok: false, reason: 'no /fetch route (404) — deploy the full worker' };
+    if (!res.ok) return { ok: false, reason: `the Worker returned HTTP ${res.status}` };
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, reason: `the Worker is unreachable (${error.message})` };
+  }
+}
+
+async function testScoutProxy() {
+  const status = $('scout-proxy-status');
+  const button = $('scout-proxy-test');
+  const url = $('scout-proxy-url').value.trim();
+  const secret = $('scout-proxy-secret').value.trim();
+  if (!url || !secret) { if (status) status.textContent = 'Enter both a Worker URL and secret first.'; return; }
+  if (button) button.disabled = true;
+  if (status) status.textContent = 'Testing connection…';
+  const check = await verifyScoutProxyCreds(url, secret);
+  if (status) status.textContent = check.ok
+    ? '✓ Working! Private scouting is set up correctly. Click Save to keep it.'
+    : `✗ Test failed: ${check.reason}.`;
+  if (button) button.disabled = false;
+}
+
+$('scout-clear')?.addEventListener('click', clearScoutHistory);
+$('btn-scout-proxy')?.addEventListener('click', openScoutProxyDialog);
+$('scout-proxy-cancel')?.addEventListener('click', () => $('scout-proxy-dlg')?.close());
+$('scout-proxy-test')?.addEventListener('click', testScoutProxy);
+$('scout-proxy-disconnect')?.addEventListener('click', () => {
+  scoutProxy.url = '';
+  scoutProxy.secret = '';
+  saveScoutProxy();
+  $('scout-proxy-url').value = '';
+  $('scout-proxy-secret').value = '';
+  $('scout-proxy-status').textContent = 'Private mode turned off.';
+  updateScoutPrivacyState();
+});
+$('scout-proxy-save')?.addEventListener('click', () => {
+  scoutProxy.url = $('scout-proxy-url').value.trim();
+  scoutProxy.secret = $('scout-proxy-secret').value.trim();
+  const status = $('scout-proxy-status');
+  if (!scoutProxyEnabled()) { if (status) status.textContent = 'Enter both a Worker URL and secret.'; return; }
+  saveScoutProxy();
+  if (status) status.textContent = 'Private mode is on and will stay on. You can close this.';
+  updateScoutPrivacyState();
+  $('scout-proxy-dlg')?.close();
+});
+$('sitemap-close')?.addEventListener('click', () => sitemapDialog?.close());
+$('sitemap-address-form')?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const value = $('sitemap-address')?.value || '';
+  const host = normaliseScoutHost(value);
+  if (!host || !host.includes('.')) {
+    if ($('sitemap-scan-state')) $('sitemap-scan-state').textContent = 'Enter a valid domain, e.g. example.com';
+    return;
+  }
+  openScoutSiteMap(host);
+});
+$('btn-sitemap-fullscreen')?.addEventListener('click', async () => {
+  const goingFull = !document.fullscreenElement && !(sitemapDialog?.classList.contains('is-fullscreen'));
+  const button = $('btn-sitemap-fullscreen');
+  if (goingFull) {
+    if (window.desktop && window.desktop.setFullscreen) {
+      try { await window.desktop.setFullscreen(true); } catch (e) { /* ignore */ }
+    } else {
+      try { if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen(); } catch (e) { /* fall back to CSS fullscreen */ }
+    }
+    sitemapDialog?.classList.add('is-fullscreen');
+    if (button) button.textContent = 'Exit full screen';
+  } else {
+    if (window.desktop && window.desktop.setFullscreen) {
+      try { await window.desktop.setFullscreen(false); } catch (e) { /* ignore */ }
+    } else {
+      try { if (document.fullscreenElement) await document.exitFullscreen(); } catch (e) { /* ignore */ }
+    }
+    sitemapDialog?.classList.remove('is-fullscreen');
+    if (button) button.textContent = 'Full screen';
+  }
+  fitSitemapNetworkView();
+});
+sitemapDialog?.addEventListener('cancel', async (event) => {
+  if (sitemapDialog.classList.contains('is-fullscreen') || document.fullscreenElement) {
+    event.preventDefault();
+    if (window.desktop && window.desktop.setFullscreen) {
+      try { await window.desktop.setFullscreen(false); } catch (e) { /* ignore */ }
+    } else {
+      try { if (document.fullscreenElement) await document.exitFullscreen(); } catch (e) { /* ignore */ }
+    }
+    sitemapDialog.classList.remove('is-fullscreen');
+    const button = $('btn-sitemap-fullscreen');
+    if (button) button.textContent = 'Full screen';
+    fitSitemapNetworkView();
+  }
+});
+$('sitemap-fs-close')?.addEventListener('click', async () => {
+  if (window.desktop && window.desktop.setFullscreen) {
+    try { await window.desktop.setFullscreen(false); } catch (e) { /* ignore */ }
+  } else {
+    try { if (document.fullscreenElement) await document.exitFullscreen(); } catch (e) { /* ignore */ }
+  }
+  sitemapDialog?.classList.remove('is-fullscreen');
+  sitemapDialog?.close();
+});
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && sitemapDialog?.classList.contains('is-fullscreen')) {
+    sitemapDialog.classList.remove('is-fullscreen');
+    const button = $('btn-sitemap-fullscreen');
+    if (button) button.textContent = 'Full screen';
+    fitSitemapNetworkView();
+  }
+});
+$('sitemap-detail-close')?.addEventListener('click', closeSitemapNodeDetail);
+$('btn-sitemap-schema')?.addEventListener('click', openSitelinksSchemaDialog);
+$('sitemap-schema-close')?.addEventListener('click', () => $('sitemap-schema-dlg')?.close());
+$('btn-sitemap-gsc')?.addEventListener('click', openGscDialog);
+$('gsc-cancel')?.addEventListener('click', () => $('gsc-dlg')?.close());
+$('gsc-disconnect')?.addEventListener('click', () => {
+  gscConfig.url = '';
+  gscConfig.secret = '';
+  $('gsc-url').value = '';
+  $('gsc-secret').value = '';
+  $('gsc-status').textContent = 'Disconnected.';
+  const section = $('sitemap-detail-search');
+  if (section) section.hidden = true;
+});
+$('gsc-save')?.addEventListener('click', async () => {
+  gscConfig.url = $('gsc-url').value.trim();
+  gscConfig.secret = $('gsc-secret').value.trim();
+  gscConfig.property = $('gsc-property').value.trim() || 'sc-domain:edgeducate.com.au';
+  const status = $('gsc-status');
+  if (!gscIsConnected()) { status.textContent = 'Enter both a Worker URL and secret.'; return; }
+  status.textContent = 'Testing connection…';
+  try {
+    await fetchGscPageData('https://edgeducate.com.au/');
+    status.textContent = 'Connected. Click a page node to see live search data.';
+  } catch (error) {
+    status.textContent = `Saved, but test failed: ${error.message}`;
+  }
+});
+$('sitemap-schema-copy')?.addEventListener('click', async () => {
+  const output = $('sitemap-schema-output');
+  const copyButton = $('sitemap-schema-copy');
+  if (!output) return;
+  try {
+    await navigator.clipboard.writeText(output.value);
+    copyButton.textContent = 'Copied';
+  } catch (error) {
+    output.select();
+    document.execCommand('copy');
+    copyButton.textContent = 'Copied';
+  }
+  setTimeout(() => { copyButton.textContent = 'Copy'; }, 1500);
+});
+$('sitemap-list-view')?.addEventListener('click', () => setSitemapViewMode('list'));
+$('sitemap-web-view')?.addEventListener('click', () => setSitemapViewMode('web'));
+$('sitemap-reset-view')?.addEventListener('click', resetSitemapNetworkView);
+$('btn-sitemap-scan')?.addEventListener('click', () => runSitemapScan());
+$('chk-linkprofile')?.addEventListener('change', (event) => {
+  if (event.target.checked) {
+    buildSitemapLinkProfile();
+  } else {
+    sitemapLinkProfile = [];
+    renderSiteMapVisual(lastScanResults);
+    const panel = $('sitemap-detail');
+    if (panel && $('sitemap-detail-kind')?.textContent === 'Outbound profile') panel.hidden = true;
+  }
+});
+$('chk-inbound')?.addEventListener('change', (event) => {
+  if (event.target.checked) {
+    buildInboundProfile();
+  } else {
+    sitemapInboundProfile = new Map();
+    sitemapInboundReady = false;
+    const box = $('sitemap-detail-inbound');
+    if (box) box.hidden = true;
+  }
+});
+$('chk-social')?.addEventListener('change', (event) => {
+  if (event.target.checked) {
+    buildSocialProfile();
+  } else {
+    sitemapSocialProfile = [];
+    const social = $('sitemap-detail-social');
+    if (social) social.hidden = true;
+    const panel = $('sitemap-detail');
+    if (panel && $('sitemap-detail-kind')?.textContent === 'Social profile') panel.hidden = true;
+    renderSiteMapVisual(lastScanResults);
+  }
+});
+$('btn-sitemap-suggest')?.addEventListener('click', () => buildSiteSuggestions());
+$('btn-sitemap-keywords')?.addEventListener('click', () => buildKeywordAnalysis());
+$('btn-sitemap-analytics')?.addEventListener('click', () => toggleSitemapAnalytics());
+$('sitemap-analytics-close')?.addEventListener('click', () => {
+  sitemapAnalyticsShown = false;
+  if ($('sitemap-analytics')) $('sitemap-analytics').hidden = true;
+  $('btn-sitemap-analytics')?.classList.remove('is-active');
+});
+document.querySelectorAll('.sitemap-filter-check').forEach((c) => c.addEventListener('change', () => applySitemapFilter()));
+$('sitemap-search')?.addEventListener('input', () => applySitemapFilter());
 
 const SETTINGS_COMPACT_KEY = 'edg-admin-compact-tables';
 
@@ -3010,6 +5386,86 @@ function questionPaperMarkup(resource, linkPrefix) {
   return links ? `<section class="question-paper-links" aria-labelledby="question-paper-links-title"><p class="section-eyebrow">Exam support</p><h2 id="question-paper-links-title">Use this paper with</h2><div class="question-paper-link-grid">${links}</div></section>` : '';
 }
 
+let sitemapRelatedPlan = null;
+const RELATED_PER_PAGE = 6;
+
+// Deterministic, evenly-distributed internal-link graph for all published resources.
+// Topical matches first, round-robin gap-fill, then a coverage-repair pass so no page is
+// left with zero contextual inbound links. Recomputed on every publish.
+function buildInternalLinkPlan() {
+  const ordered = items.filter((item) => item.status !== 'draft')
+    .slice()
+    .sort((a, b) => String(b.added || '').localeCompare(String(a.added || '')) || String(a.id).localeCompare(String(b.id)));
+  const n = ordered.length;
+  const byId = new Map(ordered.map((r) => [r.id, r]));
+  const related = new Map(ordered.map((r) => [r.id, new Set()]));
+
+  // Tier 1 + 2: curated relatedIds and topical matches (subject, tags, year, type, stage).
+  ordered.forEach((r) => {
+    const set = related.get(r.id);
+    relatedResourcesFor(r).forEach((item) => { if (item.id !== r.id && byId.has(item.id)) set.add(item.id); });
+  });
+
+  // Tier 3: round-robin gap-fill so each page reaches the target count without favouring any page.
+  const target = Math.min(RELATED_PER_PAGE, Math.max(0, n - 1));
+  ordered.forEach((r, i) => {
+    const set = related.get(r.id);
+    for (let step = 1; step < n && set.size < target; step += 1) set.add(ordered[(i + step) % n].id);
+    set.delete(r.id);
+  });
+
+  // Coverage repair: guarantee each page at least one contextual inbound link, spread evenly via a rotating source.
+  const inbound = new Map(ordered.map((r) => [r.id, 0]));
+  related.forEach((set) => set.forEach((tid) => inbound.set(tid, (inbound.get(tid) || 0) + 1)));
+  const cap = RELATED_PER_PAGE + 4;
+  let pointer = 0;
+  ordered.forEach((t) => {
+    let guard = 0;
+    while ((inbound.get(t.id) || 0) < 1 && guard < n) {
+      const src = ordered[pointer % n];
+      pointer += 1;
+      guard += 1;
+      if (src.id === t.id) continue;
+      const set = related.get(src.id);
+      if (set.has(t.id) || set.size >= cap) continue;
+      set.add(t.id);
+      inbound.set(t.id, (inbound.get(t.id) || 0) + 1);
+    }
+  });
+
+  const plan = new Map();
+  related.forEach((set, id) => plan.set(id, [...set].map((tid) => byId.get(tid)).filter(Boolean)));
+  return plan;
+}
+
+// Static hub that links to every published resource once — the even baseline that removes orphans.
+function resourceHubMarkup() {
+  const rootPrefix = '../';
+  const published = items.filter((item) => item.status !== 'draft');
+  const bySubject = new Map();
+  published.forEach((r) => {
+    const key = (String(r.subject || '').trim()) || 'Other';
+    if (!bySubject.has(key)) bySubject.set(key, []);
+    bySubject.get(key).push(r);
+  });
+  const groups = [...bySubject.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([subject, list]) => {
+      const links = list.slice()
+        .sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')))
+        .map((r) => `<li><a href="${escapeAttr(encodeURIComponent(r.id))}/index.html">${escapeHtml(r.title || r.id)}</a></li>`)
+        .join('');
+      return `<section class="resource-index-group"><h2>${escapeHtml(subject)}</h2><ul class="resource-index-list">${links}</ul></section>`;
+    }).join('');
+  const total = published.length;
+  const canonical = `${SITE_URL}/resource-pages/`;
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>All resources | Edgeducate Resources</title><meta name="description" content="Browse every resource in the Edgeducate library."><link rel="canonical" href="${canonical}"><meta property="og:title" content="All resources | Edgeducate Resources"><meta property="og:description" content="Browse every resource in the Edgeducate library."><meta property="og:type" content="website"><meta property="og:url" content="${canonical}"><link rel="stylesheet" href="${rootPrefix}styles.css"></head>
+<body class="resource-detail-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories">Categories</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header>
+<main><article class="resource-index"><div class="container"><nav class="crumbs"><a href="${rootPrefix}index.html">Resources</a><span>/</span><a href="${rootPrefix}all-resources.html">Library</a><span>/</span><span>All resources</span></nav><h1>All resources</h1><p class="resource-index-intro">Browse all ${total} resource${total === 1 ? '' : 's'} in the Edgeducate library.</p>${groups}</div></article></main>
+<footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}site-menu.js"></script></body></html>`;
+}
+
 function resourcePageMarkup(resource) {
   const type = CONFIG.types[resource.type] || { label: resource.type, colour: 'blue', blurb: '' };
   const staticPath = resourcePagePath(resource);
@@ -3018,7 +5474,7 @@ function resourcePageMarkup(resource) {
   const metadata = [['Subject', resource.subject], ['Year level', resource.year], ['Difficulty', resource.level], ['Details', resource.details], ['Solutions', resource.solutions], ['Solutions video', resource.solutionsVideo]]
     .filter(([, value]) => value)
     .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${label === 'Solutions' ? '<a href="solutions/index.html">View solutions</a>' : label === 'Solutions video' ? `<a href="${escapeAttr(value)}">Watch solutions video</a>` : escapeHtml(value)}</dd></div>`).join('');
-  const related = relatedResourcesFor(resource);
+  const related = (sitemapRelatedPlan && sitemapRelatedPlan.get(resource.id)) || relatedResourcesFor(resource);
   const relatedMarkup = related.map((item) => {
     const relatedType = CONFIG.types[item.type] || { label: item.type, colour: 'blue' };
     const relatedPath = resourcePagePath(item);
@@ -3049,7 +5505,7 @@ function resourcePageMarkup(resource) {
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(resource.title)} | Edgeducate Resources</title><meta name="description" content="${escapeHtml(description)}"><link rel="canonical" href="${canonical}"><meta property="og:title" content="${escapeHtml(resource.title)} | Edgeducate Resources"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:type" content="article"><meta property="og:url" content="${canonical}"><script type="application/ld+json">${schema}</script><script type="application/ld+json">${breadcrumbSchema}</script><script type="application/ld+json">${faqSchema}</script>${videoSchema ? `<script type="application/ld+json">${videoSchema}</script>` : ''}<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="${rootPrefix}styles.css"></head>
 <body class="resource-detail-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories">Categories</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header>
 <main><article class="resource-detail${hasInlinePreview(resource) ? ' has-inline-preview' : ''}"${hasInlinePreview(resource) ? ` data-resource-title="${escapeAttr(resource.title)}" data-resource-context="${escapeAttr(`${type.label} · ${resource.subject} · ${resource.year}`)}"` : ''}><div class="container"><nav class="crumbs"><a href="${rootPrefix}index.html">Resources</a><span>/</span><a href="${rootPrefix}all-resources.html">Library</a><span>/</span><span>${escapeHtml(resource.title)}</span></nav><div class="resource-detail-layout"><div class="resource-detail-preview">${preview}</div><div class="resource-detail-copy"><span class="badge badge-${type.colour}">${escapeHtml(type.label)}</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">${escapeHtml(description)}</p><dl class="resource-detail-meta">${metadata}</dl><a class="btn btn-primary btn-block" href="${escapeHtml(resource.url)}">${actionLabel}</a><a class="resource-back" href="${rootPrefix}all-resources.html">Back to all resources</a></div></div><section class="resource-faq"><h2>About this resource</h2><dl><div><dt>Who is this for?</dt><dd>${escapeHtml(resource.title)} is suitable for ${escapeHtml(resource.year || 'students')} studying ${escapeHtml(resource.subject || 'this topic')}.</dd></div><div><dt>How should I use it?</dt><dd>${escapeHtml(description)}</dd></div></dl></section>${relatedSection}</div></article></main>
-  <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}reader-layout.js"></script><script src="${rootPrefix}carousel.js"></script><script type="module" src="${rootPrefix}pdf-reader.js?v=20261012native"></script><script src="${rootPrefix}site-menu.js"></script></body></html>`.replace('</div></div><section class="resource-faq"', `</div></div>${questionPaperSection}<section class="resource-faq"`).replace('<a class="resource-back"', `${solutionsButton}<a class="resource-back"`);
+  <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><nav class="footer-resource-links"><a href="${rootPrefix}resource-pages/index.html">Browse all resources</a></nav><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}reader-layout.js"></script><script src="${rootPrefix}carousel.js"></script><script type="module" src="${rootPrefix}pdf-reader.js?v=20261012native"></script><script src="${rootPrefix}site-menu.js"></script></body></html>`.replace('</div></div><section class="resource-faq"', `</div></div>${questionPaperSection}<section class="resource-faq"`).replace('<a class="resource-back"', `${solutionsButton}<a class="resource-back"`);
 }
 
 const removeHeaderLibraryButton = (markup) => markup.replace(/<a class="btn btn-cta" href="[^"]*">Browse library<\/a>/g, '');
@@ -3058,9 +5514,17 @@ const linkGeneratedPagesToMainSite = (markup) => markup.replace(/(<a class="bran
 
 async function writeStaticPages() {
   if (!projectHandle) return false;
+  sitemapRelatedPlan = buildInternalLinkPlan();
+  const publishable = items.filter((item) => item.status !== 'draft');
+  const seenPaths = new Map();
+  publishable.forEach((resource) => {
+    const p = resourcePagePath(resource);
+    if (seenPaths.has(p)) log(`[Publish] Duplicate resource path "${decodeURIComponent(p)}" (ids "${seenPaths.get(p)}" and "${resource.id}") — one page will overwrite the other.`, 'warnl');
+    else seenPaths.set(p, resource.id);
+  });
   const pagesDirectory = await projectHandle.getDirectoryHandle('resource-pages', { create: true });
   for await (const [name] of pagesDirectory.entries()) await pagesDirectory.removeEntry(name, { recursive: true });
-  for (const resource of items.filter((item) => item.status !== 'draft')) {
+  for (const resource of publishable) {
     let pageDirectory = pagesDirectory;
     for (const segment of resourcePagePath(resource).split('/')) pageDirectory = await pageDirectory.getDirectoryHandle(segment, { create: true });
     const pageFile = await pageDirectory.getFileHandle('index.html', { create: true });
@@ -3075,6 +5539,11 @@ async function writeStaticPages() {
       await solutionsWritable.close();
     }
   }
+  const hubFile = await pagesDirectory.getFileHandle('index.html', { create: true });
+  const hubWritable = await hubFile.createWritable();
+  await hubWritable.write(linkGeneratedPagesToMainSite(replaceLegacySiteUrls(resourceHubMarkup())));
+  await hubWritable.close();
+  sitemapRelatedPlan = null;
   const sitemapFile = await projectHandle.getFileHandle('sitemap.xml', { create: true });
   const sitemapWriter = await sitemapFile.createWritable();
   await sitemapWriter.write(buildSitemapXml());

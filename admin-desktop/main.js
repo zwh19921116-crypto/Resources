@@ -440,6 +440,13 @@ function createWindow(startFile) {
   win.loadFile(startFile);
 }
 
+ipcMain.handle('window:setFullscreen', (event, flag) => {
+  if (!win) return false;
+  win.setFullScreen(!!flag);
+  return win.isFullScreen();
+});
+ipcMain.handle('window:isFullscreen', () => (win ? win.isFullScreen() : false));
+
 ipcMain.handle('auth:hasAccount', () => hasAccount());
 ipcMain.handle('auth:setAccount', (event, { username, password }) => {
   setAccount(username, password);
