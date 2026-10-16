@@ -3027,6 +3027,7 @@ function resourcePageMarkup(resource) {
 
 const removeHeaderLibraryButton = (markup) => markup.replace(/<a class="btn btn-cta" href="[^"]*">Browse library<\/a>/g, '');
 const replaceLegacySiteUrls = (markup) => markup.replaceAll(LEGACY_SITE_URL, SITE_URL);
+const linkGeneratedPagesToMainSite = (markup) => markup.replace(/(<a class="brand" href=")[^"]+(">)/, '$1https://edgeducate.com.au/$2');
 
 async function writeStaticPages() {
   if (!projectHandle) return false;
@@ -3037,13 +3038,13 @@ async function writeStaticPages() {
     for (const segment of resourcePagePath(resource).split('/')) pageDirectory = await pageDirectory.getDirectoryHandle(segment, { create: true });
     const pageFile = await pageDirectory.getFileHandle('index.html', { create: true });
     const writable = await pageFile.createWritable();
-    await writable.write(replaceLegacySiteUrls(removeHeaderLibraryButton(resourcePageMarkup(resource))));
+    await writable.write(linkGeneratedPagesToMainSite(replaceLegacySiteUrls(removeHeaderLibraryButton(resourcePageMarkup(resource)))));
     await writable.close();
     if (resource.solutions || resource.solutionsVideo) {
       const solutionsDirectory = await pageDirectory.getDirectoryHandle('solutions', { create: true });
       const solutionsFile = await solutionsDirectory.getFileHandle('index.html', { create: true });
       const solutionsWritable = await solutionsFile.createWritable();
-      await solutionsWritable.write(replaceLegacySiteUrls(removeHeaderLibraryButton(solutionPageMarkup(resource))));
+      await solutionsWritable.write(linkGeneratedPagesToMainSite(replaceLegacySiteUrls(removeHeaderLibraryButton(solutionPageMarkup(resource)))));
       await solutionsWritable.close();
     }
   }
