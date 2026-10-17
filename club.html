@@ -27,6 +27,32 @@
   "inLanguage": "en-AU"
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Edgeducate",
+      "item": "https://edgeducate.com.au/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Resources",
+      "item": "https://resources.edgeducate.com.au/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Club",
+      "item": "https://resources.edgeducate.com.au/club.html"
+    }
+  ]
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -59,6 +85,13 @@
 <main id="main">
   <section class="club-offers section">
     <div class="container" id="club-offers">
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <a href="https://edgeducate.com.au/">Edgeducate</a>
+        <span aria-hidden="true">/</span>
+        <a href="resources.html">Resources</a>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">Club</span>
+      </nav>
       <div class="club-results"><div class="club-results-copy"><h1>Explore <em>current offers</em></h1><p class="club-results-lede">Exclusive deals, freebies and perks for our Edgeducate community.</p></div><p class="club-results-note" aria-hidden="true">Rewarding<br />hardworking students <span></span></p></div>
       <div class="club-toolbar">
         <div class="club-search-wrap"><label class="sr-only" for="club-search">Search Club offers</label><input id="club-search" type="search" placeholder="Search offers, partners or codes" autocomplete="off" /><button id="club-search-clear" type="button" hidden>Clear</button></div>
