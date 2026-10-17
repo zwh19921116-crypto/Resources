@@ -171,11 +171,30 @@ function sitemapLinkMarkup(label, url, detail = '') {
   return `<li><a class="sitemap-link" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}${detail ? `<small>${escapeHtml(detail)}</small>` : ''}</a></li>`;
 }
 
-// Canonical form for matching internal links to scanned page URLs (drops hash and trailing slash).
+// Nest scanned URLs by every path segment, so /a/b/solutions/ appears under /a/b/ under /a/.
+function buildSitemapPathTree(urls) {
+  const root = { segment: '/', url: null, children: new Map() };
+  urls.forEach((raw) => {
+    let path;
+    try { path = new URL(raw).pathname; } catch (e) { return; }
+    const segments = path.replace(/\/index\.html?$/i, '/').split('/').filter(Boolean);
+    let node = root;
+    segments.forEach((segment) => {
+      if (!node.children.has(segment)) node.children.set(segment, { segment, url: null, children: new Map() });
+      node = node.children.get(segment);
+    });
+    if (!node.url) node.url = raw;
+  });
+  return root;
+}
+
+// Canonical form for matching internal links to scanned page URLs (drops hash, trailing slash and
+// a trailing index.html, so /page/, /page and /page/index.html are treated as the same page).
 function normalizeSitemapUrl(raw, base) {
   try {
     const u = base ? new URL(raw, base) : new URL(raw);
     u.hash = '';
+    u.pathname = u.pathname.replace(/\/index\.html?$/i, '/');
     return u.href.replace(/\/$/, '').toLowerCase();
   } catch (e) { return ''; }
 }
@@ -236,14 +255,23 @@ function relocateSitemapToolbar(toCanvas) {
 }
 
 function setSitemapViewMode(mode) {
-  sitemapViewMode = mode === 'web' ? 'web' : 'list';
-  $('sitemap-domain-grid')?.classList.toggle('sitemap-web', sitemapViewMode === 'web');
-  if ($('sitemap-domain-grid')) $('sitemap-domain-grid').hidden = sitemapViewMode === 'web';
-  if ($('sitemap-network')) $('sitemap-network').hidden = sitemapViewMode !== 'web';
-  relocateSitemapToolbar(sitemapViewMode === 'web');
-  if (sitemapViewMode !== 'web') closeSitemapNodeDetail();
+  const next = mode === 'web' ? 'web' : 'list';
+  const changed = next !== sitemapViewMode;
+  sitemapViewMode = next;
+  const grid = $('sitemap-domain-grid');
+  if (grid) grid.hidden = true;
+  const network = $('sitemap-network');
+  const wasHidden = network ? network.hidden : false;
+  if (network) network.hidden = false;
+  relocateSitemapToolbar(true);
   $('sitemap-list-view')?.setAttribute('aria-selected', String(sitemapViewMode === 'list'));
   $('sitemap-web-view')?.setAttribute('aria-selected', String(sitemapViewMode === 'web'));
+  if (changed) {
+    closeSitemapNodeDetail();
+    renderSiteMapVisual(lastScanResults);
+  } else if (wasHidden) {
+    fitSitemapNetworkView();
+  }
 }
 
 function networkNodeMarkup(id, label, url, detail, group, kind, x, y) {
@@ -301,6 +329,316 @@ function extractKeywords(text, extra = []) {
 const sitemapAuditCache = new Map();
 const sitemapStatusCache = new Map();
 const sitemapFailureCache = new Map();
+const sitemapRobotsCache = new Map();
+
+const SEO_TITLE_RANGE = [30, 60];
+const SEO_META_RANGE = [120, 160];
+const SEO_GENERIC_TITLES = new Set(['home', 'homepage', 'home page', 'untitled', 'index', 'welcome', 'page', 'document', 'new page', 'test']);
+const SEO_GENERIC_ANCHORS = new Set(['', 'click here', 'here', 'read more', 'more', 'learn more', 'link', 'this', 'this page', 'go', 'details', 'view', 'continue', 'see more']);
+const SEO_GENERIC_URL_TOKENS = new Set(['copy', 'untitled', 'test', 'new', 'tmp', 'temp', 'draft', 'sample', 'page', 'final']);
+const SEO_KNOWN_SCHEMA_TYPES = new Set(['Organization', 'LocalBusiness', 'EducationalOrganization', 'WebSite', 'WebPage', 'CollectionPage', 'AboutPage', 'ContactPage', 'FAQPage', 'QAPage', 'Article', 'BlogPosting', 'NewsArticle', 'LearningResource', 'Course', 'Product', 'Offer', 'Service', 'Event', 'VideoObject', 'HowTo', 'ItemList', 'BreadcrumbList', 'Person', 'Review', 'AggregateRating', 'SearchAction', 'Question', 'Answer', 'ListItem', 'ImageObject', 'Place', 'PostalAddress']);
+const SEO_SCHEMA_REQUIRED = {
+  Article: ['headline'], BlogPosting: ['headline'], NewsArticle: ['headline'],
+  Product: ['name'], Organization: ['name', 'url'], LocalBusiness: ['name', 'address'],
+  BreadcrumbList: ['itemListElement'], FAQPage: ['mainEntity'], VideoObject: ['name', 'thumbnailUrl', 'uploadDate'],
+  LearningResource: ['name'], Course: ['name', 'description'], Event: ['name', 'startDate'], WebSite: ['name', 'url']
+};
+const SEO_CATEGORIES = [
+  { key: 'crawl', label: 'Crawl & index' },
+  { key: 'onpage', label: 'On-page' },
+  { key: 'links', label: 'Internal links' },
+  { key: 'content', label: 'Content' },
+  { key: 'tech', label: 'Technical' },
+  { key: 'schema', label: 'Structured data' }
+];
+
+// Plain-English help for each scoring check, shown when hovering a check in the page panel.
+// `fix` is shown when the check fails or partly passes; `unassessed` when it could not be checked.
+const SEO_GLOSSARY = [
+  { match: /^Crawl & index$/, what: 'Whether Google can reach, read and index this page at all. Problems here can stop a page appearing in Google completely.' },
+  { match: /^On-page$/, what: 'The page’s own text signals: title, meta description, headings, URL and language.' },
+  { match: /^Internal links$/, what: 'How well this page connects to the rest of your website, which helps Google find it and judge its importance.' },
+  { match: /^Content$/, what: 'How much useful, original and unique content the page has.' },
+  { match: /^Technical$/, what: 'Security, mobile-friendliness, accessibility and page weight.' },
+  { match: /^Structured data$/, what: 'Machine-readable JSON-LD that describes the page to Google and can unlock rich results.' },
+  { match: /^Returns HTTP 200/, what: 'The page should load directly with a “200 OK” response. Redirects make Google take an extra hop and can weaken ranking signals.', fix: 'This URL redirects to another address. Need to link to (and list in your sitemap) the final URL instead of the redirecting one.' },
+  { match: /^Indexable/, what: 'A “noindex” instruction tells Google not to show the page in search results.', fix: 'A noindex directive was found, so this page will not appear in Google. Need to remove <meta name="robots" content="noindex"> (or the X-Robots-Tag header) if the page should be searchable.' },
+  { match: /^robots\.txt allows/, what: 'robots.txt is a site-wide file listing which paths search crawlers are allowed to visit.', fix: 'robots.txt blocks Googlebot from this page. Need to remove or narrow the matching Disallow rule shown below.', unassessed: 'robots.txt could not be read, so this was not checked and does not affect the score.' },
+  { match: /^Canonical tag present/, what: 'The canonical tag tells Google which URL is the official version of this content, so duplicate versions don’t compete.', fix: 'Missing canonical tag. Need to add <link rel="canonical" href="(this page’s full URL)"> inside <head>.' },
+  { match: /^Canonical points to this page/, what: 'The canonical URL should normally be the page’s own address.', fix: 'The canonical points to a different URL, so Google may ignore this page and rank the other one instead. Need to set the canonical to this page’s own URL (unless this page is an intentional duplicate).' },
+  { match: /^Main content readable/, what: 'Google reads text that is in the page’s HTML. Content that only exists inside images, PDFs or is loaded later by JavaScript may be missed.', fix: 'Very little readable text is in the HTML. Need to add a written summary on the page, or link directly to the document.' },
+  { match: /^Title tag present/, what: 'The <title> is the clickable blue headline shown in Google results and the browser tab.', fix: 'Missing <title> tag — a title is required. Need to add a unique <title> inside <head>. Score is capped at 59 until fixed.' },
+  { match: /^Title length/, what: 'Google displays roughly 50–60 characters of a title. Longer titles get cut off; very short ones waste space.', fix: 'Title length is outside the target range. Need to rewrite the title to 30–60 characters.' },
+  { match: /^Title is descriptive/, what: 'The page-specific part of the title (before the “|” or “–”) should clearly describe the page in at least two meaningful words.', fix: 'Title is too generic (e.g. “Home”, “test2”). Need a descriptive title such as “VCE Physics Practice Questions – Units 3&4 | Edgeducate”.' },
+  { match: /^Meta description present/, what: 'The meta description is the grey summary text shown under the title in Google results.', fix: 'Missing meta description. Need to add <meta name="description" content="…">, otherwise Google picks random text from the page.' },
+  { match: /^Meta description \d/, what: 'Google displays about 120–160 characters of a description.', fix: 'Description length is outside the target range. Need to rewrite it to 120–160 characters, summarising the page and why someone should click.' },
+  { match: /^Exactly one H1/, what: 'The H1 is the page’s main visible heading. One clear H1 tells Google the main topic.', fix: 'Need exactly one <h1>. If it’s missing, add the page’s main heading as <h1>; if there are several, keep one and change the rest to <h2>.' },
+  { match: /^H1 matches title/, what: 'The H1 and the title should share key words so the page has one clear, consistent topic.', fix: 'The H1 and the title don’t share any key words. Need to use the main topic words in both.' },
+  { match: /^Logical heading hierarchy/, what: 'Headings should work like an outline: H1 → H2 → H3, without skipping a level (e.g. jumping from H2 straight to H4). Long pages should be split into H2 sections.', fix: 'Need to fix skipped heading levels (e.g. change an H4 that follows an H2 into an H3), and/or add H2 sub-headings to break up long content.' },
+  { match: /^Clean, descriptive URL/, what: 'Short, lowercase, hyphenated URLs made of real words help people and Google understand the page.', fix: 'The URL has the issues shown below. Need to rename it using descriptive words, e.g. /vce-physics-practice-questions/, and redirect the old URL if it is already live.' },
+  { match: /^HTML lang/, what: 'The lang attribute tells search engines and screen readers which language the page is in.', fix: 'Missing language attribute. Need to add lang="en-AU" (or "en") to the <html> tag.' },
+  { match: /^At least 5 unique internal links/, what: 'Links to other pages on your site help Google discover them and understand how pages relate.', fix: 'Too few internal links. Need to link to more related pages, e.g. related resources, the parent category or the resource directory.' },
+  { match: /^Descriptive anchor text/, what: 'The clickable text of a link should say where it goes.', fix: 'Some links use vague text such as “click here” or “read more”. Need to change them to describe the destination, e.g. “VCE Physics practice exams”.' },
+  { match: /^No broken internal links/, what: 'Links to pages that return errors (such as 404 Not Found) frustrate visitors and waste Google’s crawl time.', fix: 'Broken internal links were found (listed below). Need to fix the link targets or remove the links.', unassessed: 'Not checked yet because the linked pages haven’t been audited. Turn on Profiles → Inbound links (or run Analytics) to check them.' },
+  { match: /^Not an orphan page/, what: 'An orphan page has no links pointing to it from other pages on your site, so Google struggles to find it and treats it as unimportant.', fix: 'No other page links here. Need to link to this page from at least one related page (menu, footer, hub page or a related section).', unassessed: 'Not checked yet. Turn on Profiles → Inbound links to check whether other pages link here.' },
+  { match: /^Breadcrumb navigation/, what: 'Breadcrumbs (Home › Category › Page) show where a page sits. With BreadcrumbList structured data, Google can show them in search results.', fix: 'Need both a visible breadcrumb trail on the page and BreadcrumbList structured data.' },
+  { match: /^Main content ≥/, what: 'Pages with more useful, original content tend to rank better. Pages built around a PDF have a lower target because the document is the main content.', fix: 'The main content is thin. Need to add more useful text, e.g. a summary, who it’s for, the topics covered and how to use it.' },
+  { match: /^Readable paragraphs/, what: 'Text split into proper paragraphs (40+ characters each) is easier to read and easier for search and AI engines to quote.', fix: 'Need at least 3 real paragraphs of text rather than short fragments or lists only.' },
+  { match: /^Unique title on site/, what: 'Every page should have its own title so Google doesn’t treat pages as duplicates.', fix: 'Another page uses the same title. Need to make this title unique.', unassessed: 'Not checked yet. Audit more pages on this site (e.g. run Analytics) to compare titles.' },
+  { match: /^Unique meta description/, what: 'Every page should have its own meta description so each search result looks distinct.', fix: 'Another page uses the same meta description. Need to write a unique one for this page.', unassessed: 'Not checked yet. Audit more pages on this site (e.g. run Analytics) to compare descriptions.' },
+  { match: /^HTTPS$/, what: 'A secure https:// connection. HTTPS is a confirmed Google ranking signal.', fix: 'The page is not served over HTTPS. Need an SSL certificate and to redirect http:// to https://.' },
+  { match: /^Mobile viewport/, what: 'The viewport tag makes the page fit phone screens. Google ranks pages using their mobile version.', fix: 'Missing viewport tag. Need to add <meta name="viewport" content="width=device-width, initial-scale=1"> inside <head>.' },
+  { match: /^Images have alt/, what: 'Alt text describes images for screen readers and Google Images. Purely decorative images can use alt="".', fix: 'Some images have no alt attribute at all. Need to add alt="short description" (or alt="" if the image is decorative).' },
+  { match: /^No mixed HTTP content/, what: 'On an https page, every image, script and stylesheet must also load over https, or browsers block it and show security warnings.', fix: 'Insecure http:// resources were found. Need to change their addresses to https://.' },
+  { match: /^Open Graph/, what: 'og:title, og:description and og:image control the preview card when the page is shared on Facebook, LinkedIn, WhatsApp, etc.', fix: 'Open Graph tags are missing or incomplete. Need to add og:title, og:description and og:image meta tags.' },
+  { match: /^Favicon/, what: 'The small site icon shown in browser tabs and next to your site name in Google results.', fix: 'Missing favicon link. Need to add <link rel="icon" href="/favicon.ico"> inside <head>.' },
+  { match: /^HTML size/, what: 'Very large HTML is slower to download and process, especially on mobile.', fix: 'The HTML is large. Need to remove bloat such as big inline scripts, inline styles or hidden content.' },
+  { match: /^Valid JSON-LD/, what: 'Structured data (JSON-LD) describes the page to Google in a machine-readable way and can enable rich results.', fix: 'JSON-LD is missing or has syntax errors. Need to add a valid <script type="application/ld+json"> block, then test it in Google’s Rich Results Test.' },
+  { match: /^Recognised Schema\.org types/, what: 'Structured data should use standard Schema.org types Google understands, e.g. Organization, Article, LearningResource or FAQPage.', fix: 'No recognised Schema.org type was found. Need to set a standard @type.' },
+  { match: /^Required properties present/, what: 'Each Schema.org type needs certain fields to qualify for rich results, e.g. an Article needs a headline.', fix: 'Required properties are missing (listed below). Need to add them to the structured data.' }
+];
+
+function sitemapGlossaryFor(label) {
+  return SEO_GLOSSARY.find((entry) => entry.match.test(label)) || null;
+}
+
+function sitemapCheckHelp(check) {
+  const entry = sitemapGlossaryFor(check.label) || {};
+  let action;
+  if (check.status === 'pass') action = 'Passing — no action needed.';
+  else if (check.status === 'na') action = `Not applicable to this page${check.detail ? ` (${check.detail})` : ''}, so it doesn’t affect the score.`;
+  else if (check.status === 'unassessed') action = entry.unassessed || 'Not checked yet, so it doesn’t affect the score.';
+  else action = `${check.status === 'warn' ? 'Partly passing. ' : ''}${entry.fix || 'Needs attention.'}`;
+  const showFound = check.status === 'pass' || check.status === 'warn' || check.status === 'fail';
+  return { what: entry.what || '', action, found: showFound ? (check.detail || '') : '' };
+}
+
+// Minimal robots.txt evaluation for Googlebot: most specific matching group, longest matching rule wins.
+function sitemapRobotsAllows(robotsText, path, agent = 'googlebot') {
+  const groups = [];
+  let current = null;
+  let lastWasAgent = false;
+  robotsText.split(/\r?\n/).forEach((rawLine) => {
+    const line = rawLine.replace(/#.*$/, '').trim();
+    const sep = line.indexOf(':');
+    if (sep < 0) return;
+    const field = line.slice(0, sep).trim().toLowerCase();
+    const value = line.slice(sep + 1).trim();
+    if (field === 'user-agent') {
+      if (!lastWasAgent || !current) { current = { agents: [], rules: [] }; groups.push(current); }
+      current.agents.push(value.toLowerCase());
+      lastWasAgent = true;
+    } else if ((field === 'allow' || field === 'disallow') && current) {
+      if (value) current.rules.push({ allow: field === 'allow', pattern: value });
+      lastWasAgent = false;
+    } else {
+      lastWasAgent = false;
+    }
+  });
+  let matching = groups.filter((g) => g.agents.includes(agent));
+  if (!matching.length) matching = groups.filter((g) => g.agents.includes('*'));
+  let best = null;
+  matching.flatMap((g) => g.rules).forEach((rule) => {
+    const escaped = rule.pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\\\$$/, '$');
+    if (!new RegExp(`^${escaped}`).test(path)) return;
+    const length = rule.pattern.length;
+    if (!best || length > best.length || (length === best.length && rule.allow)) best = { allow: rule.allow, length, pattern: rule.pattern };
+  });
+  return best ? { allowed: best.allow, rule: `${best.allow ? 'Allow' : 'Disallow'}: ${best.pattern}` } : { allowed: true, rule: '' };
+}
+
+async function sitemapRobotsCheck(url) {
+  let parsed;
+  try { parsed = new URL(url); } catch (e) { return { assessed: false }; }
+  if (!sitemapRobotsCache.has(parsed.origin)) {
+    sitemapRobotsCache.set(parsed.origin, (async () => {
+      try {
+        const res = await scoutFetch(`${parsed.origin}/robots.txt`, 'html');
+        if (res.status === 404 || res.status === 410) return { text: '' };
+        if (!res.ok) return null;
+        return { text: await res.text() };
+      } catch (e) { return null; }
+    })());
+  }
+  const robots = await sitemapRobotsCache.get(parsed.origin);
+  if (!robots) return { assessed: false };
+  return { assessed: true, ...sitemapRobotsAllows(robots.text, parsed.pathname + parsed.search) };
+}
+
+function sitemapSchemaSummary(ldJsonTexts) {
+  const types = [];
+  const missing = [];
+  let invalid = 0;
+  const visit = (node) => {
+    if (Array.isArray(node)) { node.forEach(visit); return; }
+    if (!node || typeof node !== 'object') return;
+    const nodeTypes = [].concat(node['@type'] || []).map(String);
+    nodeTypes.forEach((type) => {
+      types.push(type);
+      (SEO_SCHEMA_REQUIRED[type] || []).forEach((prop) => { if (node[prop] === undefined || node[prop] === '') missing.push(`${type}.${prop}`); });
+    });
+    Object.values(node).forEach((value) => { if (value && typeof value === 'object') visit(value); });
+  };
+  ldJsonTexts.forEach((text) => {
+    try { visit(JSON.parse(text)); } catch (e) { invalid += 1; }
+  });
+  return { blocks: ldJsonTexts.length, invalid, types: [...new Set(types)], recognised: [...new Set(types)].filter((t) => SEO_KNOWN_SCHEMA_TYPES.has(t)), missing: [...new Set(missing)] };
+}
+
+function sitemapUrlQuality(url) {
+  let parsed;
+  try { parsed = new URL(url); } catch (e) { return { ok: false, reasons: ['invalid URL'] }; }
+  const segments = parsed.pathname.split('/').filter(Boolean).map((s) => decodeURIComponent(s).replace(/\.(html?|php|aspx?)$/i, ''));
+  const reasons = [];
+  if (parsed.search) reasons.push('has query string');
+  if (/[A-Z]/.test(parsed.pathname)) reasons.push('uppercase letters');
+  if (/[_\s%]/.test(parsed.pathname)) reasons.push('underscores, spaces or encoded characters');
+  if (segments.length > 5) reasons.push(`deep path (${segments.length} levels)`);
+  if (segments.some((s) => s.length > 60)) reasons.push('very long segment');
+  if (segments.some((s) => /^\d+$/.test(s))) reasons.push('numeric-only segment');
+  const generic = segments.flatMap((s) => s.toLowerCase().split('-')).filter((t) => SEO_GENERIC_URL_TOKENS.has(t));
+  if (generic.length) reasons.push(`generic words (${[...new Set(generic)].join(', ')})`);
+  return { ok: !reasons.length, reasons };
+}
+
+function sitemapSignificantWords(text) {
+  return new Set((text || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w.length >= 4 && !KEYWORD_STOPWORDS.has(w)));
+}
+
+// Strict, itemised page score. Each check: pass = full points, warn = partial, fail = 0.
+// "na" and "unassessed" checks are excluded from the denominator; critical failures cap the final score.
+function sitemapPageScore(audit) {
+  const checks = [];
+  const caps = [];
+  const add = (cat, label, max, earned, status, detail = '') => checks.push({ cat, label, max, earned: Math.max(0, Math.min(max, earned)), status, detail });
+  const tri = (cat, label, max, passCond, warnCond, warnPoints, detail) => {
+    if (passCond) add(cat, label, max, max, 'pass', detail);
+    else if (warnCond) add(cat, label, max, warnPoints, 'warn', detail);
+    else add(cat, label, max, 0, 'fail', detail);
+  };
+  const skip = (cat, label, max, status, detail) => add(cat, label, max, 0, status, detail);
+
+  let parsed = null;
+  try { parsed = new URL(audit.url); } catch (e) { parsed = null; }
+  const isHome = !!parsed && (parsed.pathname === '/' || /^\/index\.html?$/i.test(parsed.pathname));
+  const selfKey = normalizeSitemapUrl(audit.url);
+  const host = parsed ? parsed.host : '';
+  const otherAudits = [...sitemapAuditCache.entries()]
+    .filter(([key, a]) => a && a.live && normalizeSitemapUrl(key) !== selfKey && (() => { try { return new URL(key).host === host; } catch (e) { return false; } })())
+    .map(([key, a]) => ({ key, a }));
+
+  // Crawl & index (25)
+  if (audit.redirected) add('crawl', 'Returns HTTP 200 without redirect', 5, 2, 'warn', `Redirected to ${audit.finalUrl}`);
+  else add('crawl', 'Returns HTTP 200 without redirect', 5, 5, 'pass', `HTTP ${audit.status || 200}`);
+  const noindex = audit.noindex || /noindex/i.test(audit.xRobots || '');
+  add('crawl', 'Indexable (no noindex)', 6, noindex ? 0 : 6, noindex ? 'fail' : 'pass', noindex ? 'noindex directive found' : '');
+  if (noindex) caps.push({ cap: 40, reason: 'Page is set to noindex' });
+  if (!audit.robots || !audit.robots.assessed) skip('crawl', 'robots.txt allows Googlebot', 4, 'unassessed', 'robots.txt could not be read');
+  else {
+    add('crawl', 'robots.txt allows Googlebot', 4, audit.robots.allowed ? 4 : 0, audit.robots.allowed ? 'pass' : 'fail', audit.robots.rule || 'No matching rule');
+    if (!audit.robots.allowed) caps.push({ cap: 40, reason: `Blocked by robots.txt (${audit.robots.rule})` });
+  }
+  add('crawl', 'Canonical tag present', 3, audit.canonical ? 3 : 0, audit.canonical ? 'pass' : 'fail');
+  if (!audit.canonical) skip('crawl', 'Canonical points to this page', 4, 'na', 'No canonical tag');
+  else {
+    const canonicalKey = normalizeSitemapUrl(audit.canonicalHref, audit.finalUrl || audit.url);
+    const selfMatch = canonicalKey === selfKey || canonicalKey === normalizeSitemapUrl(audit.finalUrl || '');
+    add('crawl', 'Canonical points to this page', 4, selfMatch ? 4 : 0, selfMatch ? 'pass' : 'fail', selfMatch ? '' : `Canonical → ${audit.canonicalHref}`);
+  }
+  if (audit.hasDocumentEmbed && audit.hasDocumentLink && audit.mainWords < 50) add('crawl', 'Main content readable as HTML text', 3, 3, 'pass', 'Document is linked directly');
+  else tri('crawl', 'Main content readable as HTML text', 3, audit.mainWords >= 50, audit.mainWords >= 20, 1, `${audit.mainWords} words in main content`);
+
+  // On-page (25)
+  add('onpage', 'Title tag present', 3, audit.title ? 3 : 0, audit.title ? 'pass' : 'fail');
+  if (!audit.title) caps.push({ cap: 59, reason: 'Missing title tag' });
+  const [tMin, tMax] = SEO_TITLE_RANGE;
+  tri('onpage', `Title length ${tMin}–${tMax} chars`, 3, audit.titleLen >= tMin && audit.titleLen <= tMax, audit.titleLen >= 15 && audit.titleLen <= 70, 1, `${audit.titleLen} characters`);
+  // The page-specific part is normally before the separator ("Page name | Site name").
+  const titleCore = (audit.title || '').split(/\s[|–—:·-]\s/)[0] || '';
+  const titleDescriptive = titleCore.trim().split(/\s+/).length >= 2 && !SEO_GENERIC_TITLES.has(titleCore.trim().toLowerCase());
+  add('onpage', 'Title is descriptive', 2, titleDescriptive ? 2 : 0, titleDescriptive ? 'pass' : 'fail', titleCore ? `"${titleCore.trim()}"` : '');
+  add('onpage', 'Meta description present', 3, audit.metaDesc ? 3 : 0, audit.metaDesc ? 'pass' : 'fail');
+  const [mMin, mMax] = SEO_META_RANGE;
+  tri('onpage', `Meta description ${mMin}–${mMax} chars`, 2, audit.metaLen >= mMin && audit.metaLen <= mMax, audit.metaLen >= 70 && audit.metaLen <= 175, 1, `${audit.metaLen} characters`);
+  tri('onpage', 'Exactly one H1', 4, audit.h1 === 1, audit.h1 > 1, 1, `${audit.h1} H1 heading${audit.h1 === 1 ? '' : 's'}`);
+  const titleWords = sitemapSignificantWords(audit.title);
+  const h1Aligned = !!audit.h1Text && [...sitemapSignificantWords(audit.h1Text)].some((w) => titleWords.has(w));
+  add('onpage', 'H1 matches title topic', 1, h1Aligned ? 1 : 0, h1Aligned ? 'pass' : 'fail', audit.h1Text ? `H1: "${audit.h1Text}"` : 'No H1 text');
+  tri('onpage', 'Logical heading hierarchy', 2, !audit.headingSkips && (audit.h2 > 0 || audit.mainWords < 300), !audit.headingSkips, 1, audit.headingSkips ? `${audit.headingSkips} skipped heading level(s)` : audit.h2 ? '' : 'Long content without H2 sections');
+  const urlQuality = sitemapUrlQuality(audit.url);
+  add('onpage', 'Clean, descriptive URL', 3, urlQuality.ok ? 3 : 0, urlQuality.ok ? 'pass' : 'fail', urlQuality.reasons.join('; '));
+  add('onpage', 'HTML lang attribute set', 2, audit.lang ? 2 : 0, audit.lang ? 'pass' : 'fail', audit.lang || '');
+
+  // Internal links (20)
+  tri('links', 'At least 5 unique internal links', 4, audit.uniqueInternalTargets >= 5, audit.uniqueInternalTargets >= 2, 2, `${audit.uniqueInternalTargets} unique internal link${audit.uniqueInternalTargets === 1 ? '' : 's'}`);
+  if (!audit.internalLinks) skip('links', 'Descriptive anchor text', 3, 'na', 'No internal links');
+  else {
+    const ratio = audit.descriptiveAnchors / audit.internalLinks;
+    tri('links', 'Descriptive anchor text', 3, ratio >= 0.9, ratio >= 0.7, 1, `${Math.round(ratio * 100)}% descriptive`);
+  }
+  const statusByKey = new Map([...sitemapStatusCache.entries()].map(([key, status]) => [normalizeSitemapUrl(key), status]));
+  const knownTargets = (audit.internalTargets || []).filter((t) => statusByKey.has(t));
+  const broken = knownTargets.filter((t) => statusByKey.get(t) >= 400);
+  if (!knownTargets.length) skip('links', 'No broken internal links', 5, 'unassessed', 'Link targets not checked yet');
+  else add('links', 'No broken internal links', 5, broken.length ? 0 : 5, broken.length ? 'fail' : 'pass', broken.length ? `${broken.length} broken: ${broken.slice(0, 3).join(', ')}` : `${knownTargets.length} checked`);
+  if (isHome) skip('links', 'Not an orphan page', 5, 'na', 'Homepage');
+  else if (sitemapInboundReady) {
+    const orphan = sitemapIsOrphanPage(audit.url);
+    add('links', 'Not an orphan page', 5, orphan ? 0 : 5, orphan ? 'fail' : 'pass', orphan ? 'No internal links point here' : '');
+  } else if (otherAudits.some(({ a }) => (a.internalTargets || []).includes(selfKey))) add('links', 'Not an orphan page', 5, 5, 'pass', 'Linked from an audited page');
+  else skip('links', 'Not an orphan page', 5, 'unassessed', 'Turn on Inbound links to verify');
+  if (isHome) skip('links', 'Breadcrumb navigation', 3, 'na', 'Homepage');
+  else tri('links', 'Breadcrumb navigation', 3, audit.hasBreadcrumb && audit.hasBreadcrumbNav, audit.hasBreadcrumb || audit.hasBreadcrumbNav, 1, audit.hasBreadcrumb && audit.hasBreadcrumbNav ? 'Visible + schema' : audit.hasBreadcrumb ? 'Schema only' : audit.hasBreadcrumbNav ? 'Visible only, no schema' : 'None');
+
+  // Content (10)
+  const contentTargets = audit.hasDocumentEmbed ? [300, 150] : [600, 300];
+  tri('content', `Main content ≥ ${contentTargets[0]} words`, 4, audit.mainWords >= contentTargets[0], audit.mainWords >= contentTargets[1], 2, `${audit.mainWords} words${audit.hasDocumentEmbed ? ' (document page)' : ''}`);
+  tri('content', 'Readable paragraphs', 2, audit.paragraphs >= 3, audit.paragraphs >= 1, 1, `${audit.paragraphs} paragraph${audit.paragraphs === 1 ? '' : 's'}`);
+  if (!otherAudits.length) {
+    skip('content', 'Unique title on site', 2, 'unassessed', 'Audit more pages to compare');
+    skip('content', 'Unique meta description on site', 2, 'unassessed', 'Audit more pages to compare');
+  } else {
+    const dupTitles = audit.title ? otherAudits.filter(({ a }) => (a.title || '').trim().toLowerCase() === audit.title.trim().toLowerCase()) : [];
+    add('content', 'Unique title on site', 2, audit.title && !dupTitles.length ? 2 : 0, audit.title && !dupTitles.length ? 'pass' : 'fail', dupTitles.length ? `Same title on ${dupTitles.length} other page(s)` : `Compared with ${otherAudits.length} page(s)`);
+    const dupMeta = audit.metaDesc ? otherAudits.filter(({ a }) => (a.metaDesc || '').trim().toLowerCase() === audit.metaDesc.trim().toLowerCase()) : [];
+    add('content', 'Unique meta description on site', 2, audit.metaDesc && !dupMeta.length ? 2 : 0, audit.metaDesc && !dupMeta.length ? 'pass' : 'fail', dupMeta.length ? `Same description on ${dupMeta.length} other page(s)` : `Compared with ${otherAudits.length} page(s)`);
+  }
+
+  // Technical (15)
+  add('tech', 'HTTPS', 3, audit.https ? 3 : 0, audit.https ? 'pass' : 'fail');
+  add('tech', 'Mobile viewport', 2, audit.viewport ? 2 : 0, audit.viewport ? 'pass' : 'fail');
+  if (!audit.images) skip('tech', 'Images have alt attributes', 3, 'na', 'No images');
+  else tri('tech', 'Images have alt attributes', 3, audit.imagesMissingAlt === 0, audit.imagesMissingAlt / audit.images <= 0.2, 1, `${audit.imagesMissingAlt} of ${audit.images} missing alt`);
+  if (!audit.https) skip('tech', 'No mixed HTTP content', 2, 'na', 'Page not on HTTPS');
+  else add('tech', 'No mixed HTTP content', 2, audit.mixedContent ? 0 : 2, audit.mixedContent ? 'fail' : 'pass', audit.mixedContent ? `${audit.mixedContent} insecure resource(s)` : '');
+  const ogCore = [audit.ogTitle, audit.ogDescription, audit.ogImage].filter(Boolean).length;
+  tri('tech', 'Open Graph title, description & image', 2, ogCore === 3, ogCore > 0, 1, `${ogCore}/3 present`);
+  add('tech', 'Favicon', 1, audit.favicon ? 1 : 0, audit.favicon ? 'pass' : 'fail');
+  tri('tech', 'HTML size under 150 KB', 2, audit.htmlBytes <= 150000, audit.htmlBytes <= 400000, 1, `${Math.round(audit.htmlBytes / 1024)} KB`);
+
+  // Structured data (5)
+  const schema = audit.schema || { blocks: 0, invalid: 0, recognised: [], missing: [] };
+  if (!schema.blocks) {
+    add('schema', 'Valid JSON-LD', 2, 0, 'fail', 'No JSON-LD found');
+    add('schema', 'Recognised Schema.org types', 2, 0, 'fail');
+    add('schema', 'Required properties present', 1, 0, 'fail');
+  } else {
+    add('schema', 'Valid JSON-LD', 2, schema.invalid ? 0 : 2, schema.invalid ? 'fail' : 'pass', schema.invalid ? `${schema.invalid} block(s) fail to parse` : `${schema.blocks} block(s)`);
+    add('schema', 'Recognised Schema.org types', 2, schema.recognised.length ? 2 : 0, schema.recognised.length ? 'pass' : 'fail', schema.recognised.join(', ') || (schema.types || []).join(', '));
+    add('schema', 'Required properties present', 1, schema.missing.length ? 0 : 1, schema.missing.length ? 'fail' : 'pass', schema.missing.length ? `Missing ${schema.missing.slice(0, 4).join(', ')}` : '');
+  }
+
+  const scored = checks.filter((c) => c.status === 'pass' || c.status === 'warn' || c.status === 'fail');
+  const earned = scored.reduce((sum, c) => sum + c.earned, 0);
+  const possible = scored.reduce((sum, c) => sum + c.max, 0);
+  let score = possible ? Math.round((earned / possible) * 100) : 0;
+  caps.forEach((c) => { score = Math.min(score, c.cap); });
+  const categories = SEO_CATEGORIES.map((cat) => {
+    const inCat = scored.filter((c) => c.cat === cat.key);
+    return { ...cat, earned: inCat.reduce((s, c) => s + c.earned, 0), max: inCat.reduce((s, c) => s + c.max, 0) };
+  });
+  return { score, earned, possible, checks, categories, caps, unassessed: checks.filter((c) => c.status === 'unassessed').length };
+}
 
 function sitemapUnavailableAnalytics(url) {
   return {
@@ -320,6 +658,11 @@ async function fetchSitemapPageAudit(url) {
     const htmlText = await res.text();
     sitemapFailureCache.delete(url);
     const htmlBytes = htmlText.length;
+    const redirected = !!res.redirected && normalizeSitemapUrl(res.url) !== normalizeSitemapUrl(url);
+    // Through the private-scouting proxy res.url is the proxy address, so only trust it after a real redirect.
+    const finalUrl = redirected ? res.url : url;
+    const xRobots = res.headers.get('x-robots-tag') || '';
+    const robots = await sitemapRobotsCheck(url);
     const doc = new DOMParser().parseFromString(htmlText, 'text/html');
     let host = '';
     try { host = new URL(url).host; } catch (e) { host = ''; }
@@ -401,25 +744,51 @@ async function fetchSitemapPageAudit(url) {
       .split(',').map((s) => s.trim()).filter(Boolean).slice(0, 20);
     const headingText = Array.from(doc.querySelectorAll('h1,h2,h3')).map((h) => h.textContent || '').join(' ');
     const keywords = extractKeywords(`${title} ${title} ${headingText} ${metaDesc}`, metaKeywords);
-    let score = 0;
-    score += title.length >= 30 && title.length <= 65 ? 20 : title ? 10 : 0;
-    score += metaDesc.length >= 70 && metaDesc.length <= 165 ? 18 : metaDesc ? 9 : 0;
-    score += h1 === 1 ? 14 : h1 > 1 ? 7 : 0;
-    score += canonical ? 10 : 0;
-    score += hasStructured ? 14 : 0;
-    score += words >= 300 ? 12 : words >= 120 ? 6 : 0;
-    score += internalLinks >= 3 ? 8 : 0;
-    score += noindex ? 0 : 4;
-    const seo = Math.min(100, score);
+    const h1Text = (doc.querySelector('h1')?.textContent || '').replace(/\s+/g, ' ').trim();
+    let headingSkips = 0;
+    let previousLevel = 0;
+    doc.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach((heading) => {
+      const level = Number(heading.tagName.slice(1));
+      if (previousLevel && level > previousLevel + 1) headingSkips += 1;
+      previousLevel = level;
+    });
+    const imagesMissingAlt = Array.from(doc.querySelectorAll('img')).filter((img) => !img.hasAttribute('alt')).length;
+    const mainSource = doc.querySelector('main, article, [role="main"]') || doc.body;
+    const mainClone = mainSource ? mainSource.cloneNode(true) : null;
+    if (mainClone) mainClone.querySelectorAll('nav, header, footer, aside, script, style, noscript, template, svg, form').forEach((el) => el.remove());
+    const mainText = (mainClone?.textContent || '').replace(/\s+/g, ' ').trim();
+    const mainWords = mainText ? mainText.split(' ').length : 0;
+    const paragraphs = mainClone ? Array.from(mainClone.querySelectorAll('p')).filter((p) => (p.textContent || '').trim().length >= 40).length : 0;
+    const hasDocumentEmbed = !!doc.querySelector('[data-pdf-url], iframe[src*=".pdf" i], embed[src*=".pdf" i], object[data*=".pdf" i]');
+    const hasDocumentLink = !!doc.querySelector('a[href*=".pdf" i]');
+    const selfKey = normalizeSitemapUrl(url);
+    const internalTargets = [...new Set(internalLinkDetails.map((l) => l.target))];
+    const uniqueInternalTargets = internalTargets.filter((t) => t !== selfKey).length;
+    const descriptiveAnchors = internalAnchors.filter((a) => {
+      const text = ((a.textContent || '').replace(/\s+/g, ' ').trim() || a.getAttribute('aria-label') || a.querySelector('img[alt]')?.getAttribute('alt') || '').trim().toLowerCase();
+      return text.length >= 2 && !SEO_GENERIC_ANCHORS.has(text);
+    }).length;
+    const hasBreadcrumbNav = !!doc.querySelector('nav[aria-label*="breadcrumb" i], .breadcrumb, .breadcrumbs, .crumbs, [itemtype*="BreadcrumbList"]');
+    const mixedContent = https ? doc.querySelectorAll('img[src^="http:" i], script[src^="http:" i], link[rel="stylesheet"][href^="http:" i], iframe[src^="http:" i], source[src^="http:" i], video[src^="http:" i], audio[src^="http:" i]').length : 0;
+    const schema = sitemapSchemaSummary(ldJson);
+    const headingTexts = Array.from(doc.querySelectorAll('h2,h3')).map((h) => (h.textContent || '').replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 40);
+    const introText = mainText.split(' ').slice(0, 100).join(' ');
+    const mainTextSample = mainText.slice(0, 20000);
     const audit = {
-      live: true, seo, grade: sitemapGradeFromScore(seo), title, titleLen: title.length,
-      metaDesc, metaLen: metaDesc.length, canonical, canonicalHref, h1, h2, headings, images, imagesNoAlt,
-      internalLinks, internalLinkDetails, words, hasStructured, hasBreadcrumb, hasSearchAction, noindex,
+      live: true, url, finalUrl, redirected, status: res.status, xRobots, robots,
+      title, titleLen: title.length,
+      metaDesc, metaLen: metaDesc.length, canonical, canonicalHref, h1, h1Text, h2, headings, headingSkips, images, imagesNoAlt, imagesMissingAlt,
+      internalLinks, internalLinkDetails, internalTargets, uniqueInternalTargets, descriptiveAnchors,
+      words, mainWords, paragraphs, hasDocumentEmbed, hasDocumentLink, hasStructured, headingTexts, introText, mainTextSample, hasBreadcrumb, hasBreadcrumbNav, hasSearchAction, noindex, schema, mixedContent,
       externalLinks, externalDomains, externalLinkDetails, sponsoredLinks, nofollowLinks,
       lang, viewport, https, ogCount, ogTitle, ogDescription, ogImage, ogUrl, ogType,
       twitter, twitterCard, twitterTitle, twitterDescription, twitterImage,
       socialLinkDetails, favicon, structuredTypes, scripts, stylesheets, htmlBytes,
-      keywords, metaKeywords
+      keywords, metaKeywords,
+      // Score is computed on read so site-wide checks (duplicates, orphans, broken links) stay current.
+      get scoreDetail() { return sitemapPageScore(this); },
+      get seo() { return this.scoreDetail.score; },
+      get grade() { return sitemapGradeFromScore(this.seo); }
     };
     sitemapAuditCache.set(url, audit);
     return audit;
@@ -442,22 +811,17 @@ function sitemapRecommendations(url, data) {
   const improvements = [];
   const sitelinks = [];
   if (data.live) {
-    if (!(data.titleLen >= 30 && data.titleLen <= 65)) improvements.push(`Title is ${data.titleLen} characters — aim for 30–65.`);
-    if (!(data.metaLen >= 70 && data.metaLen <= 165)) improvements.push(`Meta description is ${data.metaLen} characters — aim for 70–165.`);
-    if (data.h1 !== 1) improvements.push(`Use exactly one H1 heading (found ${data.h1}).`);
-    if (!data.canonical) improvements.push('Add a canonical link tag.');
-    if (data.words < 300) improvements.push(`Thin content (${data.words} words) — expand toward 300+.`);
-    if (data.imagesNoAlt > 0) improvements.push(`${data.imagesNoAlt} image(s) missing alt text.`);
-    if (!data.viewport) improvements.push('Add a mobile viewport meta tag.');
-    if (!data.https) improvements.push('Serve the page over HTTPS.');
-    if (data.ogCount === 0) improvements.push('Add Open Graph tags for social sharing.');
-    if (!data.lang) improvements.push('Set the <html lang> attribute.');
-    if (!data.hasStructured) improvements.push('Add structured data (JSON-LD).');
-    if (data.internalLinks < 3) improvements.push('Add more internal links with descriptive anchor text.');
-    if (!improvements.length) improvements.push('No major on-page issues found.');
+    const detail = data.scoreDetail;
+    detail.caps.forEach((c) => improvements.push(`Critical: ${c.reason} — score capped at ${c.cap}.`));
+    detail.checks
+      .filter((c) => c.status === 'fail' || c.status === 'warn')
+      .sort((a, b) => (b.max - b.earned) - (a.max - a.earned))
+      .forEach((c) => improvements.push(`${c.label}${c.detail ? ` — ${c.detail}` : ''} (+${c.max - c.earned} pts)`));
+    if (detail.unassessed) improvements.push(`${detail.unassessed} check(s) not assessed yet — build Inbound links and audit more pages for a complete score.`);
+    if (!improvements.length) improvements.push('All assessed checks pass.');
     sitelinks.push([data.hasBreadcrumb, 'BreadcrumbList schema on the page']);
     sitelinks.push([data.hasSearchAction, 'WebSite + SearchAction schema (sitelinks search box)']);
-    sitelinks.push([data.titleLen > 0 && data.titleLen <= 65, 'Unique, descriptive page title']);
+    sitelinks.push([data.titleLen >= SEO_TITLE_RANGE[0] && data.titleLen <= SEO_TITLE_RANGE[1], 'Unique, descriptive page title']);
     sitelinks.push([data.canonical, 'Canonical URL set']);
     sitelinks.push([!data.noindex, 'Page is indexable']);
     sitelinks.push([data.internalLinks >= 3, 'Strong internal linking with clear anchors']);
@@ -508,16 +872,7 @@ function renderSitemapDetailAnalytics(data) {
   const fill = $('sda-gauge-fill');
   if (fill) fill.style.width = `${Math.max(0, Math.min(100, data.seo))}%`;
   if ($('sda-score')) $('sda-score').textContent = data.seo;
-  const factors = [
-    ['Title', data.titleLen >= 30 && data.titleLen <= 65 ? 20 : data.title ? 10 : 0, 20],
-    ['Meta desc', data.metaLen >= 70 && data.metaLen <= 165 ? 18 : data.metaDesc ? 9 : 0, 18],
-    ['H1', data.h1 === 1 ? 14 : data.h1 > 1 ? 7 : 0, 14],
-    ['Schema', data.hasStructured ? 14 : 0, 14],
-    ['Words', data.words >= 300 ? 12 : data.words >= 120 ? 6 : 0, 12],
-    ['Canonical', data.canonical ? 10 : 0, 10],
-    ['Internal links', data.internalLinks >= 3 ? 8 : 0, 8],
-    ['Indexable', data.noindex ? 0 : 4, 4]
-  ];
+  const factors = data.scoreDetail.categories.filter((c) => c.max > 0).map((c) => [c.label, c.earned, c.max]);
   const bars = $('sda-bars');
   if (bars) bars.innerHTML = factors.map(([label, got, max]) => {
     const pct = Math.round((got / max) * 100);
@@ -542,26 +897,27 @@ function renderSitemapDetail(url, data) {
   let criteria;
   if (data.live) {
     metrics = [
-      ['Words', data.words],
-      ['Internal links', data.internalLinks],
+      ['Words', data.mainWords],
+      ['Internal links', data.uniqueInternalTargets],
       ['Headings', data.headings],
       ['Images', data.images]
     ];
-    criteria = [
-      [`Title length ${data.titleLen} (30–65)`, data.titleLen >= 30 && data.titleLen <= 65],
-      [`Meta description ${data.metaLen} (70–165)`, data.metaLen >= 70 && data.metaLen <= 165],
-      ['Single H1 heading', data.h1 === 1],
-      ['Canonical tag set', data.canonical],
-      ['Structured data present', data.hasStructured],
-      ['Breadcrumb schema (sitelinks)', data.hasBreadcrumb],
-      ['Images have alt text', data.images === 0 || data.imagesNoAlt === 0],
-      ['Indexable (no noindex)', !data.noindex],
-      ['HTTPS secure', data.https],
-      ['Mobile viewport set', data.viewport],
-      ['Open Graph tags', data.ogCount > 0],
-      ['Language set', !!data.lang]
-    ];
-    $('sitemap-detail-note').textContent = 'Live on-page audit.';
+    const detail = data.scoreDetail;
+    const icons = { pass: '✓', warn: '~', fail: '✗', na: '–', unassessed: '?' };
+    const classes = { pass: 'ok', warn: 'warn', fail: 'fail', na: 'na', unassessed: 'unknownc' };
+    criteria = SEO_CATEGORIES.flatMap((cat) => {
+      const summary = detail.categories.find((c) => c.key === cat.key);
+      const rows = detail.checks.filter((c) => c.cat === cat.key).map((c) => {
+        const points = c.status === 'na' ? 'N/A' : c.status === 'unassessed' ? 'not assessed' : `${c.earned}/${c.max}`;
+        const help = sitemapCheckHelp(c);
+        const helpAttrs = `tabindex="0" data-help-title="${escapeAttr(c.label)}" data-help-what="${escapeAttr(help.what)}" data-help-found="${escapeAttr(help.found)}" data-help-action="${escapeAttr(help.action)}" data-help-status="${c.status}"`;
+        return { html: `<li class="${classes[c.status]} has-help" ${helpAttrs}>${icons[c.status]} <span class="crit-label">${escapeHtml(c.label)}</span> <span class="crit-pts">${points}</span>${c.detail ? `<small>${escapeHtml(c.detail)}</small>` : ''}</li>` };
+      });
+      const catHelp = sitemapGlossaryFor(cat.label);
+      return [{ html: `<li class="crit-cat has-help" tabindex="0" data-help-title="${escapeAttr(cat.label)}" data-help-what="${escapeAttr(catHelp ? catHelp.what : '')}" data-help-status="category"><span class="crit-label">${escapeHtml(cat.label)}</span> <span class="crit-pts">${summary.earned}/${summary.max}</span></li>` }, ...rows];
+    });
+    const capNote = detail.caps.length ? ` Capped at ${Math.min(...detail.caps.map((c) => c.cap))}: ${detail.caps.map((c) => c.reason).join('; ')}.` : '';
+    $('sitemap-detail-note').textContent = `Score = ${detail.earned} of ${detail.possible} assessed points.${detail.unassessed ? ` ${detail.unassessed} check(s) not assessed.` : ''}${capNote}`;
   } else {
     metrics = [
       ['Words', '—'],
@@ -570,8 +926,8 @@ function renderSitemapDetail(url, data) {
       ['Images', '—']
     ];
     criteria = [
-      ['Title tag length (30–65)', null],
-      ['Meta description (70–165)', null],
+      ['Title tag length (30–60)', null],
+      ['Meta description (120–160)', null],
       ['Single H1 heading', null],
       ['Canonical tag set', null],
       ['Structured data present', null],
@@ -589,7 +945,9 @@ function renderSitemapDetail(url, data) {
   $('sitemap-detail-metrics').innerHTML = metrics
     .map(([k, v]) => `<div class="sitemap-metric"><strong>${v}</strong><small>${escapeHtml(k)}</small></div>`).join('');
   $('sitemap-detail-criteria').innerHTML = criteria
-    .map(([k, ok]) => {
+    .map((row) => {
+      if (row.html) return row.html;
+      const [k, ok] = row;
       const cls = ok === null ? 'unknownc' : ok ? 'ok' : 'warn';
       const icon = ok === null ? '?' : ok ? '✓' : '!';
       return `<li class="${cls}">${icon} ${escapeHtml(k)}</li>`;
@@ -928,6 +1286,20 @@ function reselectExternalNode(domain) {
 }
 
 const gscConfig = { url: '', secret: '', property: 'sc-domain:edgeducate.com.au' };
+const GSC_CONFIG_KEY = 'edg-gsc-config';
+// Remember the Search Console connection on this computer so it survives restarts.
+try {
+  const saved = JSON.parse(localStorage.getItem(GSC_CONFIG_KEY) || '{}');
+  if (saved && saved.url) gscConfig.url = saved.url;
+  if (saved && saved.secret) gscConfig.secret = saved.secret;
+  if (saved && saved.property) gscConfig.property = saved.property;
+} catch (e) { /* ignore */ }
+function saveGscConfig() {
+  try {
+    if (gscConfig.url && gscConfig.secret) localStorage.setItem(GSC_CONFIG_KEY, JSON.stringify(gscConfig));
+    else localStorage.removeItem(GSC_CONFIG_KEY);
+  } catch (e) { /* ignore */ }
+}
 const GSC_DAILY_LIMIT = 100000;
 
 function gscCallsKey() {
@@ -963,6 +1335,64 @@ async function fetchGscPageData(pageUrl) {
   return res.json();
 }
 
+// Generic call to the Search Console helper Worker (routes: /site, /inspect, /suggest).
+async function gscHelperGet(path, params) {
+  if (!gscIsConnected()) return null;
+  const endpoint = new URL(`${gscConfig.url.replace(/\/$/, '')}${path}`);
+  Object.entries(params).forEach(([key, value]) => [].concat(value).forEach((v) => endpoint.searchParams.append(key, v)));
+  bumpGscCalls();
+  const res = await fetch(endpoint.href, { headers: { 'x-gsc-secret': gscConfig.secret } });
+  let data = null;
+  try { data = await res.json(); } catch (e) { data = null; }
+  if (res.status === 404) throw new Error('the Search Console helper needs updating (route not found)');
+  if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
+  return data;
+}
+
+const gscInspectCache = new Map();
+async function fetchGscInspection(pageUrl) {
+  if (gscInspectCache.has(pageUrl)) return gscInspectCache.get(pageUrl);
+  const result = await gscHelperGet('/inspect', { url: pageUrl, site: gscConfig.property });
+  gscInspectCache.set(pageUrl, result);
+  return result;
+}
+
+let gscSiteQueriesCache = null;
+async function fetchGscSiteQueries() {
+  if (gscSiteQueriesCache) return gscSiteQueriesCache;
+  const data = await gscHelperGet('/site', { site: gscConfig.property, days: 90, dimension: 'query' });
+  gscSiteQueriesCache = (data && data.rows) || [];
+  return gscSiteQueriesCache;
+}
+
+// Google search suggestions for many phrases: Search Console helper first, then the private-scouting proxy.
+async function fetchGoogleSuggestions(phrases) {
+  const unique = [...new Set(phrases.map((p) => p.trim()).filter(Boolean))];
+  const results = {};
+  if (gscIsConnected()) {
+    for (let i = 0; i < unique.length; i += 40) {
+      const data = await gscHelperGet('/suggest', { q: unique.slice(i, i + 40), hl: 'en-AU', gl: 'au' });
+      Object.assign(results, (data && data.results) || {});
+    }
+    return results;
+  }
+  if (!scoutProxyEnabled()) return null;
+  await Promise.all(unique.slice(0, 20).map(async (phrase) => {
+    const target = `https://suggestqueries.google.com/complete/search?client=firefox&hl=en-AU&gl=au&q=${encodeURIComponent(phrase)}`;
+    try {
+      const res = await fetch(`${scoutProxy.url.replace(/\/$/, '')}/fetch?url=${encodeURIComponent(target)}`, { headers: { 'x-scout-secret': scoutProxy.secret } });
+      const data = JSON.parse(await res.text());
+      results[phrase] = Array.isArray(data[1]) ? data[1] : [];
+    } catch (e) { results[phrase] = []; }
+  }));
+  return results;
+}
+
+// Google Keyword Planner ideas (via the Search Console helper's /keywords route, Google Ads API).
+async function fetchKeywordPlannerIdeas(seeds, pageUrl) {
+  return gscHelperGet('/keywords', { q: seeds.slice(0, 20), url: pageUrl || '', geo: '2036', lang: '1000' });
+}
+
 async function renderSitemapSearchData(pageUrl) {
   const section = $('sitemap-detail-search');
   if (!section) return;
@@ -993,7 +1423,7 @@ function openGscDialog() {
   $('gsc-url').value = gscConfig.url;
   $('gsc-secret').value = gscConfig.secret;
   $('gsc-property').value = gscConfig.property;
-  $('gsc-status').textContent = gscIsConnected() ? 'Connected (session only).' : 'Not connected.';
+  $('gsc-status').textContent = gscIsConnected() ? 'Connected (remembered on this computer).' : 'Not connected.';
   updateGscUsage();
   $('gsc-dlg')?.showModal();
 }
@@ -1199,11 +1629,84 @@ function renderSitemapTree(network, group) {
   wireSitemapNetwork(network);
 }
 
+// Tree view: one left-to-right diagram of every scanned domain, nested by each URL path segment,
+// so /resource-pages/test/solutions/ sits under /test, which sits under /resource-pages.
+function renderSitemapFullTree(network, groups) {
+  const colW = 300;
+  const rowH = 58;
+  const pageCards = new Map();
+  const addCard = (u, c) => { if (!pageCards.has(u)) pageCards.set(u, []); pageCards.get(u).push(c); };
+  sitemapLinkProfile.forEach((it) => (it.origins || []).forEach((o) => (o.links || []).forEach((l) => addCard(o.url, { href: l.href, text: l.text, kind: 'link-card' }))));
+  sitemapSocialProfile.forEach((p) => (p.origins || []).forEach((o) => (o.links || []).forEach((l) => addCard(o.url, { href: l.href, text: l.text, kind: 'social-card' }))));
+
+  const cardChildren = (url) => (pageCards.get(url) || []).map((c) => ({
+    label: (c.text && c.text.trim()) || '(no link text)', url: c.href, detail: c.href, kind: c.kind, group: 'external', children: []
+  }));
+  const pathChildren = (pathNode, source, parentPath) => [...pathNode.children.values()]
+    .sort((a, b) => a.segment.localeCompare(b.segment))
+    .map((child) => {
+      const path = `${parentPath}${child.segment}/`;
+      const kids = [...pathChildren(child, source, path), ...(child.url ? cardChildren(child.url) : [])];
+      const subPages = child.children.size;
+      const detail = child.url
+        ? (subPages ? `page · ${subPages} sub-page${subPages === 1 ? '' : 's'}` : 'page')
+        : `folder · ${subPages} item${subPages === 1 ? '' : 's'}`;
+      return { label: `/${child.segment}`, url: child.url || `https://${source.host}${path}`, detail, kind: child.url ? 'page' : 'folder', group: source.key, children: kids };
+    });
+
+  const tree = {
+    label: sitemapRootInfo.label, url: sitemapRootInfo.url, detail: 'Homepage', kind: 'root', group: 'root',
+    children: groups.map(({ source, pages }) => {
+      const pathTree = buildSitemapPathTree(pages);
+      return {
+        label: source.label, url: pathTree.url || `https://${source.host}/`,
+        detail: `${source.host} · ${pages.length} page${pages.length === 1 ? '' : 's'}`,
+        kind: 'domain', group: source.key,
+        children: [...pathChildren(pathTree, source, '/'), ...(pathTree.url ? cardChildren(pathTree.url) : [])]
+      };
+    })
+  };
+
+  // Tidy layout: leaves take consecutive rows; each parent is centred on its children.
+  let row = 0;
+  const place = (node, depth) => {
+    node.x = depth * colW;
+    if (!node.children.length) { node.y = row * rowH; row += 1; return; }
+    node.children.forEach((child) => place(child, depth + 1));
+    node.y = Math.round((node.children[0].y + node.children[node.children.length - 1].y) / 2);
+  };
+  place(tree, 0);
+
+  const edges = [];
+  const hits = [];
+  const nodes = [];
+  let seq = 0;
+  const emit = (node, parentId) => {
+    const id = node.kind === 'root' ? 'root' : `tree-${seq++}`;
+    nodes.push(networkNodeMarkup(id, node.label, node.url, node.detail, node.group, node.kind, node.x, node.y));
+    if (parentId) {
+      const parent = emit.parents.get(parentId);
+      const edgeClass = node.group === 'external' ? 'ext-edge' : 'domain-edge';
+      edges.push(`<line data-edge-from="${parentId}" data-edge-to="${id}" class="sitemap-network-edge ${edgeClass} group-${node.group}" x1="${parent.x}" y1="${parent.y}" x2="${node.x}" y2="${node.y}" />`);
+      hits.push(`<line data-edge-from="${parentId}" data-edge-to="${id}" class="sitemap-network-hit" x1="${parent.x}" y1="${parent.y}" x2="${node.x}" y2="${node.y}" />`);
+    }
+    emit.parents.set(id, node);
+    node.children.forEach((child) => emit(child, id));
+  };
+  emit.parents = new Map();
+  emit(tree, null);
+
+  network.classList.add('is-single-domain');
+  network.innerHTML = `<div class="sitemap-network-world" id="sitemap-network-world"><svg viewBox="0 0 1600 1000" preserveAspectRatio="none" aria-hidden="true">${edges.join('')}${hits.join('')}</svg>${nodes.join('')}</div>`;
+  wireSitemapNetwork(network);
+}
+
 function renderSitemapNetwork(externalMaps) {
   const network = $('sitemap-network');
   if (!network) return;
   // Full-circle "analog clock" web: searched page at the centre, branches evenly spaced all around.
   const groups = activeSitemapSources.map((source) => ({ source, pages: externalMaps[source.key] || [] }));
+  if (sitemapViewMode === 'list') { renderSitemapFullTree(network, groups); return; }
   const singleDomain = activeSitemapSources.length === 1;
   if (singleDomain) { renderSitemapTree(network, groups[0] || { source: activeSitemapSources[0], pages: [] }); return; }
   const cx = singleDomain ? 180 : 900;
@@ -1883,12 +2386,12 @@ async function buildSiteSuggestions() {
     counts.total += 1;
     if (audit && audit.live) {
       counts.live += 1;
-      if (!audit.title) counts.notitle += 1; else if (!(audit.titleLen >= 30 && audit.titleLen <= 65)) counts.badtitle += 1;
-      if (!audit.metaDesc) counts.nometa += 1; else if (!(audit.metaLen >= 70 && audit.metaLen <= 165)) counts.badmeta += 1;
+      if (!audit.title) counts.notitle += 1; else if (!(audit.titleLen >= SEO_TITLE_RANGE[0] && audit.titleLen <= SEO_TITLE_RANGE[1])) counts.badtitle += 1;
+      if (!audit.metaDesc) counts.nometa += 1; else if (!(audit.metaLen >= SEO_META_RANGE[0] && audit.metaLen <= SEO_META_RANGE[1])) counts.badmeta += 1;
       if (audit.h1 === 0) counts.noh1 += 1; else if (audit.h1 > 1) counts.multih1 += 1;
       if (!audit.canonical) counts.nocanon += 1;
-      if (audit.words < 300) counts.thin += 1;
-      if (audit.imagesNoAlt > 0) counts.noalt += 1;
+      if (audit.mainWords < (audit.hasDocumentEmbed ? 300 : 600)) counts.thin += 1;
+      if (audit.imagesMissingAlt > 0) counts.noalt += 1;
       if (!audit.viewport) counts.noviewport += 1;
       if (!audit.https) counts.nohttps += 1;
       if (audit.ogCount === 0) counts.noog += 1;
@@ -1913,12 +2416,12 @@ async function buildSiteSuggestions() {
 
 function pageImprovementSteps(d) {
   const steps = [];
-  if (!d.title) steps.push('Add a page title'); else if (!(d.titleLen >= 30 && d.titleLen <= 65)) steps.push(`Adjust title to 30–65 characters (now ${d.titleLen})`);
-  if (!d.metaDesc) steps.push('Add a meta description'); else if (!(d.metaLen >= 70 && d.metaLen <= 165)) steps.push(`Adjust meta description to 70–165 characters (now ${d.metaLen})`);
+  if (!d.title) steps.push('Add a page title'); else if (!(d.titleLen >= SEO_TITLE_RANGE[0] && d.titleLen <= SEO_TITLE_RANGE[1])) steps.push(`Adjust title to ${SEO_TITLE_RANGE[0]}–${SEO_TITLE_RANGE[1]} characters (now ${d.titleLen})`);
+  if (!d.metaDesc) steps.push('Add a meta description'); else if (!(d.metaLen >= SEO_META_RANGE[0] && d.metaLen <= SEO_META_RANGE[1])) steps.push(`Adjust meta description to ${SEO_META_RANGE[0]}–${SEO_META_RANGE[1]} characters (now ${d.metaLen})`);
   if (d.h1 === 0) steps.push('Add an H1 heading'); else if (d.h1 > 1) steps.push(`Reduce to one H1 heading (now ${d.h1})`);
   if (!d.canonical) steps.push('Add a canonical tag');
-  if (d.words < 300) steps.push(`Expand content to 300+ words (now ${d.words})`);
-  if (d.imagesNoAlt > 0) steps.push(`Add alt text to ${d.imagesNoAlt} image(s)`);
+  if (d.mainWords < (d.hasDocumentEmbed ? 300 : 600)) steps.push(`Expand main content to ${d.hasDocumentEmbed ? 300 : 600}+ words (now ${d.mainWords})`);
+  if (d.imagesMissingAlt > 0) steps.push(`Add alt attributes to ${d.imagesMissingAlt} image(s)`);
   if (!d.viewport) steps.push('Add a mobile viewport tag');
   if (!d.https) steps.push('Serve the page over HTTPS');
   if (d.ogCount === 0) steps.push('Add Open Graph tags');
@@ -1949,9 +2452,9 @@ function renderSiteSuggestions(counts, perPage = []) {
   const items = [];
   const add = (n, msg) => { if (n > 0) items.push({ n, msg: `${msg} (${n} page${n === 1 ? '' : 's'})` }); };
   add(counts.notitle, 'Add a page title where missing');
-  add(counts.badtitle, 'Tighten titles to 30–65 characters');
+  add(counts.badtitle, `Tighten titles to ${SEO_TITLE_RANGE[0]}–${SEO_TITLE_RANGE[1]} characters`);
   add(counts.nometa, 'Add a meta description');
-  add(counts.badmeta, 'Adjust meta descriptions to 70–165 characters');
+  add(counts.badmeta, `Adjust meta descriptions to ${SEO_META_RANGE[0]}–${SEO_META_RANGE[1]} characters`);
   add(counts.noh1, 'Add a single H1 heading');
   add(counts.multih1, 'Reduce to one H1 heading');
   add(counts.nocanon, 'Add a canonical tag');
@@ -2124,6 +2627,49 @@ async function scanSitemapUrl(sitemapUrl, depth) {
 
 const sitemapDialog = $('sitemap-dlg');
 
+// Floating glossary tooltip for SEO checks. Lives inside the modal dialog so it renders above it.
+(function wireSitemapCheckHelp() {
+  const list = $('sitemap-detail-criteria');
+  if (!list || !sitemapDialog) return;
+  const tip = document.createElement('div');
+  tip.className = 'seo-help-tip';
+  tip.setAttribute('role', 'tooltip');
+  tip.id = 'seo-help-tip';
+  tip.hidden = true;
+  sitemapDialog.appendChild(tip);
+  const statusLabel = { pass: 'Passing', warn: 'Partly passing', fail: 'Failing', na: 'Not applicable', unassessed: 'Not assessed', category: 'Category' };
+  const show = (row) => {
+    const { helpTitle, helpWhat, helpFound, helpAction, helpStatus } = row.dataset;
+    tip.dataset.status = helpStatus;
+    tip.innerHTML = `<strong>${escapeHtml(helpTitle)}</strong><span class="seo-help-status">${escapeHtml(statusLabel[helpStatus] || '')}</span>`
+      + (helpWhat ? `<p><b>What it means:</b> ${escapeHtml(helpWhat)}</p>` : '')
+      + (helpFound ? `<p><b>Found:</b> ${escapeHtml(helpFound)}</p>` : '')
+      + (helpAction ? `<p class="seo-help-action"><b>What to do:</b> ${escapeHtml(helpAction)}</p>` : '');
+    tip.hidden = false;
+    row.setAttribute('aria-describedby', tip.id);
+    const rect = row.getBoundingClientRect();
+    const tipRect = tip.getBoundingClientRect();
+    const gap = 12;
+    let left = rect.left - tipRect.width - gap;
+    let top = rect.top + rect.height / 2 - tipRect.height / 2;
+    if (left < 8) {
+      // Not enough room on the left (e.g. narrow window): show it below the row instead.
+      left = Math.min(window.innerWidth - tipRect.width - 8, Math.max(8, rect.left));
+      top = rect.bottom + gap;
+    }
+    top = Math.max(8, Math.min(window.innerHeight - tipRect.height - 8, top));
+    tip.style.left = `${left}px`;
+    tip.style.top = `${top}px`;
+  };
+  const hide = () => { tip.hidden = true; };
+  list.addEventListener('mouseover', (event) => { const row = event.target.closest('.has-help'); if (row && list.contains(row)) show(row); });
+  list.addEventListener('mouseleave', hide);
+  list.addEventListener('focusin', (event) => { const row = event.target.closest('.has-help'); if (row) show(row); });
+  list.addEventListener('focusout', hide);
+  list.addEventListener('keydown', (event) => { if (event.key === 'Escape') { hide(); event.stopPropagation(); } });
+  $('sitemap-detail')?.addEventListener('scroll', hide, { passive: true });
+})();
+
 function applySitemapScope() {
   if ($('sitemap-dlg-title')) $('sitemap-dlg-title').textContent = sitemapScopeMine ? 'Site map visual' : `SiteScout — ${sitemapRootInfo.label}`;
   if ($('sitemap-address')) $('sitemap-address').value = sitemapRootInfo.label;
@@ -2200,6 +2746,1852 @@ async function openScoutSiteMap(input) {
   return true;
 }
 
+// ---------- Website search: every page, its likely Google status, and domain authority ----------
+const WS_OPR_STORAGE = 'edg-opr-key';
+const WS_OPR_ENDPOINT = 'https://openpagerank.keywordseverywhere.com/v1/domains/bulk';
+const WS_PAGE_LIMIT = 150;
+const WS_CONCURRENCY = 4;
+const WS_STATUS = {
+  confirmed: { label: 'On Google (confirmed)', group: 'likely' },
+  likely: { label: 'Likely on Google', group: 'likely' },
+  maybe: { label: 'Might not show', group: 'maybe' },
+  no: { label: 'Won’t show', group: 'no' },
+  unknown: { label: 'Couldn’t check', group: 'unknown' },
+  pending: { label: 'Not checked', group: 'pending' }
+};
+const WS_FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'likely', label: 'Likely on Google' },
+  { key: 'maybe', label: 'Might not show' },
+  { key: 'no', label: 'Won’t show' },
+  { key: 'unknown', label: 'Couldn’t check' },
+  { key: 'pending', label: 'Not checked' }
+];
+let wsOprKey = '';
+try { wsOprKey = localStorage.getItem(WS_OPR_STORAGE) || ''; } catch (e) { wsOprKey = ''; }
+const wsState = { run: 0, host: '', owned: false, rows: [], authority: null, filter: 'all', stopped: false, checked: 0, toCheck: 0, done: false, message: '' };
+let wsRenderQueued = false;
+
+function wsCanonicalElsewhere(url, audit) {
+  if (!audit.canonical || !audit.canonicalHref) return false;
+  const canonicalKey = normalizeSitemapUrl(audit.canonicalHref, audit.finalUrl || url);
+  return canonicalKey !== normalizeSitemapUrl(url) && canonicalKey !== normalizeSitemapUrl(audit.finalUrl || '');
+}
+
+function wsCanonicalTarget(url, audit) {
+  try { return new URL(audit.canonicalHref, audit.finalUrl || url).href; } catch (e) { return ''; }
+}
+
+// HTTP status and final address of a URL after following redirects (status 0 when it can't be checked).
+async function wsUrlCheck(url) {
+  if (sitemapStatusCache.has(url)) return { status: sitemapStatusCache.get(url), finalUrl: url };
+  try {
+    const res = await scoutFetch(url, 'html');
+    return { status: res.status, finalUrl: res.url || url };
+  } catch (e) { return { status: 0, finalUrl: url }; }
+}
+
+// Search Console stores data under the exact URL Google shows, which can differ from the sitemap
+// address by a trailing slash, www, or the page's canonical. Try those forms in order.
+function wsGscCandidates(url, audit) {
+  const out = [];
+  const add = (u) => { if (u && !out.includes(u)) out.push(u); };
+  const slashVariant = (u) => {
+    try {
+      const parsed = new URL(u);
+      if (parsed.search || parsed.hash) return null;
+      return u.endsWith('/') ? u.replace(/\/+$/, '') : `${u}/`;
+    } catch (e) { return null; }
+  };
+  add(url);
+  add(slashVariant(url));
+  if (audit && audit.live && audit.canonicalHref) {
+    const canonical = wsCanonicalTarget(url, audit);
+    add(canonical);
+    add(slashVariant(canonical));
+    const apex = canonical.replace(/^https:\/\/www\./i, 'https://');
+    add(apex);
+    add(slashVariant(apex));
+  }
+  return out.slice(0, 6);
+}
+
+// Estimate whether Google is likely to show a page, from the same live signals Google uses to decide.
+function wsGoogleStatus(url, audit) {
+  const httpStatus = sitemapStatusCache.get(url);
+  if (!audit || !audit.live) {
+    if (httpStatus >= 400) return { key: 'no', reason: `Returns HTTP ${httpStatus}${httpStatus === 404 ? ' (page not found)' : ''}, so Google removes it from results.` };
+    const failure = sitemapFailureCache.get(url);
+    return { key: 'unknown', reason: `The page couldn’t be loaded from here${failure ? ` (${failure})` : ''}.` };
+  }
+  if (audit.noindex || /noindex/i.test(audit.xRobots || '')) return { key: 'no', reason: 'Has a noindex directive, which tells Google not to show it.' };
+  if (audit.robots && audit.robots.assessed && !audit.robots.allowed) return { key: 'no', reason: `Blocked from Google by robots.txt (${audit.robots.rule}).` };
+  const issues = [];
+  if (audit.redirected) issues.push(`Redirects to ${audit.finalUrl}, so Google shows that address instead`);
+  if (wsCanonicalElsewhere(url, audit)) issues.push(`Canonical points to ${audit.canonicalHref}, so Google will usually show that URL instead`);
+  if (!audit.title) issues.push('Missing a title tag');
+  if (audit.mainWords < 50 && !(audit.hasDocumentEmbed && audit.hasDocumentLink)) issues.push(`Very little content (${audit.mainWords} words), and Google often skips thin pages`);
+  if (issues.length) return { key: 'maybe', reason: `${issues.join('. ')}.` };
+  return { key: 'likely', reason: 'Loads normally, can be indexed, isn’t blocked, and marks itself as the main version.' };
+}
+
+function wsAuthorityLabel(score) {
+  if (score >= 8) return 'Very strong';
+  if (score >= 6) return 'Strong';
+  if (score >= 4) return 'Moderate';
+  if (score >= 2) return 'Weak';
+  return 'Very weak';
+}
+
+async function wsFetchAuthority(host, key = wsOprKey) {
+  if (!key) return { state: 'nokey' };
+  try {
+    const res = await fetch(WS_OPR_ENDPOINT, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'API-OPR': key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ domains: [host], include_history: false })
+    });
+    if (!res.ok) {
+      let apiMessage = '';
+      try { apiMessage = ((await res.json()).error || {}).message || ''; } catch (e) { apiMessage = ''; }
+      if (res.status === 401 || res.status === 403) {
+        const format = /^opr_live_/.test(key) ? '' : ' Current keys start with "opr_live_" — old DomCop/openpagerank.com keys no longer work, so create a new key at keywordseverywhere.com/account/openpagerank.';
+        return { state: 'error', message: `the API key was rejected${apiMessage ? ` (${apiMessage})` : ''}.${format}` };
+      }
+      if (res.status === 429) return { state: 'error', message: apiMessage || 'the free monthly limit has been reached' };
+      return { state: 'error', message: `HTTP ${res.status}${apiMessage ? ` — ${apiMessage}` : ''}` };
+    }
+    const data = await res.json();
+    const row = (data.results || [])[0];
+    if (!row) return { state: 'error', message: 'no result returned' };
+    const hostRow = (row.hosts || []).find((h) => h.host === host) || null;
+    return {
+      state: 'ok', asOf: data.as_of || '', domain: row.domain, found: !!row.found,
+      score: typeof row.open_page_rank === 'number' ? row.open_page_rank : null,
+      rank: row.rank || null, referring: row.referring_domains || null,
+      host: hostRow ? { host: hostRow.host, found: !!hostRow.found, score: typeof hostRow.open_page_rank === 'number' ? hostRow.open_page_rank : null, rank: hostRow.rank || null } : null
+    };
+  } catch (error) {
+    return { state: 'error', message: error.message };
+  }
+}
+
+function wsAuthorityTile() {
+  const a = wsState.authority;
+  const tile = (value, text, extra = '') => `<div class="ws-tile ws-authority" title="Open PageRank: a free 0–10 authority score based on links from other websites. Similar in spirit to Moz Domain Authority, but a different number.">${value}<small>${text}</small>${extra}</div>`;
+  if (!a) return tile('<strong>…</strong>', 'Authority: loading');
+  if (a.state === 'nokey') return tile('<strong>—</strong>', 'Authority: add a free Open PageRank key to see how strong this domain is');
+  if (a.state === 'error') return tile('<strong>—</strong>', `Authority unavailable: ${escapeHtml(a.message)}`);
+  const useHost = a.host && a.host.score !== null;
+  const score = useHost ? a.host.score : a.score;
+  if (score === null || (!a.found && !useHost)) return tile('<strong>0/10</strong>', 'Authority: not ranked yet — too few links from other websites');
+  const rank = useHost ? a.host.rank : a.rank;
+  const details = [`${wsAuthorityLabel(score)} authority`, rank ? `global rank #${rank.toLocaleString()}` : '', !useHost && a.referring ? `~${a.referring.toLocaleString()} referring domains` : '', useHost && a.score !== null ? `root ${escapeHtml(a.domain)}: ${a.score.toFixed(2)}/10` : '']
+    .filter(Boolean).join(' · ');
+  return tile(`<strong>${score.toFixed(2)}/10</strong>`, `${details} (Open PageRank)`, `<div class="ws-authority-bar"><span style="width:${Math.max(2, Math.min(100, score * 10))}%"></span></div>`);
+}
+
+function wsRankPage(position) {
+  return Math.max(1, Math.ceil(position / 10));
+}
+
+// Which page of Google results a URL sits on, from Search Console's average position (10 results per page).
+function wsRankingCell(row) {
+  if (!wsState.owned) return '<span class="ws-rank-none">Not available</span>';
+  if (!gscIsConnected()) return '<span class="ws-rank-none">Needs Search Console</span>';
+  if (row.status.key === 'pending') return '<span class="ws-rank-none">…</span>';
+  if (!row.gsc) return '<span class="ws-rank-none">No data</span>';
+  if (!row.gsc.impressions) return '<span class="ws-rank"><strong>Not ranking yet</strong><small>No Google views in the last 28 days. Open <b>Strategy</b> for how to get it ranking.</small></span>';
+  const page = wsRankPage(row.gsc.position);
+  const tone = page === 1 ? 'page-1' : page === 2 ? 'page-2' : 'page-far';
+  const top = row.gscTop && row.gscTop.impressions
+    ? `<small>Best keyword: “${escapeHtml(row.gscTop.query)}” — page ${wsRankPage(row.gscTop.position)}, #${row.gscTop.position.toFixed(1)}</small>`
+    : '';
+  const recordedAs = row.gscUrl && row.gscUrl !== row.url ? `<small>Google records it as ${escapeHtml(row.gscUrl)}</small>` : '';
+  return `<span class="ws-rank ${tone}"><strong>Google page ${page} · #${row.gsc.position.toFixed(1)}</strong><small>Average position · ${row.gsc.impressions.toLocaleString()} views · ${row.gsc.clicks.toLocaleString()} clicks</small>${top}${recordedAs}</span>`;
+}
+
+function wsScheduleRender() {
+  if (wsRenderQueued) return;
+  wsRenderQueued = true;
+  requestAnimationFrame(() => { wsRenderQueued = false; renderWebsiteSearch(); });
+}
+
+function renderWebsiteSearch() {
+  const box = $('ws-results');
+  if (!box) return;
+  box.hidden = false;
+  $('ws-results-title').textContent = wsState.host ? `Website search — ${wsState.host}` : 'Website search';
+  const rows = wsState.rows;
+  const count = (group) => rows.filter((r) => WS_STATUS[r.status.key].group === group).length;
+  const confirmed = rows.filter((r) => r.status.key === 'confirmed').length;
+  const progress = wsState.message
+    || (wsState.done
+      ? `Checked ${wsState.checked} of ${rows.length} page${rows.length === 1 ? '' : 's'}${wsState.stopped ? ' (stopped)' : ''}.`
+      : `Checking pages… ${wsState.checked} of ${wsState.toCheck}`);
+  $('ws-progress').textContent = progress;
+  $('ws-stop').hidden = wsState.done || !rows.length;
+  if ($('ws-sitelinks')) $('ws-sitelinks').disabled = !(wsState.done && rows.some((r) => r.audit && r.audit.live));
+  const scored = rows.filter((r) => r.audit && r.audit.live);
+  const avgSeo = scored.length ? Math.round(scored.reduce((s, r) => s + r.audit.seo, 0) / scored.length) : null;
+  const ranked = rows.filter((r) => r.gsc && r.gsc.impressions > 0);
+  const pageOne = ranked.filter((r) => wsRankPage(r.gsc.position) === 1).length;
+  const tiles = [
+    `<div class="ws-tile"><strong>${rows.length}</strong><small>Pages found in the sitemap</small></div>`,
+    `<div class="ws-tile is-good"><strong>${count('likely')}</strong><small>Likely on Google${confirmed ? ` (${confirmed} confirmed by Search Console)` : ''}</small></div>`,
+    ranked.length ? `<div class="ws-tile is-good"><strong>${pageOne}</strong><small>On Google page 1 (of ${ranked.length} ranking)</small></div>` : '',
+    `<div class="ws-tile is-warn"><strong>${count('maybe')}</strong><small>Might not show</small></div>`,
+    `<div class="ws-tile is-bad"><strong>${count('no')}</strong><small>Won’t show</small></div>`,
+    count('unknown') ? `<div class="ws-tile"><strong>${count('unknown')}</strong><small>Couldn’t check</small></div>` : '',
+    `<div class="ws-tile"><strong>${avgSeo === null ? '—' : avgSeo}</strong><small>Average SEO score</small></div>`,
+    wsAuthorityTile()
+  ];
+  $('ws-tiles').innerHTML = tiles.join('');
+  $('ws-filters').innerHTML = WS_FILTERS.map((f) => {
+    const n = f.key === 'all' ? rows.length : count(f.key);
+    if (f.key !== 'all' && !n) return '';
+    return `<button type="button" class="ws-filter" data-filter="${f.key}" aria-pressed="${wsState.filter === f.key}">${escapeHtml(f.label)} (${n})</button>`;
+  }).join('');
+  const rankNote = $('ws-rank-note');
+  if (rankNote) {
+    if (wsState.owned && !gscIsConnected()) {
+      rankNote.hidden = false;
+      rankNote.innerHTML = '<span>To see which Google results page each URL is on (page 1, 2…), its position and best keyword, connect Search Console.</span><button type="button" class="btn btn-primary btn-sm" id="ws-connect-gsc">Connect Search Console</button>';
+    } else if (!wsState.owned && wsState.host) {
+      rankNote.hidden = false;
+      rankNote.innerHTML = '<span>Google ranking positions are only available for your own sites (via Search Console). Other companies’ rankings need a paid ranking service.</span>';
+    } else {
+      rankNote.hidden = true;
+      rankNote.innerHTML = '';
+    }
+  }
+  const visible = rows.filter((r) => wsState.filter === 'all' || WS_STATUS[r.status.key].group === wsState.filter);
+  $('ws-rows').innerHTML = visible.length ? visible.map((r) => {
+    let path = r.url;
+    try { const u = new URL(r.url); path = `${u.pathname}${u.search}` || '/'; } catch (e) { /* keep full URL */ }
+    const meta = WS_STATUS[r.status.key];
+    const seo = r.audit && r.audit.live ? `<span class="ws-score">${r.audit.seo}<small>${r.audit.grade}</small></span>` : '—';
+    const title = r.audit && r.audit.live ? escapeHtml(r.audit.title || '(no title)') : '—';
+    const strategy = r.audit && r.audit.live
+      ? `<button type="button" class="btn btn-light btn-sm ws-strategy-btn" data-strategy-url="${escapeAttr(r.url)}">Strategy</button> <button type="button" class="btn btn-ghost btn-sm ws-strategy-btn" data-inspect-url="${escapeAttr(r.url)}">Inspect</button>`
+      : '<span class="ws-rank-none">—</span>';
+    return `<tr><td><a href="${escapeAttr(r.url)}" target="_blank" rel="noopener noreferrer" title="${escapeAttr(r.url)}">${escapeHtml(path)}</a></td><td><span class="ws-badge ${r.status.key}">${escapeHtml(meta.label)}</span>${r.status.reason ? `<span class="ws-reason">${escapeHtml(r.status.reason)}</span>` : ''}</td><td>${wsRankingCell(r)}</td><td>${seo}</td><td>${title}</td><td>${strategy}</td></tr>`;
+  }).join('') : `<tr><td colspan="6">${rows.length ? 'No pages match this filter.' : 'No pages to show.'}</td></tr>`;
+  const authorityNote = wsState.authority && wsState.authority.state === 'ok' && wsState.authority.asOf ? ` Authority data as of ${wsState.authority.asOf}.` : '';
+  const limitNote = rows.length > WS_PAGE_LIMIT ? ` Only the first ${WS_PAGE_LIMIT} pages are checked; the rest are listed as “Not checked”.` : '';
+  $('ws-footnote').textContent = `“Likely on Google” is an estimate from each page’s live signals — only Google (or Search Console for your own sites) can confirm a page is indexed.${limitNote}${authorityNote}`;
+}
+
+// Forget everything saved for a site so the next search re-checks every page live.
+function wsClearSiteCaches(host) {
+  const bare = String(host || '').replace(/^www\./, '');
+  const onSite = (url) => {
+    try { return new URL(url).hostname.replace(/^www\./, '') === bare; } catch (e) { return false; }
+  };
+  [sitemapAuditCache, sitemapStatusCache, sitemapFailureCache, wsResearchCache, wsPlannerCache, gscInspectCache].forEach((cache) => {
+    [...cache.keys()].forEach((key) => { if (onSite(key)) cache.delete(key); });
+  });
+  [...sitemapRobotsCache.keys()].forEach((origin) => { if (onSite(origin)) sitemapRobotsCache.delete(origin); });
+  gscSiteQueriesCache = null;
+}
+
+async function runWebsiteSearch(input, statusEl = $('scout-status')) {
+  const status = statusEl;
+  const host = normaliseScoutHost(input);
+  if (!host || !host.includes('.')) {
+    if (status) status.textContent = 'Enter a valid website, e.g. example.com';
+    return;
+  }
+  const owned = isOwnedHost(host);
+  // Researching another company's site must go through the verified private-mode proxy first.
+  if (!owned) {
+    if (!scoutProxyEnabled()) {
+      if (status) status.textContent = 'Turn on private scouting before researching other websites.';
+      openScoutProxyDialog();
+      return;
+    }
+    if (status) status.textContent = `Checking private mode before searching ${host}…`;
+    const check = await verifyScoutProxyCreds(scoutProxy.url, scoutProxy.secret);
+    if (!check.ok) {
+      if (status) status.textContent = `Can't search ${host}: ${check.reason}. Fix private mode first.`;
+      openScoutProxyDialog();
+      return;
+    }
+  }
+  if (status) status.textContent = '';
+  if ($('ws-status')) $('ws-status').textContent = '';
+  if ($('ws-dlg-status')) $('ws-dlg-status').textContent = '';
+  const dialog = $('ws-dlg');
+  if (dialog && !dialog.open) dialog.showModal();
+  const run = ++wsState.run;
+  closeWsStrategy();
+  sitemapScopeMine = owned;
+  rememberScoutSite(host);
+  Object.assign(wsState, { host, owned, rows: [], authority: null, filter: 'all', stopped: false, checked: 0, toCheck: 0, done: false, message: 'Reading the sitemap…' });
+  if ($('ws-submit')) $('ws-submit').disabled = true;
+  renderWebsiteSearch();
+  wsFetchAuthority(host).then((authority) => { if (run === wsState.run) { wsState.authority = authority; wsScheduleRender(); } });
+  wsState.siteQueries = [];
+  if (owned && gscIsConnected()) {
+    fetchGscSiteQueries().then((rows) => { if (run === wsState.run) wsState.siteQueries = rows; }).catch(() => {});
+  }
+  let pages;
+  try {
+    pages = await scanSitemapSource({ key: 'ws', label: host, host, sitemap: `https://${host}/sitemap.xml` });
+  } catch (error) {
+    if (run !== wsState.run) return;
+    Object.assign(wsState, { done: true, message: `Couldn't read a sitemap for ${host} (${error.message}). The site may not publish one, or it blocks automated requests.` });
+    if ($('ws-submit')) $('ws-submit').disabled = false;
+    renderWebsiteSearch();
+    return;
+  }
+  if (run !== wsState.run) return;
+  const unique = [...new Set(pages)];
+  wsState.rows = unique.map((url) => ({ url, status: { key: 'pending', reason: '' }, audit: null, gsc: null, gscTop: null, gscUrl: '', gscQueries: [] }));
+  wsState.toCheck = Math.min(unique.length, WS_PAGE_LIMIT);
+  wsState.message = '';
+  renderWebsiteSearch();
+  let next = 0;
+  const worker = async () => {
+    while (next < wsState.toCheck && run === wsState.run && !wsState.stopped) {
+      const row = wsState.rows[next++];
+      row.audit = await fetchSitemapPageAudit(row.url);
+      if (run !== wsState.run) return;
+      row.status = wsGoogleStatus(row.url, row.audit);
+      if (row.audit && row.audit.live && wsCanonicalElsewhere(row.url, row.audit)) {
+        const target = wsCanonicalTarget(row.url, row.audit);
+        const check = await wsUrlCheck(target);
+        if (run !== wsState.run) return;
+        if (check.status >= 400) {
+          row.status = { key: 'no', reason: `Canonical points to ${target}, which doesn’t exist (HTTP ${check.status}). Google is told the real version of this page is missing, so it’s unlikely to show. Need to change the canonical to this page’s own URL.` };
+        } else if (check.status && normalizeSitemapUrl(check.finalUrl) === normalizeSitemapUrl(row.url)) {
+          const otherIssues = wsGoogleStatus(row.url, { ...row.audit, canonicalHref: row.url });
+          row.status = otherIssues.key === 'likely'
+            ? { key: 'likely', reason: `Canonical uses ${target}, which redirects back to this page, so Google treats this page as the main version. Better to point the canonical at this exact URL.` }
+            : otherIssues;
+        }
+      }
+      if (owned && gscIsConnected() && row.audit && row.audit.live) {
+        let firstData = null;
+        for (const candidate of wsGscCandidates(row.url, row.audit)) {
+          let data = null;
+          try { data = await fetchGscPageData(candidate); } catch (e) { data = null; }
+          if (run !== wsState.run) return;
+          if (!data || !data.totals) continue;
+          if (!firstData) firstData = { data, candidate };
+          if (data.totals.impressions > 0) { firstData = { data, candidate }; break; }
+        }
+        row.gsc = firstData ? firstData.data.totals : null;
+        row.gscUrl = firstData ? firstData.candidate : '';
+        const queries = (firstData && firstData.data.queries) || [];
+        row.gscTop = queries.length ? queries.slice().sort((a, b) => (b.impressions || 0) - (a.impressions || 0))[0] : null;
+        row.gscQueries = queries;
+        if (row.gsc && row.gsc.impressions > 0) {
+          row.status = { key: 'confirmed', reason: `Shown in Google ${row.gsc.impressions.toLocaleString()} time${row.gsc.impressions === 1 ? '' : 's'} in the last 28 days (average position ${row.gsc.position.toFixed(1)}).` };
+        } else if (row.gsc && row.status.key === 'likely') {
+          row.status = { key: 'likely', reason: `${row.status.reason} No Google impressions in the last 28 days yet.` };
+        }
+      }
+      wsState.checked += 1;
+      wsScheduleRender();
+    }
+  };
+  await Promise.all(Array.from({ length: WS_CONCURRENCY }, worker));
+  if (run !== wsState.run) return;
+  wsState.done = true;
+  if ($('ws-submit')) $('ws-submit').disabled = false;
+  renderWebsiteSearch();
+}
+
+// ---------- Page strategy: keywords, links and content plan for one page ----------
+const WS_STOP = new Set([...KEYWORD_STOPWORDS, 'with', 'your', 'from', 'for', 'and', 'the']);
+const wsNormText = (text) => ` ${String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()} `;
+const wsWords = (text) => wsNormText(text).trim().split(' ').filter((w) => w.length >= 2 && !WS_STOP.has(w));
+
+function wsBrandWord(host) {
+  const labels = String(host || '').toLowerCase().split('.').filter((l) => l && !['www', 'com', 'au', 'net', 'org', 'co', 'edu', 'gov', 'io'].includes(l));
+  return labels[labels.length - 1] || '';
+}
+
+// Where (and how fully) a keyword phrase appears in one piece of text.
+function wsPlacement(text, phrase) {
+  const p = wsNormText(phrase).trim();
+  if (!p) return 'miss';
+  if (wsNormText(text).includes(` ${p} `)) return 'ok';
+  const words = wsWords(phrase);
+  const hay = wsNormText(text);
+  return words.length && words.every((w) => hay.includes(` ${w} `)) ? 'part' : 'miss';
+}
+
+function wsCountPhrase(text, phrase) {
+  const p = wsNormText(phrase).trim();
+  if (!p) return 0;
+  return wsNormText(text).split(` ${p} `).length - 1;
+}
+
+// Pick the keyword this page should target: real Google data first, otherwise the page's own topic.
+function wsPrimaryKeyword(row) {
+  const audit = row.audit;
+  const queries = (row.gscQueries || []).filter((q) => q.impressions > 0);
+  if (queries.length) {
+    const reachable = queries.filter((q) => q.position <= 20);
+    const pick = (reachable.length ? reachable : queries).slice().sort((a, b) => b.impressions - a.impressions)[0];
+    return { phrase: pick.query, source: `Search Console: shown ${pick.impressions.toLocaleString()} times, average position #${pick.position.toFixed(1)}` };
+  }
+  const brand = wsBrandWord(wsState.host);
+  const cleaned = (segment) => wsNormText(segment).trim().split(' ').filter((w) => w && w !== brand).join(' ');
+  const segments = String(audit.title || '').split(/\s*[|–—]\s*|\s[-:]\s/).map(cleaned).filter(Boolean);
+  let phrase = segments[0] || '';
+  const h1 = cleaned(audit.h1Text || '');
+  if (phrase.split(' ').length < 2 && h1.split(' ').length >= 2) phrase = h1;
+  if (!phrase) phrase = h1 || (audit.keywords || []).slice(0, 2).join(' ');
+  return { phrase, source: 'Suggested from the page’s title and main heading (no Google data for this page yet)' };
+}
+
+function wsTopicWords(audit) {
+  return new Set(wsWords(`${audit.title || ''} ${audit.h1Text || ''} ${audit.metaDesc || ''}`).filter((w) => w !== wsBrandWord(wsState.host)));
+}
+
+function wsRelatedPages(row) {
+  const mine = wsTopicWords(row.audit);
+  return wsState.rows
+    .filter((other) => other !== row && other.audit && other.audit.live)
+    .map((other) => {
+      const theirs = wsTopicWords(other.audit);
+      const shared = [...mine].filter((w) => theirs.has(w));
+      return { row: other, score: shared.length / Math.max(1, Math.min(mine.size, theirs.size)), shared };
+    })
+    .filter((r) => r.shared.length)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6);
+}
+
+function wsPathOf(url) {
+  try { const u = new URL(url); return `${u.pathname}${u.search}` || '/'; } catch (e) { return url; }
+}
+
+function wsBuildStrategy(row) {
+  const audit = row.audit;
+  const selfKey = normalizeSitemapUrl(row.url);
+  const actions = [];
+  const action = (prio, text) => actions.push({ prio, text });
+  const rank = { critical: 0, high: 1, medium: 2 };
+
+  // Google visibility first: nothing else matters if Google won't show the page.
+  if (row.status.key === 'no') action('critical', row.status.reason);
+  else if (row.status.key === 'maybe') action('high', row.status.reason);
+
+  // Keywords.
+  const primary = wsPrimaryKeyword(row);
+  const urlText = wsPathOf(row.url).replace(/[-_/.]+/g, ' ');
+  const places = [
+    ['Title tag', audit.title, 'high', 'Put the keyword near the start of the title.'],
+    ['Main heading (H1)', audit.h1Text, 'high', 'Use the keyword in the H1.'],
+    ['Meta description', audit.metaDesc, 'medium', 'Include the keyword naturally in the meta description.'],
+    ['First 100 words', audit.introText, 'medium', 'Mention the keyword in the opening paragraph.'],
+    ['Subheadings (H2/H3)', (audit.headingTexts || []).join(' | '), 'medium', 'Use the keyword (or a close variation) in at least one H2.'],
+    ['URL', urlText, null, '']
+  ].map(([label, text, prio, fix]) => ({ label, result: wsPlacement(text, primary.phrase), prio, fix }));
+  places.forEach((p) => { if (p.prio && p.result === 'miss') action(p.prio, `Keyword “${primary.phrase}” is missing from the ${p.label.toLowerCase()}. ${p.fix}`); });
+  const mentions = wsCountPhrase(audit.mainTextSample, primary.phrase);
+  if (primary.phrase && primary.phrase.split(' ').length < 2) action('high', `“${primary.phrase}” is too vague to rank for. Need a descriptive 2–4 word keyword (e.g. subject + level + type, like “VCE physics practice questions”), then use it in the title and H1.`);
+  const quickWins = (row.gscQueries || []).filter((q) => q.position > 3 && q.position <= 20 && q.impressions > 0).sort((a, b) => b.impressions - a.impressions).slice(0, 5);
+  quickWins
+    .filter((q) => q.query.toLowerCase() !== primary.phrase.toLowerCase())
+    .slice(0, 2)
+    .forEach((q) => action('high', q.position <= 10
+      ? `Quick win: “${q.query}” is at #${q.position.toFixed(1)} on Google page 1. Use the phrase in a heading and answer it directly to move into the top 3, where most clicks happen.`
+      : `Quick win: “${q.query}” is at #${q.position.toFixed(1)} (Google page ${wsRankPage(q.position)}). Add a section that answers this search and use the phrase in a heading to push it onto page 1.`));
+  const primaryRank = (row.gscQueries || []).find((q) => q.query.toLowerCase() === primary.phrase.toLowerCase());
+  if (primaryRank && primaryRank.position > 3) {
+    action('high', primaryRank.position <= 10
+      ? `Main keyword “${primary.phrase}” is at #${primaryRank.position.toFixed(1)} on Google page 1. Strengthen it in the title, H1 and opening paragraph to move into the top 3.`
+      : `Main keyword “${primary.phrase}” is at #${primaryRank.position.toFixed(1)} (Google page ${wsRankPage(primaryRank.position)}). Strengthen it in the title, H1 and content to reach page 1.`);
+  }
+
+  // Links.
+  const inbound = wsState.rows.filter((other) => other !== row && other.audit && other.audit.live && (other.audit.internalTargets || []).includes(selfKey));
+  const related = wsRelatedPages(row);
+  const linkFrom = related.filter((r) => !inbound.includes(r.row)).slice(0, 4);
+  const outTargets = new Set(audit.internalTargets || []);
+  const linkTo = related.filter((r) => !outTargets.has(normalizeSitemapUrl(r.row.url))).slice(0, 4);
+  const isHome = wsPathOf(row.url) === '/';
+  let linkNeed;
+  if (isHome) linkNeed = { prio: 'good', text: 'Homepage — it receives links from your navigation.' };
+  else if (!inbound.length) linkNeed = { prio: 'critical', text: 'Required: no other checked page links here (orphan page). Google may not find or value it.' };
+  else if (inbound.length < 3) linkNeed = { prio: 'high', text: `Recommended: only ${inbound.length} checked page${inbound.length === 1 ? '' : 's'} link here. Aim for at least 3 relevant internal links.` };
+  else linkNeed = { prio: 'good', text: `Good: ${inbound.length} checked pages link here.` };
+  if (linkNeed.prio !== 'good') action(linkNeed.prio, `${linkNeed.text}${linkFrom.length ? ` Add a link from ${linkFrom.slice(0, 2).map((r) => wsPathOf(r.row.url)).join(' and ')} using the text “${primary.phrase}”.` : ''}`);
+  if ((audit.uniqueInternalTargets || 0) < 3 && linkTo.length) action('medium', `This page links to only ${audit.uniqueInternalTargets || 0} other page(s). Link out to related pages such as ${linkTo.slice(0, 2).map((r) => wsPathOf(r.row.url)).join(' and ')}.`);
+
+  // Content.
+  const target = audit.hasDocumentEmbed ? 300 : 600;
+  const words = audit.mainWords || 0;
+  if (words < target) action('medium', `Content is thin: ${words} words. Need about ${target - words} more words of useful text (who it’s for, what it covers, how to use it, FAQs).`);
+  if (!(audit.headingTexts || []).length && words >= 150) action('medium', 'No subheadings. Split the content into H2 sections that each answer one question.');
+
+  // Remaining SEO checks with the biggest score impact, not already covered above.
+  const covered = /canonical|noindex|robots|title|h1|meta description|orphan|internal links|main content/i;
+  (audit.scoreDetail.checks || [])
+    .filter((c) => (c.status === 'fail' || c.status === 'warn') && !covered.test(c.label))
+    .sort((a, b) => (b.max - b.earned) - (a.max - a.earned))
+    .slice(0, 3)
+    .forEach((c) => {
+      const help = sitemapCheckHelp(c);
+      action('medium', `${c.label}: ${help.action.replace(/^Partly passing\.\s*/, '')}`);
+    });
+
+  actions.sort((a, b) => rank[a.prio] - rank[b.prio]);
+  return { primary, places, mentions, quickWins, inbound, linkFrom, linkTo, linkNeed, words, target, actions };
+}
+
+function openWsStrategy(url) {
+  const row = wsState.rows.find((r) => r.url === url);
+  if (!row || !row.audit || !row.audit.live) return;
+  const s = wsBuildStrategy(row);
+  const panel = $('ws-strategy');
+  const icon = { ok: '<span class="ws-ok">✓ Yes</span>', part: '<span class="ws-part">~ Words present, not as a phrase</span>', miss: '<span class="ws-miss">✗ Missing</span>' };
+  const prioLabel = { critical: 'Critical', high: 'High', medium: 'Medium', good: 'Good' };
+  const g = (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}&gl=au&hl=en`;
+  const recs = sitemapRecommendations(row.url, row.audit);
+  const authority = wsState.authority && wsState.authority.state === 'ok' && wsState.authority.score !== null
+    ? `Domain authority: <b>${(wsState.authority.host && wsState.authority.host.score !== null ? wsState.authority.host.score : wsState.authority.score).toFixed(2)}/10</b> (Open PageRank). Backlinks from other trusted websites raise this.`
+    : 'Backlinks from other trusted websites (schools, education directories, partners, local news) raise your domain authority.';
+  $('ws-strategy-body').innerHTML = `
+    <div class="ws-strategy-export"><button type="button" class="btn btn-primary btn-sm" id="ws-strategy-export" data-url="${escapeAttr(url)}">Export report</button><span class="hint" id="ws-strategy-export-status" role="status"></span></div>
+    <h3>Strategy: ${escapeHtml(wsPathOf(row.url))}</h3>
+    <p class="ws-strategy-url">${escapeHtml(row.url)}</p>
+    <div class="ws-strategy-meta"><span class="ws-badge ${row.status.key}">${escapeHtml(WS_STATUS[row.status.key].label)}</span><span>SEO score <b>${row.audit.seo}</b> (${row.audit.grade})</span>${row.gsc && row.gsc.impressions ? `<span>Google page ${wsRankPage(row.gsc.position)} · #${row.gsc.position.toFixed(1)}</span>` : ''}</div>
+    <section>
+      <h4>Priority actions</h4>
+      ${s.actions.length ? `<ol class="ws-actions">${s.actions.slice(0, 10).map((a) => `<li><span class="ws-prio ${a.prio}">${prioLabel[a.prio]}</span>${escapeHtml(a.text)}</li>`).join('')}</ol>` : '<p><span class="ws-prio good">Good</span>No major actions — keep content fresh and build backlinks.</p>'}
+    </section>
+    ${wsState.owned && (!row.gsc || !row.gsc.impressions) ? wsRankingGuideMarkup(row, s) : ''}
+    <section>
+      <h4>Keywords</h4>
+      <p>Main keyword to target:</p>
+      <span class="ws-keyword">${escapeHtml(s.primary.phrase || '—')}</span>
+      <p class="hint">${escapeHtml(s.primary.source)}</p>
+      <table class="ws-place"><tbody>${s.places.map((p) => `<tr><td>${escapeHtml(p.label)}</td><td>${p.label === 'URL' && wsPathOf(row.url) === '/' ? '<span class="ws-rank-none">– Not needed (homepage)</span>' : icon[p.result]}</td></tr>`).join('')}<tr><td>Mentions in the content</td><td>${s.mentions ? `<span class="ws-ok">${s.mentions}×</span>` : '<span class="ws-miss">0× — mention it 2–4 times naturally</span>'}</td></tr></tbody></table>
+      ${s.quickWins.length ? `<p><b>Quick wins</b> (already ranking on Google page 1–2 — easiest to improve):</p><div class="ws-chips">${s.quickWins.map((q) => `<span class="ws-chip"><b>${escapeHtml(q.query)}</b> #${q.position.toFixed(1)} · ${q.impressions.toLocaleString()} views</span>`).join('')}</div>` : ''}
+      ${(row.gscQueries || []).length ? '' : (wsState.owned ? '<p class="hint">Connect Search Console to see the real searches this page appears for.</p>' : '')}
+      <p><b>Keyword research</b> (popular Google searches for this topic):</p>
+      <div id="ws-strategy-research"><p class="hint">Researching Google searches…</p></div>
+      <p><b>Google Keyword Planner</b> (real monthly searches in Australia):</p>
+      <div id="ws-strategy-planner"><p class="hint">${gscIsConnected() ? 'Loading Keyword Planner…' : 'Connect Search Console to use Google Keyword Planner.'}</p></div>
+      <ul class="ws-list">
+        <li><a href="${escapeAttr(g(s.primary.phrase))}" target="_blank" rel="noopener noreferrer">See who ranks for “${escapeHtml(s.primary.phrase)}” on Google</a> (check the “People also ask” questions to answer on this page)</li>
+        <li><a href="https://trends.google.com/trends/explore?geo=AU&q=${encodeURIComponent(s.primary.phrase)}" target="_blank" rel="noopener noreferrer">Compare search interest in Google Trends</a></li>
+        <li><a href="https://ads.google.com/aw/keywordplanner/home" target="_blank" rel="noopener noreferrer">Check monthly search volume in Google Keyword Planner</a> (free with a Google Ads account)</li>
+      </ul>
+    </section>
+    <section>
+      <h4>Links</h4>
+      <p><span class="ws-prio ${s.linkNeed.prio}">${prioLabel[s.linkNeed.prio]}</span>${escapeHtml(s.linkNeed.text)}</p>
+      ${s.inbound.length ? `<p class="hint">Linked from: ${s.inbound.slice(0, 6).map((r) => escapeHtml(wsPathOf(r.url))).join(', ')}${s.inbound.length > 6 ? '…' : ''}</p>` : ''}
+      ${s.linkFrom.length ? `<p><b>Add a link to this page from:</b></p><ul class="ws-list">${s.linkFrom.map((r) => `<li><a href="${escapeAttr(r.row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(wsPathOf(r.row.url))}</a> — shares the topic “${escapeHtml(r.shared.slice(0, 3).join(', '))}”. Link text: “${escapeHtml(s.primary.phrase)}”</li>`).join('')}</ul>` : ''}
+      ${s.linkTo.length ? `<p><b>Link from this page to:</b></p><ul class="ws-list">${s.linkTo.map((r) => `<li><a href="${escapeAttr(r.row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(wsPathOf(r.row.url))}</a> — related: “${escapeHtml(r.shared.slice(0, 3).join(', '))}”</li>`).join('')}</ul>` : ''}
+      <p><b>Backlinks (other websites linking here):</b> ${authority}</p>
+      ${recs.guestposts.length ? `<ul class="ws-list">${recs.guestposts.map((gp) => `<li><a href="${escapeAttr(gp.url)}" target="_blank" rel="noopener noreferrer">Find sites to pitch: ${escapeHtml(gp.label)}</a></li>`).join('')}</ul>` : ''}
+    </section>
+    <section>
+      <h4>Content</h4>
+      <p>Main content: <b>${s.words}</b> words — target <b>${s.target}+</b>${row.audit.hasDocumentEmbed ? ' (document page)' : ''}.</p>
+      <p>Subheadings: <b>${(row.audit.headingTexts || []).length}</b> · Paragraphs: <b>${row.audit.paragraphs || 0}</b></p>
+      <p class="hint">Good structure: one H1 with the main keyword, an opening paragraph that answers the search directly, H2 sections for each sub-topic, and a short FAQ answering “People also ask” questions.</p>
+    </section>
+    <p class="hint">Strategy is rule-based, from this page’s live content${(row.gscQueries || []).length ? ', Search Console data' : ''} and the other pages checked in this search.</p>`;
+  panel.hidden = false;
+  panel.scrollTop = 0;
+  panel.dataset.url = url;
+  $('ws-dlg')?.classList.add('has-strategy');
+  $('ws-strategy-close')?.focus();
+  wsKeywordResearch(row, s.primary)
+    .catch((error) => { const box = $('ws-strategy-research'); if (box && panel.dataset.url === url) box.innerHTML = `<p class="hint">Keyword research failed: ${escapeHtml(error.message)}</p>`; return undefined; })
+    .then((research) => {
+      const box = $('ws-strategy-research');
+      if (!box || panel.dataset.url !== url || research === undefined) return research;
+      box.innerHTML = wsResearchMarkup(research, s.primary);
+      return research;
+    })
+    .then((research) => {
+      if (!gscIsConnected() || panel.dataset.url !== url) return;
+      wsLoadPlanner(row, s.primary, research || null).then((planner) => {
+        const box = $('ws-strategy-planner');
+        if (box && panel.dataset.url === url) box.innerHTML = wsPlannerMarkup(planner);
+      });
+    });
+  const indexStep = $('ws-index-step');
+  if (indexStep && gscIsConnected()) {
+    fetchGscInspection(row.url)
+      .then((insp) => {
+        if (panel.dataset.url !== url || !$('ws-index-step')) return;
+        const advice = wsIndexAdvice(insp);
+        $('ws-index-step').innerHTML = `<span class="${advice.ok ? 'ws-ok' : 'ws-miss'}">${advice.ok ? '✓' : '✗'}</span> <b>${escapeHtml(advice.title)}</b>${insp.lastCrawlTime ? ` <span class="hint">(last visited by Google ${escapeHtml(new Date(insp.lastCrawlTime).toLocaleDateString())})</span>` : ''}<br><span class="hint">${escapeHtml(advice.advice)}</span>`;
+        const link = $('ws-request-index');
+        if (link) link.href = wsSearchConsoleInspectLink(row.url, insp);
+      })
+      .catch((error) => {
+        if (panel.dataset.url !== url || !$('ws-index-step')) return;
+        $('ws-index-step').innerHTML = `<span class="ws-part">?</span> <b>Google has indexed it</b><br><span class="hint">Couldn’t check: ${escapeHtml(error.message)}. Use “Request indexing” below to check in Search Console.</span>`;
+      });
+  }
+}
+
+function wsBuildStrategyReportHtml(row, strategy, research, planner) {
+  const audit = row.audit;
+  const primary = strategy.primary.phrase || '—';
+  const volumeOf = new Map(planner && planner.state === 'ok' ? planner.ideas.concat(planner.targets).map((k) => [k.phrase, k.volume]) : []);
+  const recommended = research && research.keywords.length ? research.keywords : [];
+  const keywords = recommended.length
+    ? recommended.map((keyword) => ({
+      phrase: keyword.phrase,
+      why: [
+        volumeOf.has(keyword.phrase)
+          ? `Keyword Planner: ${volumeOf.get(keyword.phrase).toLocaleString()} searches a month in Australia.`
+          : `Google suggestion strength is ${Math.round(keyword.popularity * 100)}% relative to the strongest related suggestion found (not a search-volume estimate).`,
+        keyword.intent === 'buying' ? 'It has customer/buyer intent.' : 'It has research intent and can attract people learning about this topic.',
+        `It matches the page topic “${primary}”.`,
+        keyword.ranking
+          ? `Search Console query data shows an average position of #${keyword.ranking.position.toFixed(1)} with ${keyword.ranking.impressions.toLocaleString()} impressions.`
+          : 'No matching Search Console query was found for this keyword.'
+      ].join(' ')
+    }))
+    : [{
+      phrase: primary,
+      why: `${strategy.primary.source}. This phrase is based on the page title/main heading or the page’s Search Console queries; Google suggestion research did not return a stronger related keyword.`
+    }];
+  const questions = research ? research.questions : [];
+  const metrics = row.gsc
+    ? [
+      ['Impressions (last 28 days)', (row.gsc.impressions || 0).toLocaleString()],
+      ['Clicks (last 28 days)', (row.gsc.clicks || 0).toLocaleString()],
+      ['Click-through rate', `${((row.gsc.ctr || 0) * 100).toFixed(1)}%`],
+      ['Average position', row.gsc.impressions ? `#${row.gsc.position.toFixed(1)} (Google page ${wsRankPage(row.gsc.position)})` : 'No impressions recorded']
+    ]
+    : [['Search Console', 'No page analytics available. Connect Search Console for impressions, clicks, click-through rate and position.']];
+  const queryRows = (row.gscQueries || []).slice().sort((a, b) => b.impressions - a.impressions).slice(0, 15);
+  const placement = strategy.places.map((item) => {
+    const result = item.result === 'ok' ? 'Present' : item.result === 'part' ? 'Related words present; exact phrase not found' : 'Missing';
+    return `<tr><td>${escapeHtml(item.label)}</td><td>${escapeHtml(result)}</td></tr>`;
+  }).join('');
+  const metricRows = metrics.map(([label, value]) => `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('');
+  const keywordRows = keywords.map((keyword) => `<tr><th>${escapeHtml(keyword.phrase)}</th><td>${escapeHtml(keyword.why)}</td></tr>`).join('');
+  const questionRows = questions.map((question) => `<li>${escapeHtml(question.phrase)} — use as an FAQ or a subheading because it reflects a question people search for about this topic.</li>`).join('');
+  const actionRows = strategy.actions.length
+    ? strategy.actions.slice(0, 10).map((item) => `<li><strong>${escapeHtml(item.prio)}:</strong> ${escapeHtml(item.text)}</li>`).join('')
+    : '<li>No major actions identified. Keep the page content current and continue building relevant links.</li>';
+  const queryTable = queryRows.length
+    ? `<table><thead><tr><th>Search query</th><th>Clicks</th><th>Impressions</th><th>CTR</th><th>Avg. position</th></tr></thead><tbody>${queryRows.map((query) => `<tr><td>${escapeHtml(query.query)}</td><td>${query.clicks.toLocaleString()}</td><td>${query.impressions.toLocaleString()}</td><td>${(query.ctr * 100).toFixed(1)}%</td><td>#${query.position.toFixed(1)}</td></tr>`).join('')}</tbody></table>`
+    : '<p>No page-specific Search Console queries are available for this period.</p>';
+  const status = `${WS_STATUS[row.status.key].label}${row.status.reason ? ` — ${row.status.reason}` : ''}`;
+  const money = (k) => (k.highBid ? `$${(k.lowBid || 0).toFixed(2)}–$${k.highBid.toFixed(2)}` : '—');
+  let plannerHtml;
+  if (planner && planner.state === 'ok' && planner.ideas.length) {
+    plannerHtml = `${planner.targets.length ? `<h3>Best keywords to target (Google Keyword Planner)</h3>
+<table><thead><tr><th>Keyword</th><th>Searches / month</th><th>Competition</th><th>Why target it</th></tr></thead><tbody>${planner.targets.map((k) => `<tr><th>${escapeHtml(k.phrase)}</th><td>${k.volume.toLocaleString()}</td><td>${WS_COMPETITION_LABEL[k.competition] || '—'}</td><td>${escapeHtml(k.why.join(' '))}</td></tr>`).join('')}</tbody></table>` : ''}
+<h3>Related keywords (Google Keyword Planner, Australia)</h3>
+<table><thead><tr><th>Keyword</th><th>Searches / month</th><th>Competition</th><th>Top-of-page bid</th><th>Your ranking</th></tr></thead><tbody>${planner.ideas.map((k) => `<tr><td>${escapeHtml(k.phrase)}</td><td>${(k.volume || 0).toLocaleString()}</td><td>${WS_COMPETITION_LABEL[k.competition] || '—'}</td><td>${money(k)}</td><td>${k.ranking ? `#${k.ranking.position.toFixed(1)}` : '—'}</td></tr>`).join('')}</tbody></table>
+<p class="muted">${planner.total} ideas returned; ${planner.offTopic} off-topic ideas excluded. “Competition” is advertiser competition in Google Ads, not organic ranking difficulty.</p>`;
+  } else if (planner && planner.state === 'error') {
+    plannerHtml = `<p class="muted">Google Keyword Planner data could not be loaded: ${escapeHtml(planner.message)}</p>`;
+  } else if (planner && planner.state === 'ok') {
+    plannerHtml = '<p class="muted">Google Keyword Planner returned no ideas matching this page’s topic.</p>';
+  } else {
+    plannerHtml = '<p class="muted">Google Keyword Planner isn’t connected or set up yet, so monthly search volumes are not included.</p>';
+  }
+  const generated = new Date().toLocaleString();
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SiteScout strategy report — ${escapeHtml(wsPathOf(row.url))}</title>
+<style>
+body{font:15px/1.55 Arial,sans-serif;color:#18243a;max-width:920px;margin:36px auto;padding:0 24px}
+h1{font-size:28px;margin-bottom:4px}h2{font-size:19px;margin:28px 0 8px;border-bottom:1px solid #d9e0eb;padding-bottom:6px}
+.muted{color:#59677d;font-size:13px}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:18px 0}
+.metric{border:1px solid #d9e0eb;border-radius:8px;padding:12px}.metric b{display:block;font-size:20px;color:#14305f}
+table{width:100%;border-collapse:collapse;margin:10px 0 20px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #e6eaf0;padding:8px}
+th{font-weight:700;background:#f5f7fa}ol,ul{padding-left:24px}li{margin:7px 0}.actions li strong{text-transform:capitalize}
+.print{float:right}@media print{body{max-width:none;margin:0;padding:0}.print{display:none}h2{break-after:avoid}tr,li{break-inside:avoid}}
+</style></head><body>
+<button class="print" onclick="window.print()">Print / Save as PDF</button>
+<p class="muted">SiteScout page strategy report · Generated ${escapeHtml(generated)}</p>
+<h1>${escapeHtml(audit.title || wsPathOf(row.url))}</h1><p><a href="${escapeAttr(row.url)}">${escapeHtml(row.url)}</a></p>
+<p><strong>Google status:</strong> ${escapeHtml(status)} · <strong>SEO score:</strong> ${audit.seo} (${escapeHtml(audit.grade)})</p>
+<h2>Analytics</h2><table><tbody>${metricRows}</tbody></table>${queryTable}
+<h2>Page and SEO stats</h2><table><tbody>
+<tr><th>Main content words</th><td>${strategy.words} (recommended target: ${strategy.target}+)</td></tr>
+<tr><th>Subheadings</th><td>${(audit.headingTexts || []).length}</td></tr>
+<tr><th>Paragraphs</th><td>${audit.paragraphs || 0}</td></tr>
+<tr><th>Unique internal links from this page</th><td>${audit.uniqueInternalTargets || 0}</td></tr>
+<tr><th>Checked pages linking to this page</th><td>${strategy.inbound.length}</td></tr></tbody></table>
+<h2>Keywords to target and why</h2>
+<p><strong>Current primary keyword:</strong> ${escapeHtml(primary)} <span class="muted">(${escapeHtml(strategy.primary.source)})</span></p>
+${research && research.keywords.length && research.keywords[0].phrase !== primary ? `<p><strong>Best related opportunity:</strong> ${escapeHtml(research.keywords[0].phrase)} — selected as the strongest relevant Google suggestion for the page topic.</p>` : ''}
+${plannerHtml}
+<h3>Related Google searches</h3>
+<table><thead><tr><th>Keyword</th><th>Why it is recommended</th></tr></thead><tbody>${keywordRows}</tbody></table>
+${questionRows ? `<h3>Related questions to answer</h3><ul>${questionRows}</ul>` : ''}
+<p class="muted">Google suggestion strength is a relative signal, not monthly search volume. Monthly searches come from Google Keyword Planner when connected. Search Console metrics reflect the connected property and recent reporting period.</p>
+<h2>Keyword placement</h2><table><thead><tr><th>Page element</th><th>Finding</th></tr></thead><tbody>${placement}<tr><td>Mentions in content</td><td>${strategy.mentions} (aim for 2–4 natural mentions)</td></tr></tbody></table>
+<h2>Priority actions</h2><ol class="actions">${actionRows}</ol>
+</body></html>`;
+}
+
+async function wsExportStrategyReport(url, button) {
+  const row = wsState.rows.find((item) => item.url === url);
+  const status = $('ws-strategy-export-status');
+  if (!row || !row.audit || !row.audit.live || !button) return;
+  button.disabled = true;
+  button.textContent = 'Preparing report…';
+  if (status) status.textContent = '';
+  try {
+    const strategy = wsBuildStrategy(row);
+    const research = await wsKeywordResearch(row, strategy.primary);
+    const planner = gscIsConnected() ? await wsLoadPlanner(row, strategy.primary, research) : null;
+    if ($('ws-strategy')?.dataset.url !== url) return;
+    const report = wsBuildStrategyReportHtml(row, strategy, research, planner);
+    const objectUrl = URL.createObjectURL(new Blob([report], { type: 'text/html;charset=utf-8' }));
+    const link = document.createElement('a');
+    const slug = wsPathOf(url).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'homepage';
+    link.href = objectUrl;
+    link.download = `sitescout-strategy-${slug}.html`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    if (status) status.textContent = 'Report downloaded. Open it and choose Print / Save as PDF if needed.';
+  } catch (error) {
+    if (status) status.textContent = `Report export failed: ${error.message}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Export report';
+  }
+}
+
+$('ws-strategy-body')?.addEventListener('click', (event) => {
+  const button = event.target.closest('#ws-strategy-export');
+  if (button) wsExportStrategyReport(button.dataset.url, button);
+});
+
+// ---------- Keyword research (Google suggestions scored for popularity, relevance and intent) ----------
+const WS_REGIONS = {
+  VIC: ['victoria', 'vic', 'melbourne', 'geelong', 'ballarat', 'bendigo'],
+  NSW: ['nsw', 'sydney', 'newcastle', 'wollongong'],
+  QLD: ['qld', 'queensland', 'brisbane', 'gold coast', 'cairns', 'townsville'],
+  WA: ['wa', 'perth'],
+  SA: ['sa', 'adelaide'],
+  TAS: ['tasmania', 'tas', 'hobart'],
+  ACT: ['act', 'canberra'],
+  NT: ['nt', 'darwin']
+};
+const WS_OFF_TARGET = /\b(jobs?|salary|salaries|careers?|hiring|vacanc(y|ies)|become an?|reddit|wiki(pedia)?|volunteer)\b/;
+const WS_OVERSEAS = /\b(fl|florida|usa|us|uk|london|ny|texas|tx|california|ca|canada|ontario|nz|new zealand|auckland|singapore|india|ireland)\b/;
+const WS_QUESTION = /^(how|what|why|is|are|can|does|do|should|when|which|who|where)\b/;
+const WS_BUYING = /\b(tutors?|tutoring|tuition|class(es)?|courses?|lessons?|programs?|near me|cost|prices?|fees?|best|private|online|coaching|cent(re|er)s?|bookings?|enrol(ment)?)\b/;
+const wsResearchCache = new Map();
+const wsPlannerCache = new Map();
+
+function wsRegionMentions(text) {
+  const hay = wsNormText(text);
+  const counts = {};
+  Object.entries(WS_REGIONS).forEach(([region, terms]) => {
+    counts[region] = terms.reduce((n, t) => n + (hay.split(` ${t} `).length - 1), 0);
+  });
+  return counts;
+}
+
+// What the business is about, read from every checked page: main topic words and home region.
+function wsBusinessProfile() {
+  const brand = wsBrandWord(wsState.host);
+  const freq = new Map();
+  let regionText = '';
+  wsState.rows.forEach((r) => {
+    if (!r.audit || !r.audit.live) return;
+    new Set(wsWords(`${r.audit.title || ''} ${r.audit.h1Text || ''} ${r.audit.metaDesc || ''}`)).forEach((w) => {
+      if (w !== brand && w.length >= 3) freq.set(w, (freq.get(w) || 0) + 1);
+    });
+    regionText += ` ${r.audit.title || ''} ${r.audit.metaDesc || ''} ${(r.audit.mainTextSample || '').slice(0, 3000)}`;
+  });
+  const counts = wsRegionMentions(regionText);
+  const best = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  return {
+    brand,
+    terms: [...freq.entries()].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]).slice(0, 20).map(([w]) => w),
+    region: best && best[1] > 0 ? best[0] : ''
+  };
+}
+
+async function wsKeywordResearch(row, primary) {
+  if (wsResearchCache.has(row.url)) return wsResearchCache.get(row.url);
+  const profile = wsBusinessProfile();
+  const locationWords = new Set(Object.values(WS_REGIONS).flat().flatMap((t) => t.split(' ')));
+  const words = wsWords(primary.phrase).filter((w) => w !== profile.brand);
+  const coreNoLocation = words.filter((w) => !locationWords.has(w)).join(' ') || words.join(' ');
+  const core = words.join(' ');
+  // The page's subject, including its location (e.g. "tutoring melbourne", "vce physics").
+  const head = words.slice(0, 2).join(' ');
+  const h1 = wsWords(row.audit.h1Text || '').filter((w) => w !== profile.brand).join(' ');
+  const seeds = [primary.phrase, core, coreNoLocation, head, h1,
+    `${coreNoLocation} near me`, `${coreNoLocation} online`, `${coreNoLocation} cost`, `best ${core}`,
+    `how ${head}`, `what ${head}`, `is ${head}`, `why ${head}`,
+    ...'abcdefghijklmnoprstuvw'.split('').map((letter) => `${head} ${letter}`)]
+    .map((s) => s.trim()).filter((s) => s && s.length > 2);
+  const results = await fetchGoogleSuggestions(seeds);
+  if (!results) return null;
+
+  const stats = new Map();
+  Object.values(results).forEach((list) => (list || []).forEach((suggestion, index) => {
+    const key = wsNormText(suggestion).trim();
+    if (!key) return;
+    const stat = stats.get(key) || { phrase: key, hits: 0, weight: 0 };
+    stat.hits += 1;
+    stat.weight += (10 - Math.min(index, 9)) / 10;
+    stats.set(key, stat);
+  }));
+  if (!stats.size) return { keywords: [], questions: [], avoided: [], profile, seeds: seeds.length };
+  const pageWords = new Set([...wsWords(primary.phrase), ...wsTopicWords(row.audit)]);
+  const businessWords = new Set([...pageWords, ...profile.terms]);
+  const pageIntent = WS_BUYING.test(wsNormText(`${row.audit.title} ${row.audit.h1Text}`)) ? 'buying' : 'research';
+  const siteQueries = new Map((wsState.siteQueries || []).map((q) => [wsNormText(q.key).trim(), q]));
+  const otherRegions = Object.entries(WS_REGIONS).filter(([region]) => region !== profile.region).flatMap(([, terms]) => terms);
+
+  const scored = [];
+  const avoided = [];
+  // A keyword must stay on this page's subject (e.g. a Physics page only gets Physics searches).
+  const stem = (w) => (w.length > 4 ? w.replace(/(ing|ers|er|es|s)$/, '') : w);
+  const subjectWords = wsWords(head).filter((w) => w.length >= 3).map(stem);
+  const pageStems = new Set([...pageWords].map(stem));
+  stats.forEach((stat) => {
+    const sWords = wsWords(stat.phrase).filter((w) => w !== profile.brand);
+    const sStems = sWords.map(stem);
+    if (!sWords.length || !sStems.some((w) => pageStems.has(w))) return;
+    if (subjectWords.length && !subjectWords.every((w) => sStems.includes(w))) return;
+    const hay = ` ${stat.phrase} `;
+    if (WS_OFF_TARGET.test(stat.phrase)) { avoided.push({ phrase: stat.phrase, why: 'job/career or off-topic search' }); return; }
+    if (profile.region && WS_OVERSEAS.test(stat.phrase)) { avoided.push({ phrase: stat.phrase, why: 'outside Australia' }); return; }
+    if (profile.region && otherRegions.some((t) => hay.includes(` ${t} `))) { avoided.push({ phrase: stat.phrase, why: `another state (your site focuses on ${profile.region})` }); return; }
+    const relevance = sWords.filter((w) => businessWords.has(w)).length / sWords.length;
+    const intent = WS_QUESTION.test(stat.phrase) ? 'question' : WS_BUYING.test(stat.phrase) ? 'buying' : 'research';
+    const intentBonus = intent === pageIntent ? 0.15 : intent === 'question' ? 0.05 : 0;
+    const ranking = siteQueries.get(stat.phrase) || null;
+    scored.push({ phrase: stat.phrase, weight: stat.weight, relevance, intent, intentBonus, ranking });
+  });
+  // Popularity is relative to the strongest on-topic search found.
+  const maxKept = Math.max(1e-9, ...scored.map((k) => k.weight));
+  scored.forEach((k) => {
+    k.popularity = k.weight / maxKept;
+    k.score = k.popularity * 0.5 + k.relevance * 0.35 + k.intentBonus;
+  });
+  scored.sort((a, b) => b.score - a.score);
+  const result = {
+    profile,
+    seeds: seeds.length,
+    pageIntent,
+    keywords: scored.filter((k) => k.intent !== 'question' && k.relevance >= 0.5).slice(0, 10),
+    questions: scored.filter((k) => k.intent === 'question').slice(0, 6),
+    avoided: avoided.slice(0, 5)
+  };
+  wsResearchCache.set(row.url, result);
+  return result;
+}
+
+function wsResearchMarkup(research, primary) {
+  if (!research) {
+    return `<p class="hint">${gscIsConnected() ? 'Google suggestions couldn’t be loaded right now.' : 'Connect Search Console (or turn on private scouting) to research popular Google searches automatically.'}</p>`;
+  }
+  if (!research.keywords.length && !research.questions.length) return '<p class="hint">Google returned no related searches for this topic.</p>';
+  const dots = (p) => '●'.repeat(Math.max(1, Math.round(p * 5))) + '○'.repeat(5 - Math.max(1, Math.round(p * 5)));
+  const intentLabel = { buying: 'Customers', research: 'Research', question: 'Question' };
+  const best = research.keywords[0];
+  const rankText = (k) => (k.ranking ? ` · you rank #${k.ranking.position.toFixed(1)}` : '');
+  return `
+    <p class="hint">Business focus detected: <b>${escapeHtml(research.profile.terms.slice(0, 8).join(', ') || '—')}</b>${research.profile.region ? ` · region <b>${escapeHtml(research.profile.region)}</b>` : ''} · ${research.seeds} Google lookups.</p>
+    ${best ? `<p><b>Best keyword to target:</b></p><span class="ws-keyword">${escapeHtml(best.phrase)}</span><p class="hint">${best.phrase === wsNormText(primary.phrase).trim() ? 'Matches the keyword this page already targets.' : `More searched${best.intent === 'buying' ? ' and buyer-focused' : ''} than “${escapeHtml(primary.phrase)}”. Consider using it in the title and H1.`}</p>` : ''}
+    <table class="ws-place ws-research"><thead><tr><td>Keyword</td><td>Popularity</td><td>Intent</td></tr></thead><tbody>
+      ${research.keywords.map((k) => `<tr><td>${escapeHtml(k.phrase)}${rankText(k) ? `<small class="ws-ranking-note">${escapeHtml(rankText(k).slice(3))}</small>` : ''}</td><td class="ws-dots" title="Relative popularity from Google search suggestions">${dots(k.popularity)}</td><td>${intentLabel[k.intent]}</td></tr>`).join('')}
+    </tbody></table>
+    ${research.questions.length ? `<p><b>Questions people ask</b> (answer these in a FAQ or H2 sections):</p><ul class="ws-list">${research.questions.map((q) => `<li>${escapeHtml(q.phrase)}?</li>`).join('')}</ul>` : ''}
+    ${research.avoided.length ? `<p class="hint">Ignored as off-target: ${research.avoided.map((a) => `“${escapeHtml(a.phrase)}” (${escapeHtml(a.why)})`).join(', ')}.</p>` : ''}
+    <p class="hint">Popularity is relative, based on how prominently Google suggests each search. For exact monthly volumes, use Google Keyword Planner.</p>`;
+}
+
+// ---------- Google Keyword Planner: real monthly searches, ranked for this page ----------
+const WS_COMPETITION_LABEL = { LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', UNSPECIFIED: '—', UNKNOWN: '—' };
+const WS_MONTHS = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+const wsStem = (w) => (w.length > 4 ? w.replace(/(ing|ers|er|es|s)$/, '') : w);
+
+// Compares the latest 3 months with the 3 months before them.
+function wsPlannerTrend(monthly) {
+  const sorted = (monthly || []).slice().sort((a, b) => (a.year - b.year) || (WS_MONTHS.indexOf(a.month) - WS_MONTHS.indexOf(b.month)));
+  if (sorted.length < 6) return null;
+  const sum = (list) => list.reduce((n, m) => n + m.searches, 0);
+  const recent = sum(sorted.slice(-3));
+  const before = sum(sorted.slice(-6, -3));
+  if (!before) return null;
+  return Math.round(((recent - before) / before) * 100);
+}
+
+async function wsKeywordPlanner(row, primary, research) {
+  if (wsPlannerCache.has(row.url)) return wsPlannerCache.get(row.url);
+  if (!gscIsConnected()) return { state: 'disconnected' };
+  const profile = wsBusinessProfile();
+  const clean = (phrase) => wsNormText(phrase).trim().split(' ').filter((w) => w && w !== profile.brand).join(' ');
+  const seeds = [...new Set([
+    primary.phrase,
+    clean(wsTitleCore(row.audit.title)),
+    clean(row.audit.h1Text),
+    ...((research && research.keywords) || []).slice(0, 12).map((k) => k.phrase),
+    ...(row.gscQueries || []).slice(0, 5).map((q) => q.query)
+  ].map(clean).filter((s) => s && s.length <= 80 && s.split(' ').length <= 10))].slice(0, 20);
+  const data = await fetchKeywordPlannerIdeas(seeds, row.url);
+  if (!data) return { state: 'disconnected' };
+  if (data.configured === false) {
+    const result = { state: 'setup', missing: data.missing || [] };
+    return result;
+  }
+
+  const pageStems = new Set([...wsWords(primary.phrase), ...wsTopicWords(row.audit)].map(wsStem));
+  const subjectStems = wsWords(primary.phrase).filter((w) => w !== profile.brand && w.length >= 3).slice(0, 2).map(wsStem);
+  const otherRegions = Object.entries(WS_REGIONS).filter(([region]) => region !== profile.region).flatMap(([, terms]) => terms);
+  const siteQueries = new Map((wsState.siteQueries || []).map((q) => [wsNormText(q.key).trim(), q]));
+  const pageQueries = new Map((row.gscQueries || []).map((q) => [wsNormText(q.query).trim(), q]));
+  const titleH1 = `${row.audit.title || ''} ${row.audit.h1Text || ''}`;
+  const competitionFactor = { LOW: 1, MEDIUM: 0.85, HIGH: 0.7 };
+
+  const ideas = [];
+  let offTopic = 0;
+  (data.ideas || []).forEach((idea) => {
+    const phrase = wsNormText(idea.text).trim();
+    const words = wsWords(phrase).filter((w) => w !== profile.brand);
+    if (!words.length) return;
+    const stems = words.map(wsStem);
+    const matched = stems.filter((s) => pageStems.has(s));
+    const relevance = matched.length / stems.length;
+    const hay = ` ${phrase} `;
+    const onSubject = !subjectStems.length || subjectStems.some((s) => stems.includes(s));
+    if (!onSubject || relevance < 0.5 || WS_OFF_TARGET.test(phrase) || WS_OVERSEAS.test(phrase)
+      || (profile.region && otherRegions.some((t) => hay.includes(` ${t} `)))) { offTopic += 1; return; }
+    const volume = idea.avgMonthlySearches || 0;
+    const ranking = pageQueries.get(phrase) || siteQueries.get(phrase) || null;
+    const trend = wsPlannerTrend(idea.monthly);
+    const quickWin = ranking && ranking.position > 3 && ranking.position <= 20;
+    const score = Math.log10(volume + 1) * relevance * (competitionFactor[idea.competition] || 0.85) + (quickWin ? 0.6 : 0) + (trend !== null && trend >= 20 ? 0.2 : 0);
+    ideas.push({ ...idea, phrase, volume, relevance, matched: words.filter((w, i) => pageStems.has(stems[i])), ranking, trend, quickWin, score, onPage: wsPlacement(titleH1, phrase) === 'ok' });
+  });
+
+  const targets = ideas.filter((i) => i.volume > 0).sort((a, b) => b.score - a.score).slice(0, 5).map((idea) => {
+    const why = [`${idea.volume.toLocaleString()} searches a month in Australia (12-month average).`];
+    if (idea.quickWin) why.push(`You already appear at #${idea.ranking.position.toFixed(1)} on Google — a quick win to push onto the top of page 1.`);
+    else if (idea.ranking) why.push(`You already rank #${idea.ranking.position.toFixed(1)} for it.`);
+    if (idea.competition === 'LOW') why.push('Few advertisers bid on it, so the results page is less crowded with ads.');
+    else if (idea.competition === 'HIGH') why.push('Many advertisers bid on it — it attracts buyers, so an organic ranking is valuable.');
+    if (idea.highBid) why.push(`Advertisers pay about $${(idea.lowBid || 0).toFixed(2)}–$${idea.highBid.toFixed(2)} per click, which shows its commercial value.`);
+    if (idea.trend !== null && Math.abs(idea.trend) >= 20) why.push(`Search interest is ${idea.trend > 0 ? 'rising' : 'falling'} (${idea.trend > 0 ? '+' : ''}${idea.trend}% in the last 3 months vs the 3 before).`);
+    why.push(`Matches this page’s topic (${idea.matched.slice(0, 4).join(', ')}).`);
+    why.push(idea.onPage ? 'Already used in the title/H1.' : 'Not yet in the title or H1 — add it there, or in an H2 section.');
+    return { ...idea, why };
+  });
+  const result = {
+    state: 'ok',
+    seeds,
+    total: (data.ideas || []).length,
+    offTopic,
+    targets,
+    ideas: ideas.sort((a, b) => b.volume - a.volume).slice(0, 25)
+  };
+  wsPlannerCache.set(row.url, result);
+  return result;
+}
+
+function wsPlannerSetupMarkup(missing) {
+  return `
+    <p class="hint">Keyword Planner isn’t set up yet${missing && missing.length ? ` (missing Worker secrets: ${missing.map(escapeHtml).join(', ')})` : ''}. It’s free — no ad spend needed:</p>
+    <ol class="ws-list">
+      <li>Create a Google Ads account at <a href="https://ads.google.com" target="_blank" rel="noopener noreferrer">ads.google.com</a> and note the 10-digit Customer ID (top right).</li>
+      <li>In the Google Cloud project that owns your Search Console OAuth client, enable <b>Google Ads API</b>, complete <b>brand verification</b>, then apply for <b>Basic access</b> on the <a href="https://console.cloud.google.com/google/ads-apis/overview" target="_blank" rel="noopener noreferrer">Google Ads API Overview page</a>.</li>
+      <li>In the <a href="https://developers.google.com/oauthplayground" target="_blank" rel="noopener noreferrer">OAuth Playground</a> (your own client ID/secret), authorise both <code>webmasters.readonly</code> and <code>https://www.googleapis.com/auth/adwords</code>, and copy the refresh token.</li>
+      <li>Add Worker secrets <code>ADS_CUSTOMER_ID</code> and <code>ADS_REFRESH_TOKEN</code> to the <b>gsc</b> Worker.</li>
+    </ol>`;
+}
+
+function wsPlannerMarkup(planner) {
+  if (!planner || planner.state === 'disconnected') return '<p class="hint">Connect Search Console to use Google Keyword Planner.</p>';
+  if (planner.state === 'setup') return wsPlannerSetupMarkup(planner.missing);
+  if (planner.state === 'error') return `<p class="hint">Keyword Planner failed: ${escapeHtml(planner.message)}</p>`;
+  if (!planner.ideas.length) return `<p class="hint">Keyword Planner returned ${planner.total} ideas, but none matched this page’s topic.</p>`;
+  const vol = (n) => (n === null || n === undefined ? '—' : n.toLocaleString());
+  const bid = (k) => (k.highBid ? `$${(k.lowBid || 0).toFixed(2)}–$${k.highBid.toFixed(2)}` : '—');
+  return `
+    ${planner.targets.length ? `<p><b>Best keywords to target</b> (volume × topic fit × competition, plus quick wins):</p>
+    <ol class="ws-actions">${planner.targets.map((k) => `<li><span class="ws-keyword">${escapeHtml(k.phrase)}</span><br><span class="hint">${k.why.map(escapeHtml).join(' ')}</span></li>`).join('')}</ol>` : ''}
+    <table class="ws-place ws-research"><thead><tr><td>Related keyword</td><td>Searches / mo</td><td>Competition</td><td>Top-of-page bid</td></tr></thead><tbody>
+      ${planner.ideas.map((k) => `<tr><td>${escapeHtml(k.phrase)}${k.ranking ? `<small class="ws-ranking-note">you rank #${k.ranking.position.toFixed(1)}</small>` : ''}</td><td>${vol(k.volume)}</td><td>${WS_COMPETITION_LABEL[k.competition] || '—'}</td><td>${bid(k)}</td></tr>`).join('')}
+    </tbody></table>
+    <p class="hint">${planner.total} ideas from ${planner.seeds.length} seed keywords and this page’s URL (Australia, English); ${planner.offTopic} off-topic ideas hidden. “Competition” is how many advertisers bid in Google Ads — not how hard it is to rank organically.</p>`;
+}
+
+async function wsLoadPlanner(row, primary, research) {
+  try {
+    return await wsKeywordPlanner(row, primary, research);
+  } catch (error) {
+    return { state: 'error', message: error.message };
+  }
+}
+
+// Plain-English meaning and fix for Search Console's URL Inspection result.
+function wsIndexAdvice(insp) {
+  const state = `${insp.coverageState || ''} ${insp.indexingState || ''}`.toLowerCase();
+  const indexed = insp.verdict === 'PASS' || /indexed/.test(state) && !/not indexed/.test(state);
+  if (indexed) return { ok: true, title: 'Google has indexed this page', advice: 'It can appear in results. If it still gets no views, it needs a keyword people search for, stronger content and more links (see the steps below).' };
+  if (/unknown to google/.test(state)) return { ok: false, title: 'Google doesn’t know this page exists yet', advice: 'Click “Request indexing” in Search Console, make sure it’s in your sitemap, and link to it from your homepage or menu.' };
+  if (/discovered/.test(state)) return { ok: false, title: 'Discovered – not indexed yet', advice: 'Google knows the page but hasn’t visited it. Add links to it from strong pages (homepage, menu) and request indexing. This often means Google sees it as low priority.' };
+  if (/crawled/.test(state)) return { ok: false, title: 'Crawled – but Google chose not to index it', advice: 'Google visited and decided it isn’t valuable enough yet. Add more unique, useful content, target a clear keyword, avoid duplicate text, then request indexing again.' };
+  if (/duplicate|canonical/.test(state)) return { ok: false, title: 'Google treats it as a duplicate', advice: `Google picked a different page as the main version${insp.googleCanonical ? ` (${insp.googleCanonical})` : ''}. Make this page’s content clearly different, and set its canonical to its own URL.` };
+  if (/noindex/.test(state)) return { ok: false, title: 'Blocked by a noindex tag', advice: 'Remove the noindex instruction from the page, then request indexing.' };
+  if (/robots/.test(state)) return { ok: false, title: 'Blocked by robots.txt', advice: 'Remove the robots.txt rule blocking this page, then request indexing.' };
+  if (/redirect/.test(state)) return { ok: false, title: 'This URL redirects', advice: 'Google indexes the destination instead. Link to and list the final URL in your sitemap.' };
+  if (/404|not found|soft 404/.test(state)) return { ok: false, title: 'Google sees this page as missing (404 / soft 404)', advice: 'Make sure the page loads with real content, then request indexing.' };
+  return { ok: false, title: insp.coverageState || 'Not indexed', advice: 'Open the page in Search Console’s URL Inspection to see details, fix any issue shown, then request indexing.' };
+}
+
+function wsSearchConsoleInspectLink(url, insp) {
+  return (insp && insp.inspectionLink) || `https://search.google.com/search-console/inspect?resource_id=${encodeURIComponent(gscConfig.property)}&id=${encodeURIComponent(url)}`;
+}
+
+function wsRankingGuideMarkup(row, s) {
+  const audit = row.audit;
+  const allowed = !audit.noindex && !(audit.robots && audit.robots.assessed && !audit.robots.allowed);
+  const canonicalOk = !wsCanonicalElsewhere(row.url, audit) || /redirects back to this page/.test(row.status.reason);
+  const canonicalFix = /doesn’t exist/.test(row.status.reason) ? row.status.reason : 'Set <link rel="canonical"> to this page’s own URL.';
+  const keywordUsed = s.places.slice(0, 2).every((p) => p.result !== 'miss');
+  const step = (ok, label, fix) => `<li><span class="${ok === null ? 'ws-part' : ok ? 'ws-ok' : 'ws-miss'}">${ok === null ? '?' : ok ? '✓' : '✗'}</span> <b>${escapeHtml(label)}</b>${ok ? '' : `<br><span class="hint">${escapeHtml(fix)}</span>`}</li>`;
+  return `
+    <section>
+      <h4>How to get this page ranking</h4>
+      <p>This page has had no Google views in the last 28 days. Work through these steps in order:</p>
+      <ol class="ws-list ws-steps">
+        ${step(allowed, 'Google is allowed to read it', 'Remove the noindex tag / robots.txt block.')}
+        ${step(row.status.key !== 'no' || /canonical/i.test(row.status.reason), 'Nothing tells Google to skip it', row.status.reason)}
+        ${step(canonicalOk, 'Its canonical points to itself', canonicalFix)}
+        <li id="ws-index-step"><span class="ws-part">…</span> <b>Google has indexed it</b><br><span class="hint">${gscIsConnected() ? 'Asking Search Console…' : 'Connect Search Console to check this.'}</span></li>
+        ${step(s.inbound.length >= 3 || wsPathOf(row.url) === '/', 'At least 3 of your pages link to it', `Only ${s.inbound.length} checked page(s) link here. Add links from related pages and your menu or homepage.`)}
+        ${step(keywordUsed, 'It targets a real search in the title and H1', `Use “${s.primary.phrase}” (or the best keyword below) in the title and H1.`)}
+        ${step(s.words >= s.target, `It has enough useful content (${s.target}+ words)`, `It has ${s.words} words. Add about ${Math.max(0, s.target - s.words)} more, e.g. answers to the questions people ask.`)}
+        ${step(null, 'Other websites link to it (backlinks)', '')}
+      </ol>
+      <p>Then click <a href="${escapeAttr(wsSearchConsoleInspectLink(row.url))}" target="_blank" rel="noopener noreferrer" id="ws-request-index"><b>Request indexing in Search Console</b></a> and allow about 2–8 weeks. New pages usually start on later Google pages and move up as they earn links and clicks.</p>
+    </section>`;
+}
+
+// ---------- Sitelinks analysis: how ready the site is for Google to show sitelinks ----------
+const WS_LEGAL = /privacy|terms|policy|conduct|child-safety|safety-statement|refund|disclaimer|cookie|legal|sitemap/i;
+
+function wsTitleCore(title) {
+  return String(title || '').split(/\s*[|–—]\s*|\s[-:]\s/)[0].trim();
+}
+
+async function openWsSitelinks() {
+  const panel = $('ws-strategy');
+  const body = $('ws-strategy-body');
+  const live = wsState.rows.filter((r) => r.audit && r.audit.live);
+  if (!panel || !body || !live.length) return;
+  panel.hidden = false;
+  panel.scrollTop = 0;
+  panel.dataset.url = '__sitelinks';
+  $('ws-dlg')?.classList.add('has-strategy');
+  body.innerHTML = '<h3>Sitelinks analysis</h3><p class="hint">Analysing your site…</p>';
+
+  let siteQueries = null;
+  if (wsState.owned && gscIsConnected()) {
+    try { siteQueries = await fetchGscSiteQueries(); } catch (e) { siteQueries = null; }
+  }
+  if (panel.dataset.url !== '__sitelinks') return;
+
+  const brand = wsBrandWord(wsState.host);
+  const homeRow = wsState.rows.find((r) => wsPathOf(r.url) === '/');
+  const home = homeRow && homeRow.audit && homeRow.audit.live ? homeRow.audit : null;
+  const homeTargets = new Set(home ? home.internalTargets || [] : []);
+  const linksTo = (row) => live.filter((o) => o !== row && (o.audit.internalTargets || []).includes(normalizeSitemapUrl(row.url)));
+  const candidates = live
+    .filter((r) => r !== homeRow && r.status.key !== 'no')
+    .map((r) => {
+      const sources = linksTo(r);
+      const anchors = new Set();
+      sources.forEach((o) => (o.audit.internalLinkDetails || []).forEach((l) => {
+        if (l.target === normalizeSitemapUrl(r.url) && l.text) anchors.add(l.text.toLowerCase());
+      }));
+      return { row: r, inbound: sources.length, fromHome: homeTargets.has(normalizeSitemapUrl(r.url)), legal: WS_LEGAL.test(`${r.url} ${r.audit.title}`), label: wsTitleCore(r.audit.title), anchors: [...anchors] };
+    })
+    .sort((a, b) => (b.fromHome - a.fromHome) || (a.legal - b.legal) || (b.inbound - a.inbound));
+  const key = candidates.filter((c) => !c.legal).slice(0, 6);
+  const legal = candidates.filter((c) => c.legal);
+
+  const checks = [];
+  const add = (ok, weight, label, detail, fix) => checks.push({ ok, weight, label, detail, fix });
+  // 1. Brand searches: sitelinks mostly appear when someone searches the business name and the homepage is #1.
+  if (siteQueries) {
+    const brandRows = siteQueries.filter((q) => wsNormText(q.key).includes(` ${brand} `) || wsNormText(q.key).trim().startsWith(brand));
+    const views = brandRows.reduce((n, q) => n + q.impressions, 0);
+    const position = views ? brandRows.reduce((n, q) => n + q.position * q.impressions, 0) / views : 0;
+    if (!brandRows.length) add(false, 3, `Ranks #1 when people search “${brand}”`, 'No brand searches recorded in the last 90 days.', `Grow brand searches: use “${brand}” consistently on Google Business Profile, social media and flyers so people search your name.`);
+    else add(position <= 1.5, 3, `Ranks #1 when people search “${brand}”`, `Average position #${position.toFixed(1)} across ${views.toLocaleString()} brand-search views.`, 'Strengthen the homepage title and content with your brand name, and get listed on directories and social profiles that link to your homepage.');
+  } else {
+    add(null, 3, `Ranks #1 when people search “${brand}”`, wsState.owned ? 'Connect Search Console to check.' : 'Only available for your own sites.', 'Search your business name on Google and confirm your homepage is the first result.');
+  }
+  // 2. Homepage indexable and showing.
+  add(!!homeRow && ['likely', 'confirmed'].includes(homeRow.status.key), 2, 'Homepage can appear on Google', homeRow ? WS_STATUS[homeRow.status.key].label : 'Homepage not found in the sitemap', homeRow ? homeRow.status.reason : 'Add the homepage to your sitemap.');
+  // 3. Homepage links to key pages (Google picks sitelinks mostly from pages your homepage/menu links to).
+  const keyFromHome = key.filter((c) => c.fromHome).length;
+  add(keyFromHome >= 4 ? true : keyFromHome >= 2 ? 'warn' : false, 3, 'Homepage menu links to your key pages', `${keyFromHome} key page${keyFromHome === 1 ? '' : 's'} linked from the homepage.`, 'Link your 4–6 most important pages (main services, pricing, contact, resources) from the homepage menu, as plain text links.');
+  // 4. Key pages can appear on Google.
+  const keyBlocked = key.filter((c) => !['likely', 'confirmed'].includes(c.row.status.key));
+  add(!keyBlocked.length, 2, 'Key pages can appear on Google', keyBlocked.length ? `${keyBlocked.length} key page(s) might not show: ${keyBlocked.map((c) => wsPathOf(c.row.url)).join(', ')}` : 'All key pages look indexable.', 'Fix the Google status issues shown for those pages (canonical, title, content).');
+  // 5. Unique titles.
+  const titleCounts = new Map();
+  live.forEach((r) => { const t = (r.audit.title || '').trim().toLowerCase(); if (t) titleCounts.set(t, (titleCounts.get(t) || 0) + 1); });
+  const dupTitles = [...titleCounts.values()].filter((n) => n > 1).reduce((a, n) => a + n, 0);
+  const noTitle = live.filter((r) => !r.audit.title).length;
+  add(!dupTitles && !noTitle, 2, 'Every page has its own title', `${dupTitles} page(s) share a title; ${noTitle} page(s) have no title.`, 'Give every page a unique, descriptive <title>. Google often uses titles as sitelink names.');
+  // 6. Short, clear page names for sitelink labels.
+  const longLabels = key.filter((c) => c.label.length > 35 || c.label.split(/\s+/).length < 2 && c.label.length < 4);
+  add(!longLabels.length, 2, 'Key pages have short, clear names', longLabels.length ? `Hard to use as a sitelink: ${longLabels.map((c) => (c.label ? `“${c.label}”` : `(no title: ${wsPathOf(c.row.url)})`)).join(', ')}` : 'Key page names are short and clear.', 'Start each key page title with a short name (2–4 words, e.g. “VCE Physics”, “Pricing”), then “| Edgeducate”.');
+  // 7. Consistent link text.
+  const messy = key.filter((c) => c.anchors.length > 3);
+  add(!messy.length, 1, 'Links to each key page use consistent text', messy.length ? `Many different link texts point to: ${messy.map((c) => wsPathOf(c.row.url)).join(', ')}` : 'Link text is consistent.', 'Use the same short link text for each key page everywhere (menu, footer, buttons).');
+  // 8. Breadcrumbs.
+  const nonHome = live.filter((r) => r !== homeRow);
+  const crumbPct = nonHome.length ? Math.round((nonHome.filter((r) => r.audit.hasBreadcrumb).length / nonHome.length) * 100) : 0;
+  add(crumbPct >= 80 ? true : crumbPct >= 30 ? 'warn' : false, 1, 'Pages have breadcrumbs (BreadcrumbList)', `${crumbPct}% of pages have breadcrumb structured data.`, 'Add a visible breadcrumb trail and BreadcrumbList structured data to every page.');
+  // 9. Homepage structured data: site name and organisation.
+  const types = new Set((home && home.schema && home.schema.types) || []);
+  add(types.has('WebSite') && (types.has('Organization') || types.has('LocalBusiness') || types.has('EducationalOrganization')) ? true : types.has('WebSite') || types.has('Organization') ? 'warn' : false, 2, 'Homepage has WebSite + Organization structured data', types.size ? `Found: ${[...types].join(', ')}` : 'No structured data on the homepage.', 'Add WebSite (with your site name) and Organization (with logo) JSON-LD to the homepage. Use “Generate schema code” below.');
+  // 10. Brand in homepage title.
+  add(!!home && wsNormText(home.title).includes(` ${brand} `), 1, 'Homepage title includes your brand name', home ? `“${home.title || '(no title)'}”` : '', `Include “${brand}” in the homepage title, e.g. “${brand.charAt(0).toUpperCase() + brand.slice(1)} | Tutoring in Melbourne”.`);
+  // 11. Canonicals consistent.
+  const badCanon = live.filter((r) => /canonical/i.test(r.status.reason) && r.status.key !== 'likely');
+  add(!badCanon.length, 2, 'Canonical tags point to the right pages', badCanon.length ? `${badCanon.length} page(s) point Google elsewhere: ${badCanon.map((c) => wsPathOf(c.url)).join(', ')}` : 'Canonicals are consistent.', 'Set each page’s canonical to its own URL so Google treats it as a real, separate page.');
+  // 12. Legal pages not crowding out key pages.
+  const legalHeavy = legal.length && key.length && Math.max(...legal.map((c) => c.inbound)) > Math.max(...key.map((c) => c.inbound));
+  add(!legalHeavy, 1, 'Key pages get more links than legal pages', legalHeavy ? 'Policy/legal pages receive more internal links than your key pages.' : 'Key pages are well linked.', 'Keep legal pages in the footer only, and link key pages from the menu and within page content too.');
+
+  const scored = checks.filter((c) => c.ok !== null);
+  const earned = scored.reduce((n, c) => n + (c.ok === true ? c.weight : c.ok === 'warn' ? c.weight / 2 : 0), 0);
+  const possible = scored.reduce((n, c) => n + c.weight, 0);
+  const readiness = possible ? Math.round((earned / possible) * 100) : 0;
+  const icon = (ok) => (ok === true ? '<span class="ws-ok">✓</span>' : ok === 'warn' ? '<span class="ws-part">~</span>' : ok === null ? '<span class="ws-part">?</span>' : '<span class="ws-miss">✗</span>');
+  const todo = checks.filter((c) => c.ok !== true && c.ok !== null).sort((a, b) => b.weight - a.weight);
+  const homeTitle = home ? home.title || wsState.host : wsState.host;
+
+  body.innerHTML = `
+    <h3>Sitelinks analysis</h3>
+    <p class="ws-strategy-url">${escapeHtml(wsState.host)}</p>
+    <p>Sitelinks are the extra page links Google shows under your homepage result. <b>Google decides automatically</b> — you can’t switch them on — but these signals make them much more likely.</p>
+    <div class="ws-strategy-meta"><span class="ws-badge ${readiness >= 80 ? 'likely' : readiness >= 50 ? 'maybe' : 'no'}">Sitelinks readiness ${readiness}%</span><span>${scored.length} of ${checks.length} checks assessed</span></div>
+    <section>
+      <h4>Likely sitelinks</h4>
+      <div class="ws-serp">
+        <span class="ws-serp-url">${escapeHtml(wsState.host)}</span>
+        <span class="ws-serp-title">${escapeHtml(homeTitle)}</span>
+        <span class="ws-serp-desc">${escapeHtml((home && home.metaDesc) || '')}</span>
+        <div class="ws-serp-links">${key.length ? key.map((c) => `<div><a href="${escapeAttr(c.row.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(c.label || wsPathOf(c.row.url))}</a><small>${c.fromHome ? 'Linked from homepage' : 'Not linked from homepage'} · ${c.inbound} internal link${c.inbound === 1 ? '' : 's'}</small></div>`).join('') : '<p class="hint">No strong candidates yet.</p>'}</div>
+      </div>
+      <p class="hint">Chosen from pages your homepage links to and that get the most internal links. Legal pages are left out.</p>
+    </section>
+    <section>
+      <h4>What to do</h4>
+      ${todo.length ? `<ol class="ws-actions">${todo.map((c) => `<li><span class="ws-prio ${c.ok === 'warn' ? 'medium' : c.weight >= 3 ? 'critical' : 'high'}">${c.ok === 'warn' ? 'Medium' : c.weight >= 3 ? 'Critical' : 'High'}</span><b>${escapeHtml(c.label)}.</b> ${escapeHtml(c.fix)}</li>`).join('')}</ol>` : '<p><span class="ws-prio good">Good</span>Your site meets the main sitelink signals. Keep building brand searches and links.</p>'}
+    </section>
+    <section>
+      <h4>All checks</h4>
+      <table class="ws-place"><tbody>${checks.map((c) => `<tr><td>${icon(c.ok)} ${escapeHtml(c.label)}</td><td>${escapeHtml(c.detail)}</td></tr>`).join('')}</tbody></table>
+      <ul class="ws-list">
+        <li><a href="https://www.google.com/search?q=${encodeURIComponent(brand)}&gl=au&hl=en" target="_blank" rel="noopener noreferrer">Search “${escapeHtml(brand)}” on Google</a> to see your current result.</li>
+        ${wsState.owned ? '<li><button type="button" class="btn btn-light btn-sm" id="ws-schema-btn">Generate sitelinks schema code</button> (WebSite, Organization and BreadcrumbList JSON-LD)</li>' : ''}
+      </ul>
+    </section>`;
+  $('ws-schema-btn')?.addEventListener('click', openSitelinksSchemaDialog);
+}
+
+function closeWsStrategy() {
+  const panel = $('ws-strategy');
+  if (panel) { panel.hidden = true; panel.dataset.url = ''; }
+  $('ws-dlg')?.classList.remove('has-strategy');
+}
+
+// ---------- Page inspect: full heading outline and on-page details for one page ----------
+const piState = { run: 0, url: '' };
+
+function piNormaliseUrl(input) {
+  let value = String(input || '').trim();
+  if (!value) return '';
+  if (!/^https?:\/\//i.test(value)) value = `https://${value}`;
+  try {
+    const parsed = new URL(value);
+    if (!parsed.hostname.includes('.')) return '';
+    parsed.hash = '';
+    return parsed.href;
+  } catch (e) { return ''; }
+}
+
+function piWhere(el) {
+  if (el.closest('nav')) return 'navigation';
+  if (el.closest('footer')) return 'footer';
+  if (el.closest('aside')) return 'sidebar';
+  if (el.closest('header') && !el.closest('main, article')) return 'site header';
+  return '';
+}
+
+function piIsHidden(el) {
+  return !!el.closest('[hidden], [aria-hidden="true"], [style*="display:none" i], [style*="display: none" i], [style*="visibility:hidden" i], [style*="visibility: hidden" i]');
+}
+
+function piExtract(doc, pageUrl) {
+  let host = '';
+  try { host = new URL(pageUrl).host; } catch (e) { host = ''; }
+  // Line breaks inside an element count as spaces ("resources<br>to" → "resources to").
+  const text = (el) => {
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll('br').forEach((br) => br.replaceWith(' '));
+    return (clone.textContent || '').replace(/\s+/g, ' ').trim();
+  };
+
+  // Headings in document order, with any structure problems.
+  const headings = Array.from(doc.querySelectorAll('h1,h2,h3,h4,h5,h6')).filter((el) => !piIsHidden(el)).map((el) => {
+    const level = Number(el.tagName.slice(1));
+    let label = text(el);
+    let imageOnly = false;
+    if (!label) {
+      const alt = Array.from(el.querySelectorAll('img[alt]')).map((img) => img.getAttribute('alt').trim()).filter(Boolean).join(' ');
+      if (alt) { label = alt; imageOnly = true; }
+    }
+    return { level, text: label, imageOnly, where: piWhere(el), hidden: piIsHidden(el), issues: [] };
+  });
+  let previous = 0;
+  let h1Seen = 0;
+  const seen = new Map();
+  headings.forEach((h) => {
+    const issue = (severity, message) => h.issues.push({ severity, message });
+    if (h.level === 1) {
+      h1Seen += 1;
+      if (h1Seen > 1) issue('bad', `Extra H1 (#${h1Seen}) — a page should have only one H1; change this to an H2`);
+      if (h.where === 'site header' || h.where === 'navigation') issue('warn', `H1 is in the ${h.where} (often the logo). The H1 should be the page’s main title`);
+      if (h.text.length > 70) issue('warn', `Long H1 (${h.text.length} characters) — aim for under 70`);
+    } else if (!h1Seen) {
+      issue('warn', 'Appears before the H1 — the H1 should normally be the first heading');
+    }
+    if (previous && h.level > previous + 1) issue('bad', `Skipped a level: H${previous} → H${h.level}. Use H${previous + 1} here`);
+    if (!h.text) issue('bad', 'Empty heading — add text or remove the heading tag');
+    else if (h.imageOnly) issue('warn', 'Image-only heading (read from the image’s alt text)');
+    if (h.level > 1 && h.text.length > 120) issue('warn', `Very long heading (${h.text.length} characters) — headings should be short labels`);
+    if (h.hidden) issue('warn', 'Hidden heading — not visible to visitors');
+    const key = `${h.level}:${h.text.toLowerCase()}`;
+    if (h.text && seen.has(key)) issue('warn', `Duplicate H${h.level} text — also used above`);
+    seen.set(key, true);
+    previous = h.level;
+  });
+
+  const meta = (selector) => (doc.querySelector(selector)?.getAttribute('content') || '').trim();
+  const links = Array.from(doc.querySelectorAll('a[href]')).map((a) => {
+    try {
+      const target = new URL(a.getAttribute('href'), pageUrl);
+      if (!/^https?:$/.test(target.protocol)) return null;
+      target.hash = '';
+      return { href: target.href, internal: target.host === host, text: text(a) || (a.getAttribute('aria-label') || a.querySelector('img[alt]')?.getAttribute('alt') || '').trim(), rel: (a.getAttribute('rel') || '').toLowerCase() };
+    } catch (e) { return null; }
+  }).filter(Boolean);
+  const uniqueLinks = (list) => {
+    const map = new Map();
+    list.forEach((l) => { if (!map.has(l.href)) map.set(l.href, { ...l, count: 0 }); map.get(l.href).count += 1; });
+    return [...map.values()];
+  };
+  const images = Array.from(doc.querySelectorAll('img')).map((img) => {
+    let src = img.getAttribute('src') || img.getAttribute('data-src') || '';
+    try { src = new URL(src, pageUrl).href; } catch (e) { /* keep raw */ }
+    return { src, hasAlt: img.hasAttribute('alt'), alt: (img.getAttribute('alt') || '').trim() };
+  });
+  const ldJson = Array.from(doc.querySelectorAll('script[type="application/ld+json"]')).map((s) => s.textContent || '');
+  const breadcrumbSchemaLabels = [];
+  const collectBreadcrumbSchema = (value) => {
+    if (Array.isArray(value)) {
+      value.forEach(collectBreadcrumbSchema);
+      return;
+    }
+    if (!value || typeof value !== 'object') return;
+    const types = Array.isArray(value['@type']) ? value['@type'] : [value['@type']];
+    if (types.includes('BreadcrumbList')) {
+      (Array.isArray(value.itemListElement) ? value.itemListElement : []).forEach((item) => {
+        const label = typeof item === 'string'
+          ? item
+          : item && (item.name || (item.item && item.item.name));
+        if (label) breadcrumbSchemaLabels.push(String(label).trim());
+      });
+    }
+    if (value['@graph']) collectBreadcrumbSchema(value['@graph']);
+  };
+  ldJson.forEach((value) => {
+    try { collectBreadcrumbSchema(JSON.parse(value)); } catch (e) { /* summary reports invalid JSON */ }
+  });
+  const breadcrumbNav = doc.querySelector('nav[aria-label*="breadcrumb" i], .breadcrumb, .breadcrumbs, .crumbs, [itemtype*="BreadcrumbList"]');
+  const hasVisibleBreadcrumb = !!breadcrumbNav && !piIsHidden(breadcrumbNav);
+  const visibleBreadcrumbText = breadcrumbNav ? text(breadcrumbNav) : '';
+  const hasBreadcrumbSchema = ldJson.some((value) => /BreadcrumbList/i.test(value));
+  return {
+    headings,
+    title: text(doc.querySelector('title') || doc.createElement('title')),
+    metaDesc: meta('meta[name="description"]'),
+    canonical: doc.querySelector('link[rel="canonical"]')?.getAttribute('href') || '',
+    robots: meta('meta[name="robots"]'),
+    lang: (doc.documentElement.getAttribute('lang') || '').trim(),
+    viewport: meta('meta[name="viewport"]'),
+    charset: doc.querySelector('meta[charset]')?.getAttribute('charset') || '',
+    ogTitle: meta('meta[property="og:title"]'),
+    ogDescription: meta('meta[property="og:description"]'),
+    ogImage: meta('meta[property="og:image"]'),
+    twitterCard: meta('meta[name="twitter:card"]'),
+    favicon: !!doc.querySelector('link[rel~="icon"]'),
+    hreflang: doc.querySelectorAll('link[rel="alternate"][hreflang]').length,
+    internalLinks: uniqueLinks(links.filter((l) => l.internal)),
+    externalLinks: uniqueLinks(links.filter((l) => !l.internal)),
+    nofollow: links.filter((l) => /nofollow|sponsored|ugc/.test(l.rel)).length,
+    images,
+    schema: sitemapSchemaSummary(ldJson),
+    hasVisibleBreadcrumb,
+    visibleBreadcrumbText,
+    hasBreadcrumbSchema,
+    breadcrumbSchemaText: [...new Set(breadcrumbSchemaLabels)].join(' / ')
+  };
+}
+
+function piRender(data) {
+  const body = $('pi-body');
+  const { page: p, audit, url, finalUrl, status } = data;
+  const h = p.headings;
+  const h1Count = h.filter((x) => x.level === 1).length;
+  const skips = h.filter((x) => x.issues.some((i) => /Skipped a level/.test(i.message))).length;
+  const empties = h.filter((x) => !x.text).length;
+  const withIssues = h.filter((x) => x.issues.length).length;
+  const mainWords = audit && audit.live ? audit.mainWords : null;
+  const titleWords = new Set(wsWords(p.title));
+  const firstH1 = h.find((x) => x.level === 1);
+  const h1MatchesTitle = !!firstH1 && wsWords(firstH1.text).some((w) => titleWords.has(w));
+  const levelCounts = [1, 2, 3, 4, 5, 6].map((level) => ({ level, count: h.filter((x) => x.level === level).length }));
+  const missingAlt = p.images.filter((img) => !img.hasAlt);
+  const check = (ok, text) => `<li>${ok === true ? '<span class="ws-ok">✓</span>' : ok === 'warn' ? '<span class="ws-part">~</span>' : '<span class="ws-miss">✗</span>'} ${text}</li>`;
+  const lenNote = (len, min, max) => (len >= min && len <= max ? `<small class="ws-ok">${len} characters ✓</small>` : `<small class="ws-miss">${len} characters — aim for ${min}–${max}</small>`);
+  const tile = (value, label, tone = '') => `<div class="ws-tile ${tone}"><strong>${value}</strong><small>${label}</small></div>`;
+
+  const outline = h.length
+    ? `<ul class="pi-outline" id="pi-outline">${h.map((x) => {
+      const worst = x.issues.some((i) => i.severity === 'bad') ? 'has-issue' : x.issues.length ? 'has-warn' : '';
+      return `<li class="pi-h ${worst}" data-has-issue="${x.issues.length ? '1' : '0'}" style="padding-left:${0.3 + (x.level - 1) * 1.25}rem"><span class="pi-tag l${x.level}">H${x.level}</span><span class="pi-h-text${x.text ? '' : ' is-empty'}">${x.text ? escapeHtml(x.text) : '(empty heading)'}${x.where ? `<span class="pi-h-where">in ${escapeHtml(x.where)}</span>` : ''}${x.issues.length ? `<span class="pi-h-issues">${x.issues.map((i) => `<span class="pi-issue ${i.severity}">${escapeHtml(i.message)}</span>`).join('')}</span>` : ''}</span></li>`;
+    }).join('')}</ul>`
+    : '<p class="ws-miss">This page has no headings at all. Need one H1 for the main title, then H2 sections.</p>';
+
+  const linkItem = (l, inspectable) => `<li>${inspectable ? `<button type="button" data-pi-url="${escapeAttr(l.href)}" title="Inspect this page">${escapeHtml(wsPathOf(l.href))}</button>` : `<a href="${escapeAttr(l.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(l.href)}</a>`}<br><small>${l.text ? `“${escapeHtml(l.text.slice(0, 80))}”` : '<span class="ws-miss">no link text</span>'}${l.count > 1 ? ` · ${l.count}×` : ''}${/nofollow|sponsored|ugc/.test(l.rel) ? ` · ${escapeHtml(l.rel)}` : ''}</small></li>`;
+
+  body.innerHTML = `
+    <div class="pi-summary">
+      ${audit && audit.live ? tile(`${audit.seo} <small style="display:inline">${audit.grade}</small>`, 'SEO score') : ''}
+      ${tile(h1Count, h1Count === 1 ? 'H1 heading ✓' : h1Count ? 'H1 headings — should be 1' : 'H1 headings — missing', h1Count === 1 ? 'is-good' : 'is-bad')}
+      ${tile(h.length, 'Headings in total')}
+      ${tile(withIssues, withIssues === 1 ? 'Heading with a problem' : 'Headings with problems', withIssues ? 'is-warn' : 'is-good')}
+      ${mainWords !== null ? tile(mainWords, 'Words of main content') : ''}
+      ${tile(p.internalLinks.length, 'Internal links')}
+      ${tile(missingAlt.length, 'Images missing alt', missingAlt.length ? 'is-warn' : 'is-good')}
+    </div>
+    <div class="pi-grid">
+      <div>
+        <div class="pi-panel">
+          <h4>Heading structure<label><input type="checkbox" id="pi-only-issues"> Show only problems</label></h4>
+          <div class="pi-levels">${levelCounts.map((c) => `<span class="pi-level-chip${(c.level === 1 && c.count !== 1) ? ' is-bad' : ''}">H${c.level} × ${c.count}</span>`).join('')}</div>
+          <ul class="pi-checks">
+            ${check(h1Count === 1, h1Count === 1 ? 'Exactly one H1' : h1Count ? `<b>${h1Count} H1 headings</b> — keep one main H1 and change the others to H2` : '<b>No H1</b> — add one main heading with the page’s topic')}
+            ${check(!skips, skips ? `<b>${skips} skipped heading level${skips === 1 ? '' : 's'}</b> — headings should step down one level at a time (H1 → H2 → H3)` : 'No skipped heading levels')}
+            ${check(!empties, empties ? `<b>${empties} empty heading${empties === 1 ? '' : 's'}</b> — add text or remove the tag` : 'No empty headings')}
+            ${firstH1 ? check(h1MatchesTitle || 'warn', h1MatchesTitle ? 'H1 and title share the main topic' : 'H1 and title don’t share any key words — use the main keyword in both') : ''}
+            ${mainWords !== null && mainWords >= 300 ? check(levelCounts[1].count > 0 || 'warn', levelCounts[1].count ? `${levelCounts[1].count} H2 sections break up the content` : 'Long content with no H2 sections — add H2 sub-headings') : ''}
+          </ul>
+          ${outline}
+        </div>
+      </div>
+      <div>
+        <div class="pi-panel">
+          <h4>Page details</h4>
+          <table class="pi-facts"><tbody>
+            <tr><td>Address</td><td>${escapeHtml(url)}${finalUrl !== url ? `<small class="ws-part">Redirects to ${escapeHtml(finalUrl)}</small>` : ''}<small>HTTP ${status}</small></td></tr>
+            <tr><td>Title</td><td>${p.title ? escapeHtml(p.title) : '<span class="ws-miss">Missing</span>'}${p.title ? lenNote(p.title.length, 30, 60) : ''}</td></tr>
+            <tr><td>Meta description</td><td>${p.metaDesc ? escapeHtml(p.metaDesc) : '<span class="ws-miss">Missing</span>'}${p.metaDesc ? lenNote(p.metaDesc.length, 120, 160) : ''}</td></tr>
+            <tr><td>Canonical</td><td>${p.canonical ? `${escapeHtml(p.canonical)}${normalizeSitemapUrl(p.canonical, finalUrl) === normalizeSitemapUrl(finalUrl) ? '<small class="ws-ok">Points to this page ✓</small>' : '<small class="ws-miss">Points to a different page</small>'}` : '<span class="ws-miss">Missing</span>'}</td></tr>
+            <tr><td>Robots</td><td>${p.robots ? escapeHtml(p.robots) : 'Not set (indexable)'}${/noindex/i.test(p.robots) ? '<small class="ws-miss">noindex — Google won’t show this page</small>' : ''}</td></tr>
+            <tr><td>Language</td><td>${p.lang ? escapeHtml(p.lang) : '<span class="ws-miss">Missing lang attribute</span>'}</td></tr>
+            <tr><td>Mobile viewport</td><td>${p.viewport ? '<span class="ws-ok">Set ✓</span>' : '<span class="ws-miss">Missing</span>'}</td></tr>
+            <tr><td>Open Graph</td><td>${[['title', p.ogTitle], ['description', p.ogDescription], ['image', p.ogImage]].map(([k, v]) => `${v ? '<span class="ws-ok">✓</span>' : '<span class="ws-miss">✗</span>'} og:${k}`).join(' · ')}</td></tr>
+            <tr><td>Favicon</td><td>${p.favicon ? '<span class="ws-ok">Set ✓</span>' : '<span class="ws-miss">Missing</span>'}</td></tr>
+            <tr><td>Structured data</td><td>${p.schema.blocks ? `${escapeHtml(p.schema.types.join(', ') || 'unknown types')}${p.schema.invalid ? `<small class="ws-miss">${p.schema.invalid} block(s) have JSON errors</small>` : ''}${p.schema.missing.length ? `<small class="ws-part">Missing: ${escapeHtml(p.schema.missing.slice(0, 4).join(', '))}</small>` : ''}` : '<span class="ws-miss">None</span>'}</td></tr>
+            <tr><td>Breadcrumbs</td><td>${p.hasVisibleBreadcrumb && p.hasBreadcrumbSchema ? `<span class="ws-ok">Visible + BreadcrumbList schema ✓</span><small>Visible: ${escapeHtml(p.visibleBreadcrumbText || 'Breadcrumb navigation detected')}</small><small>Schema: ${escapeHtml(p.breadcrumbSchemaText || 'BreadcrumbList detected')}</small>` : p.hasVisibleBreadcrumb ? `<span class="ws-part">Visible only</span><small>${escapeHtml(p.visibleBreadcrumbText || 'Visible breadcrumb navigation detected')}</small>` : p.hasBreadcrumbSchema ? `<span class="ws-part">Schema only</span><small>Schema: ${escapeHtml(p.breadcrumbSchemaText || 'BreadcrumbList detected')}</small>` : '<span class="ws-miss">None</span>'}</td></tr>
+          </tbody></table>
+        </div>
+        <div class="pi-panel">
+          <h4>Images (${p.images.length})</h4>
+          ${missingAlt.length ? `<p class="ws-miss" style="font-size:.78rem;margin:.2rem 0">${missingAlt.length} image${missingAlt.length === 1 ? '' : 's'} missing an alt attribute:</p><ul class="pi-list">${missingAlt.slice(0, 40).map((img) => `<li>${escapeHtml(img.src.split('/').pop() || img.src)}</li>`).join('')}</ul>` : `<p style="font-size:.78rem;margin:.2rem 0">${p.images.length ? '<span class="ws-ok">✓</span> All images have an alt attribute.' : 'No images on this page.'}</p>`}
+        </div>
+        <div class="pi-panel">
+          <h4>Internal links (${p.internalLinks.length})</h4>
+          <p class="hint" style="margin:0 0 .3rem">Click a page to inspect it.</p>
+          <ul class="pi-list">${p.internalLinks.map((l) => linkItem(l, true)).join('') || '<li>None</li>'}</ul>
+        </div>
+        <div class="pi-panel">
+          <h4>External links (${p.externalLinks.length})${p.nofollow ? ` · ${p.nofollow} nofollow/sponsored` : ''}</h4>
+          <ul class="pi-list">${p.externalLinks.map((l) => linkItem(l, false)).join('') || '<li>None</li>'}</ul>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function runPageInspect(input, statusEl = $('pi-status')) {
+  const url = piNormaliseUrl(input);
+  if (!url) {
+    if (statusEl) statusEl.textContent = 'Enter a valid page address, e.g. example.com/about';
+    return;
+  }
+  const host = normaliseScoutHost(new URL(url).hostname);
+  const owned = isOwnedHost(host);
+  // Researching another company's page must go through the verified private-mode proxy first.
+  if (!owned) {
+    if (!scoutProxyEnabled()) {
+      if (statusEl) statusEl.textContent = 'Turn on private scouting before inspecting other companies’ pages.';
+      openScoutProxyDialog();
+      return;
+    }
+    if (statusEl) statusEl.textContent = 'Checking private mode…';
+    const check = await verifyScoutProxyCreds(scoutProxy.url, scoutProxy.secret);
+    if (!check.ok) {
+      if (statusEl) statusEl.textContent = `Can't inspect ${host}: ${check.reason}. Fix private mode first.`;
+      openScoutProxyDialog();
+      return;
+    }
+  }
+  if (statusEl) statusEl.textContent = '';
+  if ($('pi-status')) $('pi-status').textContent = '';
+  if ($('pi-dlg-status')) $('pi-dlg-status').textContent = '';
+  const dialog = $('pi-dlg');
+  if (dialog && !dialog.open) dialog.showModal();
+  const run = ++piState.run;
+  piState.url = url;
+  sitemapScopeMine = owned;
+  $('pi-title').textContent = `Page inspect — ${wsPathOf(url)}`;
+  $('pi-subtitle').textContent = url;
+  $('pi-open').href = url;
+  $('pi-body').innerHTML = '<p class="pi-loading">Reading the page…</p>';
+  try {
+    const [res, audit] = await Promise.all([scoutFetch(url, 'html'), fetchSitemapPageAudit(url)]);
+    if (run !== piState.run) return;
+    const finalUrl = res.redirected && res.url ? res.url : url;
+    if (!res.ok) {
+      $('pi-body').innerHTML = `<div class="pi-panel"><p class="ws-miss"><b>The page returned HTTP ${res.status}.</b></p><p>${res.status === 404 ? 'It doesn’t exist — check the address, or fix links pointing to it.' : 'It couldn’t be read. It may be blocked, private, or temporarily down.'}</p></div>`;
+      return;
+    }
+    const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+    if (run !== piState.run) return;
+    piRender({ page: piExtract(doc, finalUrl), audit, url, finalUrl, status: res.status });
+  } catch (error) {
+    if (run !== piState.run) return;
+    $('pi-body').innerHTML = `<div class="pi-panel"><p class="ws-miss"><b>The page couldn’t be loaded.</b></p><p>${escapeHtml(error.message)}. The site may block automated requests${owned ? '' : ', or private scouting may be offline'}.</p></div>`;
+  }
+}
+
+// ---------- Website inspect: page inspect for every page in a site's sitemap ----------
+const WI_CHECKS = [
+  { key: 'http', severity: 'bad', label: 'Page doesn’t load', pass: 'Every page loads' },
+  { key: 'title', severity: 'bad', label: 'Missing title', pass: 'Every page has a title' },
+  { key: 'meta', severity: 'warn', label: 'Missing meta description', pass: 'Every page has a meta description' },
+  { key: 'canonical', severity: 'bad', label: 'Missing canonical', pass: 'Every page has a canonical tag' },
+  { key: 'canonicalElsewhere', severity: 'warn', label: 'Canonical points to another page', pass: 'Every canonical points to its own page' },
+  { key: 'noindex', severity: 'warn', label: 'Set to noindex (hidden from Google)', pass: 'No page is set to noindex' },
+  { key: 'h1', severity: 'bad', label: 'Not exactly one H1', pass: 'Every page has exactly one H1' },
+  { key: 'skips', severity: 'warn', label: 'Skipped heading levels', pass: 'No skipped heading levels' },
+  { key: 'empty', severity: 'bad', label: 'Empty headings', pass: 'No empty headings' },
+  { key: 'schema', severity: 'warn', label: 'No structured data', pass: 'Every page has structured data' },
+  { key: 'breadcrumb', severity: 'warn', label: 'No breadcrumbs', pass: 'Every page has breadcrumbs' },
+  { key: 'og', severity: 'warn', label: 'Incomplete Open Graph (title, description, image)', pass: 'Every page has full Open Graph tags' },
+  { key: 'alt', severity: 'warn', label: 'Images missing alt text', pass: 'Every image has alt text' },
+  { key: 'lang', severity: 'warn', label: 'Missing language attribute', pass: 'Every page sets its language' }
+];
+const WI_CHECK_BY_KEY = new Map(WI_CHECKS.map((check) => [check.key, check]));
+const wiState = { run: 0, host: '', rows: [], selected: '', stopped: false, checked: 0, toCheck: 0, done: false, message: '' };
+let wiRenderTimer = 0;
+
+function wiRowIssues(row) {
+  if (row.state === 'error') return [{ key: 'http', detail: row.error }];
+  const p = row.page;
+  const issues = [];
+  const add = (key, detail = '') => issues.push({ key, detail });
+  let isHome = false;
+  try { isHome = /^\/(index\.html?)?$/i.test(new URL(row.finalUrl).pathname); } catch (e) { isHome = false; }
+  if (!p.title) add('title');
+  if (!p.metaDesc) add('meta');
+  if (!p.canonical) add('canonical');
+  else if (normalizeSitemapUrl(p.canonical, row.finalUrl) !== normalizeSitemapUrl(row.finalUrl)) add('canonicalElsewhere', p.canonical);
+  if (/noindex/i.test(p.robots)) add('noindex');
+  const h1Count = p.headings.filter((h) => h.level === 1).length;
+  if (h1Count !== 1) add('h1', `${h1Count} H1`);
+  const skips = p.headings.filter((h) => h.issues.some((i) => /Skipped a level/.test(i.message))).length;
+  if (skips) add('skips', `${skips}`);
+  const empties = p.headings.filter((h) => !h.text).length;
+  if (empties) add('empty', `${empties}`);
+  if (!p.schema.blocks) add('schema');
+  if (!isHome && !p.hasVisibleBreadcrumb && !p.hasBreadcrumbSchema) add('breadcrumb');
+  if (!(p.ogTitle && p.ogDescription && p.ogImage)) add('og');
+  const missingAlt = p.images.filter((img) => !img.hasAlt).length;
+  if (missingAlt) add('alt', `${missingAlt}`);
+  if (!p.lang) add('lang');
+  return issues;
+}
+
+async function wiFetchPage(url) {
+  try {
+    const res = await scoutFetch(url, 'html');
+    const finalUrl = res.redirected && res.url ? res.url : url;
+    if (!res.ok) return { state: 'error', status: res.status, finalUrl, error: `HTTP ${res.status}` };
+    const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+    return { state: 'done', status: res.status, finalUrl, page: piExtract(doc, finalUrl) };
+  } catch (error) {
+    return { state: 'error', status: 0, finalUrl: url, error: error.message || 'Fetch failed' };
+  }
+}
+
+function wiProgressText() {
+  const total = wiState.rows.length;
+  if (!total) return wiState.message || 'Reading the sitemap…';
+  const limited = wiState.toCheck < total ? ` (first ${wiState.toCheck} — page limit)` : '';
+  if (!wiState.done) return `Checking ${wiState.checked} of ${wiState.toCheck} pages${limited}…`;
+  if (wiState.stopped && wiState.checked < wiState.toCheck) return `Stopped after ${wiState.checked} of ${total} pages.`;
+  return `Checked ${wiState.checked} of ${total} pages${limited}.`;
+}
+
+function wiRowBadge(row) {
+  if (row.state === 'pending') return '<span class="wi-badge pending" title="Checking…">…</span>';
+  if (row.state === 'skipped') return '<span class="wi-badge pending" title="Not checked">–</span>';
+  if (!row.issues.length) return '<span class="wi-badge ok" title="No problems">✓</span>';
+  const bad = row.issues.some((i) => WI_CHECK_BY_KEY.get(i.key).severity === 'bad');
+  const title = row.issues.map((i) => WI_CHECK_BY_KEY.get(i.key).label).join(', ');
+  return `<span class="wi-badge ${bad ? 'bad' : 'warn'}" title="${escapeAttr(title)}">${row.issues.length}</span>`;
+}
+
+function wiRenderSidebar() {
+  const list = $('wi-pages');
+  if (!list) return;
+  const query = ($('wi-search')?.value || '').trim().toLowerCase();
+  const onlyIssues = !!$('wi-only-issues')?.checked;
+  const rows = wiState.rows.filter((row) => (!query || wsPathOf(row.url).toLowerCase().includes(query)) && (!onlyIssues || (row.issues && row.issues.length)));
+  list.innerHTML = rows.map((row) => `<li><button type="button" class="wi-page${row.url === wiState.selected ? ' is-active' : ''}" data-wi-url="${escapeAttr(row.url)}"><span class="wi-page-path">${escapeHtml(wsPathOf(row.url))}</span>${wiRowBadge(row)}</button></li>`).join('')
+    || `<li class="wi-progress" style="padding:.6rem .2rem">${wiState.rows.length ? 'No pages match.' : ''}</li>`;
+  $('wi-overview')?.classList.toggle('is-active', !wiState.selected);
+  if ($('wi-progress')) $('wi-progress').textContent = wiProgressText();
+  if ($('wi-stop')) $('wi-stop').hidden = wiState.done || !wiState.rows.length;
+}
+
+function wiRenderOverview() {
+  const body = $('pi-body');
+  if (!body) return;
+  const checked = wiState.rows.filter((row) => row.state === 'done' || row.state === 'error');
+  const withIssues = checked.filter((row) => row.issues.length);
+  const tile = (value, label, tone = '') => `<div class="ws-tile ${tone}"><strong>${value}</strong><small>${label}</small></div>`;
+  const counts = WI_CHECKS.map((check) => ({ ...check, rows: checked.filter((row) => row.issues.some((i) => i.key === check.key)) }));
+  const problems = counts.filter((c) => c.rows.length).sort((a, b) => (a.severity === b.severity ? b.rows.length - a.rows.length : a.severity === 'bad' ? -1 : 1));
+  const passing = counts.filter((c) => !c.rows.length);
+  const pageButtons = (rows) => `${rows.slice(0, 12).map((row) => `<button type="button" data-wi-url="${escapeAttr(row.url)}">${escapeHtml(wsPathOf(row.url))}</button>`).join('')}${rows.length > 12 ? `<small>+${rows.length - 12} more</small>` : ''}`;
+  let problemsMarkup;
+  if (!wiState.rows.length) problemsMarkup = `<p class="${wiState.message ? 'ws-miss' : 'pi-loading'}">${escapeHtml(wiState.message || 'Reading the sitemap…')}</p>`;
+  else if (!checked.length) problemsMarkup = '<p class="pi-loading">Checking pages…</p>';
+  else if (!problems.length) problemsMarkup = '<p><span class="ws-ok">✓</span> No problems found on any checked page.</p>';
+  else problemsMarkup = `<table class="wi-issues"><tbody>${problems.map((c) => `<tr><td><span class="pi-issue ${c.severity}">${c.rows.length} page${c.rows.length === 1 ? '' : 's'}</span></td><td><b>${escapeHtml(c.label)}</b><div class="wi-issue-pages">${pageButtons(c.rows)}</div></td></tr>`).join('')}</tbody></table>`;
+  body.innerHTML = `
+    <div class="pi-summary">
+      ${tile(wiState.rows.length, 'Pages in sitemap')}
+      ${tile(checked.length, wiState.done ? 'Pages checked' : 'Pages checked so far')}
+      ${tile(withIssues.length, withIssues.length === 1 ? 'Page with problems' : 'Pages with problems', withIssues.length ? 'is-warn' : checked.length ? 'is-good' : '')}
+      ${tile(checked.length - withIssues.length, 'Pages with no problems', checked.length ? 'is-good' : '')}
+    </div>
+    <div class="pi-panel">
+      <h4>Problems across the site</h4>
+      <p class="hint" style="margin:0 0 .5rem;font-size:.78rem">${escapeHtml(wiProgressText())} Click a page to open its full page inspect report.</p>
+      ${problemsMarkup}
+    </div>
+    ${checked.length && passing.length ? `<div class="pi-panel"><h4>Passing on every checked page</h4><ul class="pi-checks">${passing.map((c) => `<li><span class="ws-ok">✓</span> ${escapeHtml(c.pass)}</li>`).join('')}</ul></div>` : ''}`;
+}
+
+function wiRender() {
+  wiRenderSidebar();
+  if (!wiState.selected) wiRenderOverview();
+}
+
+function wiScheduleRender() {
+  if (wiRenderTimer) return;
+  wiRenderTimer = setTimeout(() => { wiRenderTimer = 0; wiRender(); }, 150);
+}
+
+function wiShowOverview() {
+  if (!wiState.host) return;
+  wiState.selected = '';
+  piState.run += 1;
+  $('pi-title').textContent = `Website inspect — ${wiState.host}`;
+  $('pi-subtitle').textContent = `https://${wiState.host}/`;
+  $('pi-open').href = `https://${wiState.host}/`;
+  $('pi-body').scrollTop = 0;
+  wiRender();
+}
+
+function wiShowPage(url) {
+  const row = wiState.rows.find((r) => r.url === url);
+  wiState.selected = url;
+  if (!row || row.state === 'pending' || row.state === 'skipped') {
+    wiRenderSidebar();
+    runPageInspect(url, $('pi-dlg-status'));
+    return;
+  }
+  const run = ++piState.run;
+  piState.url = url;
+  $('pi-title').textContent = `Page inspect — ${wsPathOf(url)}`;
+  $('pi-subtitle').textContent = url;
+  $('pi-open').href = url;
+  wiRenderSidebar();
+  $('pi-body').scrollTop = 0;
+  if (row.state === 'error') {
+    $('pi-body').innerHTML = `<div class="pi-panel"><p class="ws-miss"><b>This page couldn’t be loaded (${escapeHtml(row.error)}).</b></p><p>${row.status === 404 ? 'It doesn’t exist — remove it from the sitemap, or fix the address.' : 'It may be blocked, private, or temporarily down.'}</p></div>`;
+    return;
+  }
+  const render = (audit) => piRender({ page: row.page, audit, url, finalUrl: row.finalUrl, status: row.status });
+  const cached = sitemapAuditCache.get(url);
+  render(cached || null);
+  // The SEO score comes from the full audit, which loads separately the first time a page is opened.
+  if (cached === undefined) fetchSitemapPageAudit(url).then((audit) => { if (run === piState.run) render(audit); });
+}
+
+function wiExit() {
+  wiState.run += 1;
+  Object.assign(wiState, { host: '', rows: [], selected: '', stopped: true, done: true, message: '' });
+  if ($('wi-sidebar')) $('wi-sidebar').hidden = true;
+  if ($('wi-stop')) $('wi-stop').hidden = true;
+  if ($('wi-submit')) $('wi-submit').disabled = false;
+}
+
+async function runWebsiteInspect(input, statusEl = $('scout-status')) {
+  const host = normaliseScoutHost(input);
+  if (!host || !host.includes('.')) {
+    if (statusEl) statusEl.textContent = 'Enter a valid website, e.g. example.com';
+    return;
+  }
+  const owned = isOwnedHost(host);
+  // Researching another company's site must go through the verified private-mode proxy first.
+  if (!owned) {
+    if (!scoutProxyEnabled()) {
+      if (statusEl) statusEl.textContent = 'Turn on private scouting before inspecting other websites.';
+      openScoutProxyDialog();
+      return;
+    }
+    if (statusEl) statusEl.textContent = `Checking private mode before inspecting ${host}…`;
+    const check = await verifyScoutProxyCreds(scoutProxy.url, scoutProxy.secret);
+    if (!check.ok) {
+      if (statusEl) statusEl.textContent = `Can't inspect ${host}: ${check.reason}. Fix private mode first.`;
+      openScoutProxyDialog();
+      return;
+    }
+  }
+  if (statusEl) statusEl.textContent = '';
+  if ($('wi-status')) $('wi-status').textContent = '';
+  if ($('pi-dlg-status')) $('pi-dlg-status').textContent = '';
+  const dialog = $('pi-dlg');
+  if (dialog && !dialog.open) dialog.showModal();
+  const run = ++wiState.run;
+  sitemapScopeMine = owned;
+  rememberScoutSite(host);
+  Object.assign(wiState, { host, rows: [], selected: '', stopped: false, checked: 0, toCheck: 0, done: false, message: '' });
+  $('wi-sidebar').hidden = false;
+  if ($('wi-submit')) $('wi-submit').disabled = true;
+  wiShowOverview();
+  let pages;
+  try {
+    pages = await scanSitemapSource({ key: 'wi', label: host, host, sitemap: `https://${host}/sitemap.xml` });
+  } catch (error) {
+    if (run !== wiState.run) return;
+    Object.assign(wiState, { done: true, message: `Couldn't read a sitemap for ${host} (${error.message}). The site may not publish one, or it blocks automated requests. Use Page inspect for individual pages instead.` });
+    if ($('wi-submit')) $('wi-submit').disabled = false;
+    wiRender();
+    return;
+  }
+  if (run !== wiState.run) return;
+  const unique = [...new Set(pages)].sort((a, b) => wsPathOf(a).localeCompare(wsPathOf(b)));
+  wiState.toCheck = Math.min(unique.length, WS_PAGE_LIMIT);
+  wiState.rows = unique.map((url, index) => ({ url, state: index < wiState.toCheck ? 'pending' : 'skipped', status: 0, finalUrl: url, page: null, error: '', issues: [] }));
+  wiRender();
+  let next = 0;
+  const worker = async () => {
+    while (next < wiState.toCheck && run === wiState.run && !wiState.stopped) {
+      const row = wiState.rows[next++];
+      Object.assign(row, await wiFetchPage(row.url));
+      if (run !== wiState.run) return;
+      row.issues = wiRowIssues(row);
+      wiState.checked += 1;
+      wiScheduleRender();
+    }
+  };
+  await Promise.all(Array.from({ length: WS_CONCURRENCY }, worker));
+  if (run !== wiState.run) return;
+  wiState.rows.forEach((row) => { if (row.state === 'pending') row.state = 'skipped'; });
+  wiState.done = true;
+  if ($('wi-submit')) $('wi-submit').disabled = false;
+  wiRender();
+}
+
+function updateWsOprState() {
+  const state = $('ws-opr-state');
+  const button = $('btn-ws-opr');
+  if (state) {
+    state.textContent = wsOprKey ? 'On — Open PageRank key saved.' : 'Add a free Open PageRank key to show it.';
+    state.classList.toggle('is-on', !!wsOprKey);
+  }
+  $('ws-opr-dot')?.classList.toggle('is-on', !!wsOprKey);
+  if (button) button.textContent = wsOprKey ? 'Change key' : 'Add key';
+}
+
+function openWsOprDialog() {
+  $('ws-opr-key').value = wsOprKey;
+  $('ws-opr-status').textContent = wsOprKey ? 'A key is saved on this computer.' : 'No key saved.';
+  $('ws-opr-dlg')?.showModal();
+}
+
+$('ws-dlg-form')?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const input = $('ws-dlg-domain');
+  runWebsiteSearch(input.value, $('ws-dlg-status')).then(() => { input.value = ''; });
+});
+// Closing the full-screen view (button or Escape) stops checking further pages.
+$('ws-close')?.addEventListener('click', () => $('ws-dlg')?.close());
+$('ws-rows')?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-strategy-url]');
+  if (button) openWsStrategy(button.dataset.strategyUrl);
+  const inspect = event.target.closest('[data-inspect-url]');
+  if (inspect) { wiExit(); runPageInspect(inspect.dataset.inspectUrl, $('ws-dlg-status')); }
+});
+$('ws-strategy-close')?.addEventListener('click', closeWsStrategy);
+$('ws-sitelinks')?.addEventListener('click', openWsSitelinks);
+// Escape closes the strategy panel first, then the full-screen view.
+$('ws-dlg')?.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !$('ws-strategy')?.hidden) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeWsStrategy();
+  }
+});
+$('ws-dlg')?.addEventListener('cancel', (event) => {
+  if (!$('ws-strategy')?.hidden) { event.preventDefault(); closeWsStrategy(); }
+});
+$('ws-rank-note')?.addEventListener('click', (event) => {
+  if (event.target.closest('#ws-connect-gsc')) openGscDialog();
+});
+// After connecting Search Console from Website search, re-run the search to load ranking data.
+$('gsc-dlg')?.addEventListener('close', () => {
+  if ($('ws-dlg')?.open && wsState.owned && wsState.host && gscIsConnected() && !wsState.rows.some((r) => r.gsc)) {
+    runWebsiteSearch(wsState.host, $('ws-dlg-status'));
+  }
+});
+$('ws-dlg')?.addEventListener('close', () => {
+  wsState.stopped = true;
+  closeWsStrategy();
+  if ($('ws-submit')) $('ws-submit').disabled = false;
+});
+$('ws-stop')?.addEventListener('click', () => { wsState.stopped = true; });
+$('ws-refresh')?.addEventListener('click', () => {
+  if (!wsState.host) return;
+  wsClearSiteCaches(wsState.host);
+  runWebsiteSearch(wsState.host, $('ws-dlg-status'));
+});
+$('ws-open-map')?.addEventListener('click', () => { if (wsState.host) openScoutSiteMap(wsState.host); });
+$('ws-filters')?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-filter]');
+  if (!button) return;
+  wsState.filter = button.dataset.filter;
+  renderWebsiteSearch();
+});
+$('btn-ws-opr')?.addEventListener('click', openWsOprDialog);
+$('ws-opr-cancel')?.addEventListener('click', () => $('ws-opr-dlg')?.close());
+$('ws-opr-test')?.addEventListener('click', async () => {
+  const key = $('ws-opr-key').value.trim().replace(/^Bearer\s+/i, '');
+  const status = $('ws-opr-status');
+  if (!key) { status.textContent = 'Paste a key first.'; return; }
+  status.textContent = 'Testing…';
+  const result = await wsFetchAuthority('google.com', key);
+  status.textContent = result.state === 'ok' ? `Key works — google.com scores ${result.score}/10.` : `Key test failed: ${result.message}`;
+});
+$('ws-opr-save')?.addEventListener('click', () => {
+  wsOprKey = $('ws-opr-key').value.trim().replace(/^Bearer\s+/i, '');
+  try { if (wsOprKey) localStorage.setItem(WS_OPR_STORAGE, wsOprKey); else localStorage.removeItem(WS_OPR_STORAGE); } catch (e) { /* ignore */ }
+  updateWsOprState();
+  $('ws-opr-dlg')?.close();
+  if (wsState.host) wsFetchAuthority(wsState.host).then((authority) => { wsState.authority = authority; renderWebsiteSearch(); });
+});
+$('ws-opr-remove')?.addEventListener('click', () => {
+  wsOprKey = '';
+  $('ws-opr-key').value = '';
+  try { localStorage.removeItem(WS_OPR_STORAGE); } catch (e) { /* ignore */ }
+  updateWsOprState();
+  $('ws-opr-status').textContent = 'Key removed.';
+});
+updateWsOprState();
+
+$('wi-overview')?.addEventListener('click', wiShowOverview);
+$('wi-search')?.addEventListener('input', wiRenderSidebar);
+$('wi-only-issues')?.addEventListener('change', wiRenderSidebar);
+$('wi-pages')?.addEventListener('click', (event) => {
+  const page = event.target.closest('[data-wi-url]');
+  if (page) wiShowPage(page.dataset.wiUrl);
+});
+$('wi-stop')?.addEventListener('click', () => { wiState.stopped = true; });
+
+// Inside Website inspect, links to pages of the same site stay in the module; anything else leaves it.
+function piOpenFromDialog(url) {
+  const target = piNormaliseUrl(url);
+  if (!target) return runPageInspect(url, $('pi-dlg-status'));
+  if (wiState.host) {
+    const key = normalizeSitemapUrl(target);
+    const row = wiState.rows.find((r) => normalizeSitemapUrl(r.url) === key);
+    if (row) { wiShowPage(row.url); return Promise.resolve(); }
+    if (normaliseScoutHost(new URL(target).hostname) === wiState.host) {
+      wiState.selected = target;
+      wiRenderSidebar();
+    } else {
+      wiExit();
+    }
+  }
+  return runPageInspect(target, $('pi-dlg-status'));
+}
+
+$('pi-form')?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  wiExit();
+  runPageInspect($('pi-url').value);
+});
+$('pi-dlg-form')?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const input = $('pi-dlg-url');
+  piOpenFromDialog(input.value).then(() => { input.value = ''; });
+});
+$('pi-close')?.addEventListener('click', () => $('pi-dlg')?.close());
+$('pi-dlg')?.addEventListener('close', () => {
+  piState.run += 1;
+  wiState.stopped = true;
+  if ($('wi-submit')) $('wi-submit').disabled = false;
+});
+$('pi-body')?.addEventListener('click', (event) => {
+  const sitePage = event.target.closest('[data-wi-url]');
+  if (sitePage) { wiShowPage(sitePage.dataset.wiUrl); return; }
+  const link = event.target.closest('[data-pi-url]');
+  if (link) piOpenFromDialog(link.dataset.piUrl);
+});
+$('pi-body')?.addEventListener('change', (event) => {
+  if (event.target.id !== 'pi-only-issues') return;
+  const onlyIssues = event.target.checked;
+  document.querySelectorAll('#pi-outline .pi-h').forEach((row) => { row.hidden = onlyIssues && row.dataset.hasIssue !== '1'; });
+});
+
 async function runSitemapScan() {
   const scanButton = $('btn-sitemap-scan');
   const state = $('sitemap-scan-state');
@@ -2254,7 +4646,7 @@ function renderScoutHistory() {
   wrap.innerHTML = list.length
     ? list.map((h) => `<span class="scout-chip"><button type="button" class="scout-chip-go" data-host="${escapeAttr(h)}">${escapeHtml(h)}</button><button type="button" class="scout-chip-rm" data-host="${escapeAttr(h)}" aria-label="Remove ${escapeAttr(h)}">&times;</button></span>`).join('')
     : '<span class="scout-recent-empty">No sites scouted yet.</span>';
-  wrap.querySelectorAll('.scout-chip-go').forEach((chip) => chip.addEventListener('click', () => openScoutSiteMap(chip.dataset.host)));
+  wrap.querySelectorAll('.scout-chip-go').forEach((chip) => chip.addEventListener('click', () => fillScoutDomain(chip.dataset.host)));
   wrap.querySelectorAll('.scout-chip-rm').forEach((btn) => btn.addEventListener('click', () => removeScoutSite(btn.dataset.host)));
   const clearBtn = $('scout-clear');
   if (clearBtn) clearBtn.hidden = list.length === 0;
@@ -2263,31 +4655,45 @@ function renderScoutHistory() {
 $('scout-clear')?.addEventListener('click', clearScoutHistory);
 
 $('btn-open-sitemap-visual')?.addEventListener('click', openMySiteMap);
-$('scout-my-site')?.addEventListener('click', openMySiteMap);
+
+function fillScoutDomain(host) {
+  const input = $('scout-domain');
+  if (!input) return;
+  input.value = host;
+  if ($('scout-status')) $('scout-status').textContent = '';
+  input.focus();
+}
+
+$('scout-my-site')?.addEventListener('click', (event) => fillScoutDomain(event.currentTarget.dataset.host));
+// One website box drives every tool; pressing Enter runs the first tool (Website inspect).
 $('scout-form')?.addEventListener('submit', (event) => {
   event.preventDefault();
-  const input = $('scout-domain');
   const status = $('scout-status');
-  const host = normaliseScoutHost(input.value);
+  const host = normaliseScoutHost($('scout-domain').value);
   if (!host || !host.includes('.')) {
-    if (status) status.textContent = 'Enter a valid domain, e.g. example.com';
+    if (status) status.textContent = 'Type a website first, e.g. example.com';
+    $('scout-domain').focus();
     return;
   }
   if (status) status.textContent = '';
-  input.value = '';
-  openScoutSiteMap(host);
+  const tool = (event.submitter && event.submitter.dataset.tool) || 'inspect';
+  if (tool === 'map') openScoutSiteMap(host);
+  else if (tool === 'search') runWebsiteSearch(host, status);
+  else runWebsiteInspect(host, status);
 });
 
 function updateScoutPrivacyState() {
   const state = $('scout-privacy-state');
   const button = $('btn-scout-proxy');
+  const on = scoutProxyEnabled();
   if (state) {
-    state.textContent = scoutProxyEnabled()
-      ? 'Private mode is always on — researched sites see the proxy, not your IP.'
-      : 'Set up private scouting once — then it stays on for every search.';
-    state.classList.toggle('is-on', scoutProxyEnabled());
+    state.textContent = on
+      ? 'On — other sites see the proxy, not your IP.'
+      : 'Needed to research other companies\' sites.';
+    state.classList.toggle('is-on', on);
   }
-  if (button) button.textContent = scoutProxyEnabled() ? 'Private scouting: On' : 'Set up private scouting';
+  $('scout-privacy-dot')?.classList.toggle('is-on', on);
+  if (button) button.textContent = on ? 'Manage' : 'Set up';
 }
 
 function openScoutProxyDialog() {
@@ -2421,9 +4827,10 @@ $('gsc-cancel')?.addEventListener('click', () => $('gsc-dlg')?.close());
 $('gsc-disconnect')?.addEventListener('click', () => {
   gscConfig.url = '';
   gscConfig.secret = '';
+  saveGscConfig();
   $('gsc-url').value = '';
   $('gsc-secret').value = '';
-  $('gsc-status').textContent = 'Disconnected.';
+  $('gsc-status').textContent = 'Disconnected and forgotten on this computer.';
   const section = $('sitemap-detail-search');
   if (section) section.hidden = true;
 });
@@ -2433,10 +4840,11 @@ $('gsc-save')?.addEventListener('click', async () => {
   gscConfig.property = $('gsc-property').value.trim() || 'sc-domain:edgeducate.com.au';
   const status = $('gsc-status');
   if (!gscIsConnected()) { status.textContent = 'Enter both a Worker URL and secret.'; return; }
+  saveGscConfig();
   status.textContent = 'Testing connection…';
   try {
     await fetchGscPageData('https://edgeducate.com.au/');
-    status.textContent = 'Connected. Click a page node to see live search data.';
+    status.textContent = 'Connected and remembered on this computer. Close this window to load Google data.';
   } catch (error) {
     status.textContent = `Saved, but test failed: ${error.message}`;
   }
@@ -3256,7 +5664,14 @@ function solutionPageMarkup(resource) {
   const pdfMarkup = solutionUrl ? `<iframe src="${escapeAttr(solutionUrl)}#page=1&view=Fit&zoom=page-fit" title="Solutions PDF"></iframe>` : '<div class="preview-note"><p>Solutions are not available yet.</p></div>';
   const videoPanel = videoEmbedUrl ? `<section class="solution-video-panel" data-solution-video-panel hidden><iframe src="${escapeAttr(videoEmbedUrl)}" title="Solutions video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></section>` : '';
   const videoAction = videoEmbedUrl ? '<button class="btn btn-solutions btn-block" type="button" data-solution-video-toggle>Watch solutions video</button>' : videoUrl ? `<a class="btn btn-solutions btn-block" href="${escapeAttr(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch solutions video</a>` : '';
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Solutions for ${escapeHtml(resource.title)} | Edgeducate Resources</title><meta name="description" content="Solutions for ${escapeHtml(resource.title)}."><link rel="canonical" href="https://zwh19921116-crypto.github.io/Resources/resource-pages/${resourcePagePath(resource)}/solutions/"><link rel="stylesheet" href="${rootPrefix}styles.css?v=20261012buttons"></head><body class="resource-detail-page solutions-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories">Categories</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header><main><article class="resource-detail solutions-detail"><div class="container"><nav class="crumbs"><a href="${rootPrefix}resources.html">Library</a><span>/</span><a href="../index.html">${escapeHtml(resource.title)}</a><span>/</span><span>Solutions</span></nav><div class="solution-stage" data-solution-stage><div class="solution-pdf-panel">${pdfMarkup}</div>${videoPanel}<div class="resource-detail-copy"><span class="badge badge-purple">Solutions</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">Work through the solutions and review the explanation video where available.</p>${solutionUrl ? `<a class="btn btn-primary btn-block" href="${escapeAttr(solutionUrl)}" target="_blank" rel="noopener noreferrer">Open PDF</a>` : ''}${videoAction}<a class="resource-back btn btn-light btn-block" href="../index.html">Back to resource</a></div></div></div></article></main><footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}solutions-page.js"></script><script src="${rootPrefix}site-menu.js"></script></body></html>`;
+  const parentUrl = `${SITE_URL}/resource-pages/${resourcePagePath(resource)}/`;
+  const solutionsBreadcrumb = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Resources', item: `${SITE_URL}/resources.html` },
+    { '@type': 'ListItem', position: 2, name: resource.title, item: parentUrl },
+    { '@type': 'ListItem', position: 3, name: 'Solutions', item: `${parentUrl}solutions/` }
+  ] }).replace(/</g, '\\u003c');
+  const parentLinkTags = `<link rel="up" href="../"><script type="application/ld+json">${solutionsBreadcrumb}</script>`;
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Solutions for ${escapeHtml(resource.title)} | Edgeducate Resources</title><meta name="description" content="Solutions for ${escapeHtml(resource.title)}."><link rel="canonical" href="https://zwh19921116-crypto.github.io/Resources/resource-pages/${resourcePagePath(resource)}/solutions/"><link rel="stylesheet" href="${rootPrefix}styles.css?v=20261012buttons">${parentLinkTags}</head><body class="resource-detail-page solutions-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories">Categories</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header><main><article class="resource-detail solutions-detail"><div class="container"><nav class="crumbs"><a href="${rootPrefix}resources.html">Library</a><span>/</span><a href="../">${escapeHtml(resource.title)}</a><span>/</span><span>Solutions</span></nav><div class="solution-stage" data-solution-stage><div class="solution-pdf-panel">${pdfMarkup}</div>${videoPanel}<div class="resource-detail-copy"><span class="badge badge-purple">Solutions</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">Work through the solutions and review the explanation video where available.</p>${solutionUrl ? `<a class="btn btn-primary btn-block" href="${escapeAttr(solutionUrl)}" target="_blank" rel="noopener noreferrer">Open PDF</a>` : ''}${videoAction}<a class="resource-back btn btn-light btn-block" href="../">Back to resource</a></div></div></div></article></main><footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}solutions-page.js"></script><script src="${rootPrefix}site-menu.js"></script></body></html>`;
 }
 
 function renderRelatedResourceOptions(resource) {
@@ -3375,7 +5790,7 @@ function updateResourceSelectionUi(visibleIds = []) {
 function deleteSelectedResources() {
   const selected = items.filter((item) => selectedResourceIds.has(item.id));
   if (!selected.length) return;
-  const confirmation = prompt(`Type DELETE to remove ${selected.length} selected resource${selected.length === 1 ? '' : 's'}.\n\nThis only removes the cards from the site. The files in your Drive are untouched.`);
+  const confirmation = prompt(`Type DELETE to remove ${selected.length} selected resource${selected.length === 1 ? '' : 's'}.\n\nWhen the project saves successfully, it removes the resources from the site and deletes their generated resource-pages/<ID> folders, including solutions pages. The source files linked from the resource cards are not deleted.`);
   if (confirmation !== 'DELETE') return;
   selected.forEach((item) => log(`Deleted "${item.title}"`, 'warnl', item.id));
   items = items.filter((item) => !selectedResourceIds.has(item.id));
@@ -3424,7 +5839,7 @@ function bindRow(tr) {
       if (act === 'replicate') return replicateResource(index);
       if (act === 'log') return openLog(items[index].id, items[index].title);
       if (act === 'del') {
-        if (confirm(`Delete "${items[index].title}"?\n\nThis only removes the card from the site. The file in your Drive is untouched.`)) {
+        if (confirm(`Delete "${items[index].title}"?\n\nWhen the project saves successfully, it removes the resource from the site and deletes its generated resource-pages/${resourcePagePath(items[index])} folder, including solutions pages. The source file linked from the card is not deleted.`)) {
           log(`Deleted "${items[index].title}"`, 'warnl', items[index].id);
           selectedResourceIds.delete(items[index].id);
           items.splice(index, 1);
@@ -5380,8 +7795,8 @@ function questionPaperMarkup(resource, linkPrefix) {
   const question = items.find((item) => item.id === resource.questionResourceId && item.status !== 'draft');
   const video = items.find((item) => item.id === resource.videoResourceId && item.status !== 'draft');
   const links = [
-    question ? `<a class="question-paper-link" href="${linkPrefix}${encodeURIComponent(question.id)}/index.html"><span>Question resource</span><strong>${escapeHtml(question.title)}</strong></a>` : '',
-    video ? `<a class="question-paper-link" href="${linkPrefix}${encodeURIComponent(video.id)}/index.html"><span>Associated video</span><strong>${escapeHtml(video.title)}</strong></a>` : ''
+    question ? `<a class="question-paper-link" href="${linkPrefix}${encodeURIComponent(question.id)}/"><span>Question resource</span><strong>${escapeHtml(question.title)}</strong></a>` : '',
+    video ? `<a class="question-paper-link" href="${linkPrefix}${encodeURIComponent(video.id)}/"><span>Associated video</span><strong>${escapeHtml(video.title)}</strong></a>` : ''
   ].filter(Boolean).join('');
   return links ? `<section class="question-paper-links" aria-labelledby="question-paper-links-title"><p class="section-eyebrow">Exam support</p><h2 id="question-paper-links-title">Use this paper with</h2><div class="question-paper-link-grid">${links}</div></section>` : '';
 }
@@ -5453,7 +7868,7 @@ function resourceHubMarkup() {
     .map(([subject, list]) => {
       const links = list.slice()
         .sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')))
-        .map((r) => `<li><a href="${escapeAttr(encodeURIComponent(r.id))}/index.html">${escapeHtml(r.title || r.id)}</a></li>`)
+        .map((r) => `<li><a href="${escapeAttr(encodeURIComponent(r.id))}/">${escapeHtml(r.title || r.id)}</a></li>`)
         .join('');
       return `<section class="resource-index-group"><h2>${escapeHtml(subject)}</h2><ul class="resource-index-list">${links}</ul></section>`;
     }).join('');
@@ -5473,12 +7888,12 @@ function resourcePageMarkup(resource) {
   const resourcePagesPrefix = '../';
   const metadata = [['Subject', resource.subject], ['Year level', resource.year], ['Difficulty', resource.level], ['Details', resource.details], ['Solutions', resource.solutions], ['Solutions video', resource.solutionsVideo]]
     .filter(([, value]) => value)
-    .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${label === 'Solutions' ? '<a href="solutions/index.html">View solutions</a>' : label === 'Solutions video' ? `<a href="${escapeAttr(value)}">Watch solutions video</a>` : escapeHtml(value)}</dd></div>`).join('');
+    .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${label === 'Solutions' ? '<a href="solutions/">View solutions</a>' : label === 'Solutions video' ? `<a href="${escapeAttr(value)}">Watch solutions video</a>` : escapeHtml(value)}</dd></div>`).join('');
   const related = (sitemapRelatedPlan && sitemapRelatedPlan.get(resource.id)) || relatedResourcesFor(resource);
   const relatedMarkup = related.map((item) => {
     const relatedType = CONFIG.types[item.type] || { label: item.type, colour: 'blue' };
     const relatedPath = resourcePagePath(item);
-    return `<article class="resource-card"><a class="thumb" href="${resourcePagesPrefix}${relatedPath}/index.html"><span class="badge badge-${relatedType.colour}">${escapeHtml(relatedType.label)}</span>${window.edgThumb(item.art, item.image)}</a><a class="card-link" href="${resourcePagesPrefix}${relatedPath}/index.html"><h3>${escapeHtml(item.title)}</h3><p class="meta">${escapeHtml(item.year || '')}</p></a></article>`;
+    return `<article class="resource-card"><a class="thumb" href="${resourcePagesPrefix}${relatedPath}/"><span class="badge badge-${relatedType.colour}">${escapeHtml(relatedType.label)}</span>${window.edgThumb(item.art, item.image)}</a><a class="card-link" href="${resourcePagesPrefix}${relatedPath}/"><h3>${escapeHtml(item.title)}</h3><p class="meta">${escapeHtml(item.year || '')}</p></a></article>`;
   }).join('');
   const relatedSection = relatedMarkup ? `<section class="related-resources" data-carousel><a class="reader-download" href="${escapeAttr(resource.url)}" download>Download resource</a><div class="related-resources-head"><div><p class="section-eyebrow">More resources</p><h2>More ${escapeHtml(resource.subject)} resources</h2></div><div class="carousel-controls"><button type="button" data-carousel-prev aria-label="Previous related resources">‹</button><button type="button" data-carousel-next aria-label="Next related resources">›</button></div></div><div class="related-carousel" tabindex="0" aria-label="Related ${escapeHtml(resource.subject)} resources"><div class="related-track">${relatedMarkup}</div></div></section>` : '';
   const questionPaperSection = questionPaperMarkup(resource, resourcePagesPrefix);
@@ -5487,7 +7902,7 @@ function resourcePageMarkup(resource) {
   const description = resource.desc || type.blurb;
   const actionLabel = resource.type === 'video' ? 'Watch video' : /\.pdf(\?|#|$)/i.test(String(resource.url || '')) ? 'View full document' : 'Open resource';
   const videoEmbedUrl = solutionVideoEmbedUrl(resource.solutionsVideo || '');
-  const solutionsButton = resource.solutions || resource.solutionsVideo ? '<a class="btn btn-solutions btn-block" href="solutions/index.html">View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>' : '';
+  const solutionsButton = resource.solutions || resource.solutionsVideo ? '<a class="btn btn-solutions btn-block" href="solutions/">View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>' : '';
   const publisher = { '@type': 'Organization', name: 'Edgeducate', url: 'https://edgeducate.com.au/' };
   const schema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'LearningResource', name: resource.title, description, educationalLevel: resource.year, learningResourceType: type.label, url: canonical, about: resource.subject || undefined, keywords: resource.tags || [], audience: { '@type': 'EducationalAudience', educationalRole: 'student' }, creator: publisher, publisher, isAccessibleForFree: true, inLanguage: 'en-AU', datePublished: resource.added || undefined, isBasedOn: resource.url || undefined });
   const breadcrumbSchema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
@@ -5505,12 +7920,17 @@ function resourcePageMarkup(resource) {
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(resource.title)} | Edgeducate Resources</title><meta name="description" content="${escapeHtml(description)}"><link rel="canonical" href="${canonical}"><meta property="og:title" content="${escapeHtml(resource.title)} | Edgeducate Resources"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:type" content="article"><meta property="og:url" content="${canonical}"><script type="application/ld+json">${schema}</script><script type="application/ld+json">${breadcrumbSchema}</script><script type="application/ld+json">${faqSchema}</script>${videoSchema ? `<script type="application/ld+json">${videoSchema}</script>` : ''}<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="${rootPrefix}styles.css"></head>
 <body class="resource-detail-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories">Categories</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header>
 <main><article class="resource-detail${hasInlinePreview(resource) ? ' has-inline-preview' : ''}"${hasInlinePreview(resource) ? ` data-resource-title="${escapeAttr(resource.title)}" data-resource-context="${escapeAttr(`${type.label} · ${resource.subject} · ${resource.year}`)}"` : ''}><div class="container"><nav class="crumbs"><a href="${rootPrefix}index.html">Resources</a><span>/</span><a href="${rootPrefix}all-resources.html">Library</a><span>/</span><span>${escapeHtml(resource.title)}</span></nav><div class="resource-detail-layout"><div class="resource-detail-preview">${preview}</div><div class="resource-detail-copy"><span class="badge badge-${type.colour}">${escapeHtml(type.label)}</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">${escapeHtml(description)}</p><dl class="resource-detail-meta">${metadata}</dl><a class="btn btn-primary btn-block" href="${escapeHtml(resource.url)}">${actionLabel}</a><a class="resource-back" href="${rootPrefix}all-resources.html">Back to all resources</a></div></div><section class="resource-faq"><h2>About this resource</h2><dl><div><dt>Who is this for?</dt><dd>${escapeHtml(resource.title)} is suitable for ${escapeHtml(resource.year || 'students')} studying ${escapeHtml(resource.subject || 'this topic')}.</dd></div><div><dt>How should I use it?</dt><dd>${escapeHtml(description)}</dd></div></dl></section>${relatedSection}</div></article></main>
-  <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><nav class="footer-resource-links"><a href="${rootPrefix}resource-pages/index.html">Browse all resources</a></nav><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}reader-layout.js"></script><script src="${rootPrefix}carousel.js"></script><script type="module" src="${rootPrefix}pdf-reader.js?v=20261012native"></script><script src="${rootPrefix}site-menu.js"></script></body></html>`.replace('</div></div><section class="resource-faq"', `</div></div>${questionPaperSection}<section class="resource-faq"`).replace('<a class="resource-back"', `${solutionsButton}<a class="resource-back"`);
+  <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><nav class="footer-resource-links"><a href="${rootPrefix}resource-pages/">Browse all resources</a></nav><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}reader-layout.js"></script><script src="${rootPrefix}carousel.js"></script><script type="module" src="${rootPrefix}pdf-reader.js?v=20261012native"></script><script src="${rootPrefix}site-menu.js"></script></body></html>`.replace('</div></div><section class="resource-faq"', `</div></div>${questionPaperSection}<section class="resource-faq"`).replace('<a class="resource-back"', `${solutionsButton}<a class="resource-back"`);
 }
 
 const removeHeaderLibraryButton = (markup) => markup.replace(/<a class="btn btn-cta" href="[^"]*">Browse library<\/a>/g, '');
 const replaceLegacySiteUrls = (markup) => markup.replaceAll(LEGACY_SITE_URL, SITE_URL);
-const linkGeneratedPagesToMainSite = (markup) => markup.replace(/(<a class="brand" href=")[^"]+(">)/, '$1https://edgeducate.com.au/$2');
+const FAVICON_TAG = '<link rel="icon" href="/favicon.ico" sizes="any">';
+// Every generated page declares the site favicon so browsers, Google and SEO checks find it.
+const linkGeneratedPagesToMainSite = (markup) => {
+  const linked = markup.replace(/(<a class="brand" href=")[^"]+(">)/, '$1https://edgeducate.com.au/$2');
+  return /<link[^>]+rel="[^"]*icon/i.test(linked) ? linked : linked.replace('</head>', `${FAVICON_TAG}</head>`);
+};
 
 async function writeStaticPages() {
   if (!projectHandle) return false;

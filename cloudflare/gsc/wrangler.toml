@@ -1,0 +1,9 @@
+﻿# Deploy config for the Search Console helper Worker (separate from the website Worker).
+# Deploy from the Resources folder with:
+#   npx wrangler deploy --config cloudflare/gsc/wrangler.toml
+# Secrets (GSC_CLIENT_ID, GSC_CLIENT_SECRET, GSC_REFRESH_TOKEN, GSC_SECRET) live in Cloudflare
+# and are kept between deploys.
+name = "gsc"
+main = "../gsc-worker.js"
+compatibility_date = "2026-10-16"
+workers_dev = true
