@@ -30,4 +30,6 @@ To publish the pushed resources to Cloudflare, run this from the repository root
 npx wrangler deploy
 ```
 
+The `.assetsignore` file keeps repository metadata and Wrangler files out of public assets.
+
 Verify the deployment on `https://resources.edgeducate.com.au/`. Resource pages use trailing-slash URLs; the Cloudflare Worker serves each directory's `index.html` while `wrangler.toml` keeps `html_handling = "none"`.

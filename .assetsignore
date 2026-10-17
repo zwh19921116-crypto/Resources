@@ -4,5 +4,11 @@ admin.html
 admin.js
 backups/
 node_modules/
+.assetsignore
+.git
 .git/
+.wrangler
+.wrangler/
+.wrangler/**
+wrangler.toml
 cloudflare/
