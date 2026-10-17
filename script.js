@@ -446,7 +446,9 @@ function renderHome() {
 
     grid.innerHTML = '';
     latest.forEach((r) => grid.appendChild(buildCard(r)));
-    el('no-results').hidden = latest.length > 0;
+    const noResults = el('no-results');
+    noResults.textContent = latest.length ? '' : 'No resources match this category.';
+    noResults.hidden = latest.length > 0;
 
     typeWrap.querySelectorAll('.filter-chip').forEach((c) => {
       c.classList.toggle('is-on', c.dataset.type === state.type);
