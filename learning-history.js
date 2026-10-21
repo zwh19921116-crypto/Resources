@@ -1,6 +1,7 @@
 (() => {
   const STORAGE_KEY = 'edgeducate-learning-session-v1';
   const MAX_ITEMS = 20;
+  const MAX_RECOMMENDATIONS = 2;
   const SESSION_MAX_AGE = 1000 * 60 * 60 * 6;
   const typePartners = {
     video: ['practice-questions', 'knowledge-sheet'],
@@ -71,7 +72,7 @@
         return { resource: candidate, score };
       })
       .sort((left, right) => right.score - left.score || String(right.resource.added || '').localeCompare(String(left.resource.added || '')))
-      .slice(0, 3)
+      .slice(0, MAX_RECOMMENDATIONS)
       .map(({ resource: candidate }) => candidate);
   };
 
@@ -84,7 +85,7 @@
       container.hidden = false;
       return;
     }
-    container.innerHTML = `<p class="section-eyebrow">Based on this session</p><h2 id="learning-recommendations-title">Continue learning</h2><p class="recommendation-note">These suggestions use this browser session only and are not sent to Edgeducate.</p><div class="resource-grid">${recommendations.map((candidate) => {
+    container.innerHTML = `<p class="section-eyebrow">Based on this session</p><h2 id="learning-recommendations-title">Continue learning</h2><p class="recommendation-note">These suggestions use this browser session only and are not sent to Edgeducate.</p><div class="resource-grid recommendation-carousel__track">${recommendations.map((candidate) => {
       const type = window.EDG_CONFIG?.types?.[candidate.type] || {};
       const art = subjectArt[String(candidate.subject || '').toLowerCase()] || candidate.art;
       const thumbnail = typeof window.edgThumb === 'function'
