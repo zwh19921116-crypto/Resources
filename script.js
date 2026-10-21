@@ -80,12 +80,12 @@ function buildCard(r) {
         ${hasVideo ? '<span class="availability-item availability-video"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>Video</span>' : ''}
       </span>` : '';
   card.innerHTML = `
-    <a class="thumb" href="${detailUrl}" target="_blank" rel="noopener" aria-label="Open ${esc(r.title)} in a new tab">
+    <a class="thumb" href="${detailUrl}" aria-label="Open ${esc(r.title)}">
       ${window.edgThumb(r.art, r.image)}
       <span class="badge badge-${type.colour}">${esc(type.label)}</span>
       ${type.action === 'embed' ? '<span class="play-overlay"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg></span>' : ''}
     </a>
-    <a class="card-link" href="${detailUrl}" target="_blank" rel="noopener">
+    <a class="card-link" href="${detailUrl}">
       <span class="card-title-row"><h3>${esc(r.title)}</h3>${availability}</span>
       <p class="meta">${[r.year, r.details].filter(Boolean).map(esc).join(' &nbsp;•&nbsp; ')}</p>
     </a>
@@ -98,7 +98,7 @@ function buildCard(r) {
   card.querySelector('.card-info').addEventListener('click', () => openDetail(r));
   card.addEventListener('click', (event) => {
     if (event.target.closest('a, button')) return;
-    window.open(detailUrl, '_blank', 'noopener');
+    window.location.href = detailUrl;
   });
   return card;
 }
