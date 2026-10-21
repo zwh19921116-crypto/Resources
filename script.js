@@ -73,9 +73,7 @@ function buildCard(r) {
   const tone = levelTone(r.level);
   const hasVideo = solutionVideoUrls(r).length > 0;
   const hasSolutions = Boolean(String(r.solutions || '').trim() || hasVideo);
-  const detailUrl = hasSolutions
-    ? `resource-pages/${encodeURIComponent(r.id)}/solutions/index.html`
-    : `resource-pages/${encodeURIComponent(r.id)}/index.html`;
+  const detailUrl = `resource-pages/${encodeURIComponent(r.id)}/index.html`;
   const availability = hasSolutions || hasVideo ? `
       <span class="resource-availability" aria-label="Available materials">
         ${hasSolutions ? '<span class="availability-item availability-solutions"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg>Solutions</span>' : ''}
