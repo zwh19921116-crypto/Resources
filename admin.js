@@ -5766,7 +5766,7 @@ function solutionVideoTitles(resource) {
 }
 function solutionVideoThumbnail(value) {
   const match = String(value || '').match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/);
-  return match ? `https://i.ytimg.com/vi/${match[1]}/mqdefault.jpg` : '';
+  return match ? `https://i.ytimg.com/vi/${match[1]}/maxresdefault.jpg` : '';
 }
 function solutionPageMarkup(resource) {
   const rootPrefix = '../../../';
@@ -5792,7 +5792,7 @@ function solutionPageMarkup(resource) {
   const pdfMarkup = solutionUrl ? `<iframe src="${escapeAttr(solutionUrl)}#page=1&view=Fit&zoom=page-fit" title="Solutions PDF"></iframe>` : '<div class="preview-note"><p>Solutions are not available yet.</p></div>';
   const videoPanel = videoUrls.length ? `<section class="solution-video-panel" data-solution-video-panel hidden>
     <div class="solution-video-selector" role="tablist" aria-label="Solutions videos">
-      ${videoUrls.map((videoUrl, index) => { const title = videoTitles[index] || `Solutions video ${index + 1}`; const thumbnail = solutionVideoThumbnail(videoUrl); return `<button type="button" class="solution-video-selector-item${index === 0 ? ' is-active' : ''}" data-solution-video-index="${index}" role="tab" aria-selected="${index === 0 ? 'true' : 'false'}"><span class="solution-video-thumbnail">${thumbnail ? `<img src="${thumbnail}" alt="" loading="lazy">` : '<span class="solution-video-thumbnail-fallback">▶</span>'}</span><span>${escapeHtml(title)}</span></button>`; }).join('')}
+      ${videoUrls.map((videoUrl, index) => { const title = videoTitles[index] || `Solutions video ${index + 1}`; const thumbnail = solutionVideoThumbnail(videoUrl); return `<button type="button" class="solution-video-selector-item${index === 0 ? ' is-active' : ''}" data-solution-video-index="${index}" role="tab" aria-selected="${index === 0 ? 'true' : 'false'}"><span class="solution-video-thumbnail">${thumbnail ? `<img src="${thumbnail}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${thumbnail.replace('/maxresdefault.jpg', '/mqdefault.jpg')}';">` : '<span class="solution-video-thumbnail-fallback">▶</span>'}</span><span>${escapeHtml(title)}</span></button>`; }).join('')}
     </div>
     <div class="solution-video-player">
       ${videoUrls.map((videoUrl, index) => { const title = videoTitles[index] || `Solutions video ${index + 1}`; return `<div class="solution-video-entry${index === 0 ? ' is-active' : ''}" data-solution-video-item="${index}" role="tabpanel"${index === 0 ? '' : ' hidden'}>${videoEmbeds[index] ? `<div class="solution-video"><iframe src="${escapeAttr(videoEmbeds[index])}" title="${escapeAttr(title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>` : `<a class="btn btn-light btn-block" href="${escapeAttr(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch ${escapeHtml(title)}</a>`}</div>`; }).join('')}
