@@ -1,6 +1,7 @@
 const stage = document.querySelector('[data-solution-stage]');
 const toggle = document.querySelector('[data-solution-video-toggle]');
 const videoPanel = document.querySelector('[data-solution-video-panel]');
+const videoSelector = document.querySelector('.solution-video-selector');
 const resourceBack = stage?.querySelector('.resource-back');
 const pdfButton = stage?.querySelector('.resource-detail-copy .btn-primary');
 const libraryCrumb = stage?.parentElement.querySelector('.crumbs a');
@@ -29,4 +30,21 @@ if (stage && toggle && videoPanel) {
     toggle.hidden = true;
 
   });
+}
+
+if (videoSelector) {
+  const selectors = [...videoSelector.querySelectorAll('[data-solution-video-index]')];
+  const players = [...videoPanel.querySelectorAll('[data-solution-video-item]')];
+  selectors.forEach((selector) => selector.addEventListener('click', () => {
+    const index = Number(selector.dataset.solutionVideoIndex);
+    selectors.forEach((item, itemIndex) => {
+      const active = itemIndex === index;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-selected', String(active));
+    });
+    players.forEach((player, playerIndex) => {
+      player.hidden = playerIndex !== index;
+      player.classList.toggle('is-active', playerIndex === index);
+    });
+  }));
 }

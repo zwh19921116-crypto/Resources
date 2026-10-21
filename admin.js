@@ -5764,6 +5764,10 @@ function solutionVideoUrls(resource) {
 function solutionVideoTitles(resource) {
   return Array.isArray(resource.solutionsVideoTitles) ? resource.solutionsVideoTitles : [];
 }
+function solutionVideoThumbnail(value) {
+  const match = String(value || '').match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/);
+  return match ? `https://i.ytimg.com/vi/${match[1]}/mqdefault.jpg` : '';
+}
 function solutionPageMarkup(resource) {
   const rootPrefix = '../../../';
   const solutionUrl = resource.solutions || '';
@@ -5786,7 +5790,14 @@ function solutionPageMarkup(resource) {
   const videoEmbeds = videoUrls.map(solutionVideoEmbedUrl);
   const videoEmbedUrl = videoEmbeds[0];
   const pdfMarkup = solutionUrl ? `<iframe src="${escapeAttr(solutionUrl)}#page=1&view=Fit&zoom=page-fit" title="Solutions PDF"></iframe>` : '<div class="preview-note"><p>Solutions are not available yet.</p></div>';
-  const videoPanel = videoUrls.length ? `<section class="solution-video-panel" data-solution-video-panel hidden>${videoUrls.map((videoUrl, index) => { const title = videoTitles[index] || `Solutions video ${index + 1}`; return `<div class="solution-video-entry"><h2>${escapeHtml(title)}</h2>${videoEmbeds[index] ? `<div class="solution-video"><iframe src="${escapeAttr(videoEmbeds[index])}" title="${escapeAttr(title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>` : `<a class="btn btn-light btn-block" href="${escapeAttr(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch ${escapeHtml(title)}</a>`}</div>`; }).join('')}</section>` : '';
+  const videoPanel = videoUrls.length ? `<section class="solution-video-panel" data-solution-video-panel hidden>
+    <div class="solution-video-selector" role="tablist" aria-label="Solutions videos">
+      ${videoUrls.map((videoUrl, index) => { const title = videoTitles[index] || `Solutions video ${index + 1}`; const thumbnail = solutionVideoThumbnail(videoUrl); return `<button type="button" class="solution-video-selector-item${index === 0 ? ' is-active' : ''}" data-solution-video-index="${index}" role="tab" aria-selected="${index === 0 ? 'true' : 'false'}"><span class="solution-video-thumbnail">${thumbnail ? `<img src="${thumbnail}" alt="" loading="lazy">` : '<span class="solution-video-thumbnail-fallback">▶</span>'}</span><span>${escapeHtml(title)}</span></button>`; }).join('')}
+    </div>
+    <div class="solution-video-player">
+      ${videoUrls.map((videoUrl, index) => { const title = videoTitles[index] || `Solutions video ${index + 1}`; return `<div class="solution-video-entry${index === 0 ? ' is-active' : ''}" data-solution-video-item="${index}" role="tabpanel"${index === 0 ? '' : ' hidden'}>${videoEmbeds[index] ? `<div class="solution-video"><iframe src="${escapeAttr(videoEmbeds[index])}" title="${escapeAttr(title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>` : `<a class="btn btn-light btn-block" href="${escapeAttr(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch ${escapeHtml(title)}</a>`}</div>`; }).join('')}
+    </div>
+  </section>` : '';
   const videoAction = videoUrls.length ? '<button class="btn btn-solutions btn-block" type="button" data-solution-video-toggle>Watch solutions video</button>' : '';
   const parentUrl = `${SITE_URL}/resource-pages/${resourcePagePath(resource)}/`;
   const solutionsBreadcrumb = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
@@ -8107,7 +8118,7 @@ function resourceHubMarkup() {
     .map(([subject, list]) => {
       const links = list.slice()
         .sort((a, b) => String(a.title || '').localeCompare(String(b.title || '')))
-        .map((r) => `<li><a href="${escapeAttr(encodeURIComponent(r.id))}/">${escapeHtml(r.title || r.id)}</a></li>`)
+        .map((r) => `<li><a href="${escapeAttr(encodeURIComponent(r.id))}/index.html">${escapeHtml(r.title || r.id)}</a></li>`)
         .join('');
       return `<section class="resource-index-group"><h2>${escapeHtml(subject)}</h2><ul class="resource-index-list">${links}</ul></section>`;
     }).join('');
@@ -8127,12 +8138,12 @@ function resourcePageMarkup(resource) {
   const resourcePagesPrefix = '../';
   const metadata = [['Subject', resource.subject], ['Year level', resource.year], ['Difficulty', resource.level], ['Details', resource.details], ['Solutions', resource.solutions], ['Solutions videos', solutionVideoUrls(resource).join(', ')]]
     .filter(([, value]) => value)
-    .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${label === 'Solutions' ? '<a href="solutions/">View solutions</a>' : label === 'Solutions video' ? `<a href="${escapeAttr(value)}">Watch solutions video</a>` : escapeHtml(value)}</dd></div>`).join('');
+    .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${label === 'Solutions' ? '<a href="solutions/index.html">View solutions</a>' : label === 'Solutions video' ? `<a href="${escapeAttr(value)}">Watch solutions video</a>` : escapeHtml(value)}</dd></div>`).join('');
   const related = (sitemapRelatedPlan && sitemapRelatedPlan.get(resource.id)) || relatedResourcesFor(resource);
   const relatedMarkup = related.map((item) => {
     const relatedType = CONFIG.types[item.type] || { label: item.type, colour: 'blue' };
     const relatedPath = resourcePagePath(item);
-    return `<article class="resource-card"><a class="thumb" href="${resourcePagesPrefix}${relatedPath}/"><span class="badge badge-${relatedType.colour}">${escapeHtml(relatedType.label)}</span>${window.edgThumb(item.art, item.image)}</a><a class="card-link" href="${resourcePagesPrefix}${relatedPath}/"><h3>${escapeHtml(item.title)}</h3><p class="meta">${escapeHtml(item.year || '')}</p></a></article>`;
+    return `<article class="resource-card"><a class="thumb" href="${resourcePagesPrefix}${relatedPath}/index.html"><span class="badge badge-${relatedType.colour}">${escapeHtml(relatedType.label)}</span>${window.edgThumb(item.art, item.image)}</a><a class="card-link" href="${resourcePagesPrefix}${relatedPath}/index.html"><h3>${escapeHtml(item.title)}</h3><p class="meta">${escapeHtml(item.year || '')}</p></a></article>`;
   }).join('');
   const relatedSection = relatedMarkup ? `<section class="related-resources" data-carousel><a class="reader-download" href="${escapeAttr(resource.url)}" download>Download resource</a><div class="related-resources-head"><div><p class="section-eyebrow">More resources</p><h2>More ${escapeHtml(resource.subject)} resources</h2></div><div class="carousel-controls"><button type="button" data-carousel-prev aria-label="Previous related resources">‹</button><button type="button" data-carousel-next aria-label="Next related resources">›</button></div></div><div class="related-carousel" tabindex="0" aria-label="Related ${escapeHtml(resource.subject)} resources"><div class="related-track">${relatedMarkup}</div></div></section>` : '';
   const questionPaperSection = questionPaperMarkup(resource, resourcePagesPrefix);
@@ -8142,7 +8153,7 @@ function resourcePageMarkup(resource) {
   const actionLabel = resource.type === 'video' ? 'Watch video' : /\.pdf(\?|#|$)/i.test(String(resource.url || '')) ? 'View full document' : 'Open resource';
   const videoUrls = solutionVideoUrls(resource);
   const videoEmbedUrl = solutionVideoEmbedUrl(videoUrls[0] || '');
-  const solutionsButton = resource.solutions || videoUrls.length ? '<a class="btn btn-solutions btn-block" href="solutions/">View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>' : '';
+  const solutionsButton = resource.solutions || videoUrls.length ? '<a class="btn btn-solutions btn-block" href="solutions/index.html">View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>' : '';
   const publisher = { '@type': 'Organization', name: 'Edgeducate', url: 'https://edgeducate.com.au/' };
   const schema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'LearningResource', name: resource.title, description, educationalLevel: resource.year, learningResourceType: type.label, url: canonical, about: resource.subject || undefined, keywords: resource.tags || [], audience: { '@type': 'EducationalAudience', educationalRole: 'student' }, creator: publisher, publisher, isAccessibleForFree: true, inLanguage: 'en-AU', datePublished: resource.added || undefined, isBasedOn: resource.url || undefined });
   const breadcrumbSchema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
