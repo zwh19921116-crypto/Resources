@@ -123,7 +123,11 @@
     const article = document.querySelector('.resource-detail[data-resource-title], .solutions-detail');
     if (!article || !location.pathname.includes('/resource-pages/')) return;
     const contentContainer = article.querySelector('.container');
+    const recommendationsTarget = article.querySelector('.solution-video-panel')
+      || article.querySelector('.solution-stage, .resource-detail-layout')
+      || contentContainer;
     if (!contentContainer
+      || !recommendationsTarget
       || document.getElementById('learning-recommendations')
       || article.querySelector('.related-resources')) return;
 
@@ -132,7 +136,7 @@
     recommendations.className = 'recommended-learning';
     recommendations.setAttribute('aria-labelledby', 'learning-recommendations-title');
     recommendations.hidden = true;
-    contentContainer.append(recommendations);
+    recommendationsTarget.append(recommendations);
 
     try {
       await loadScript(`${prefix}data/config.js`);
