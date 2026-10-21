@@ -61,6 +61,8 @@ function driveId(url) {
   return m ? m[1] : null;
 }
 const isPdf = (url) => /\.pdf(\?|#|$)/i.test(String(url));
+const solutionVideoUrls = (resource) => (Array.isArray(resource.solutionsVideos) ? resource.solutionsVideos : [resource.solutionsVideo])
+  .map((url) => String(url || '').trim()).filter(Boolean);
 
 /* ---------- cards ---------- */
 function buildCard(r) {
@@ -71,8 +73,8 @@ function buildCard(r) {
   const detailUrl = `resource-pages/${encodeURIComponent(r.id)}/`;
 
   const tone = levelTone(r.level);
-  const hasSolutions = Boolean(String(r.solutions || '').trim() || String(r.solutionsVideo || '').trim());
-  const hasVideo = Boolean(String(r.solutionsVideo || '').trim());
+  const hasVideo = solutionVideoUrls(r).length > 0;
+  const hasSolutions = Boolean(String(r.solutions || '').trim() || hasVideo);
   const availability = hasSolutions || hasVideo ? `
       <span class="resource-availability" aria-label="Available materials">
         ${hasSolutions ? '<span class="availability-item availability-solutions"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg>Solutions</span>' : ''}
@@ -161,7 +163,7 @@ function openDetail(r) {
   action.textContent = youtubeId(r.url) ? 'Watch on YouTube' : 'Download / Open';
 
   const solutionsAction = el('detail-solutions');
-  const hasSolutionsPage = Boolean(String(r.solutions || '').trim() || String(r.solutionsVideo || '').trim());
+  const hasSolutionsPage = Boolean(String(r.solutions || '').trim() || solutionVideoUrls(r).length);
   solutionsAction.hidden = !hasSolutionsPage;
   solutionsAction.href = hasSolutionsPage
     ? `resource-pages/${encodeURIComponent(r.id)}/solutions/`
@@ -395,21 +397,13 @@ function renderHome() {
   renderHeroStats();
   renderHeroSessionPreview();
   const wrap = el('category-grid');
-  const categoryArt = {
-    'practice-questions': 'questions',
-    'practice-exam': 'examCard',
-    checklist: 'checklistCard',
-    'knowledge-sheet': 'knowledge',
-    'interactive-app': 'interactive',
-    video: 'videoCard'
-  };
   Object.entries(CONFIG.types).forEach(([key, t]) => {
     const total = ALL.filter((r) => r.type === key).length;
     const a = document.createElement('a');
     a.className = `category-card category-${t.colour}`;
     a.href = `all-resources.html?type=${encodeURIComponent(key)}`;
     a.innerHTML = `
-      <span class="cat-art">${window.edgThumb(categoryArt[key])}</span>
+      <span class="cat-art">${window.edgThumb(CONFIG.categoryArt[key])}</span>
       <span class="cat-body">
         <span class="cat-title">${esc(key === 'video' ? 'Video Lessons' : t.label)}</span>
         <span class="cat-blurb">${esc(t.blurb)}</span>
@@ -712,8 +706,8 @@ function matches(r) {
   if (state.subject && r.subject !== state.subject) return false;
   if (state.mathsType && mathematicsTypeFor(r) !== state.mathsType) return false;
   if (state.year && r.year !== state.year) return false;
-  if (state.solutions && !(r.solutions || r.solutionsVideo)) return false;
-  if (state.video && !r.solutionsVideo) return false;
+  if (state.solutions && !(r.solutions || solutionVideoUrls(r).length)) return false;
+  if (state.video && !solutionVideoUrls(r).length) return false;
   if (!state.q) return true;
   const type = CONFIG.types[r.type];
   const haystack = [r.title, r.desc, r.subject, r.year, r.level, r.details, type && type.label, (r.tags || []).join(' ')]
@@ -789,8 +783,8 @@ function renderLibraryControls() {
     });
     return b;
   };
-  availabilityWrap.appendChild(availabilityOption('solutions', 'Solutions provided', ALL.filter((r) => r.solutions || r.solutionsVideo).length));
-  availabilityWrap.appendChild(availabilityOption('video', 'Video provided', ALL.filter((r) => r.solutionsVideo).length));
+  availabilityWrap.appendChild(availabilityOption('solutions', 'Solutions provided', ALL.filter((r) => r.solutions || solutionVideoUrls(r).length).length));
+  availabilityWrap.appendChild(availabilityOption('video', 'Video provided', ALL.filter((r) => solutionVideoUrls(r).length).length));
 
   const fill = (select, values) => values.forEach((v) => {
     const o = document.createElement('option');

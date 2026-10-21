@@ -93,8 +93,9 @@
           ? `<img class="art" src="${escapeHtml(candidate.image)}" alt="" loading="lazy" />`
           : '';
       const summary = candidate.desc || candidate.details || 'Explore this resource next.';
-          const hasSolutions = Boolean(String(candidate.solutions || '').trim() || String(candidate.solutionsVideo || '').trim());
-          const hasVideo = Boolean(String(candidate.solutionsVideo || '').trim());
+          const videoUrls = Array.isArray(candidate.solutionsVideos) ? candidate.solutionsVideos : [candidate.solutionsVideo];
+          const hasVideo = videoUrls.some((url) => String(url || '').trim());
+          const hasSolutions = Boolean(String(candidate.solutions || '').trim() || hasVideo);
           const availability = hasSolutions || hasVideo ? `<span class="resource-availability" aria-label="Available materials">${hasSolutions ? '<span class="availability-item availability-solutions"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg>Solutions</span>' : ''}${hasVideo ? '<span class="availability-item availability-video"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>Video</span>' : ''}</span>` : '';
           return `<article class="resource-card"><a class="thumb" href="${resourceUrl(prefix, candidate)}"><span class="badge badge-${escapeHtml(type.colour || 'blue')}">${escapeHtml(type.label || candidate.type)}</span>${thumbnail}</a><a class="card-link" href="${resourceUrl(prefix, candidate)}"><span class="card-title-row"><h3>${escapeHtml(candidate.title)}</h3>${availability}</span><p class="meta">${escapeHtml(candidate.subject || '')}${candidate.year ? ` · ${escapeHtml(candidate.year)}` : ''}</p><p class="recommendation-summary">${escapeHtml(summary)}</p></a></article>`;
     }).join('')}</div>`;

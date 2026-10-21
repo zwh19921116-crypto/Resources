@@ -182,6 +182,7 @@ dialog::backdrop{background:rgba(9,13,35,.55);backdrop-filter:blur(3px)}
 .admin-related-option b{font-size:.78rem;color:var(--ink)}
 .admin-related-option small{font-size:.68rem;color:var(--muted)}
 .admin-question-video-row{display:grid;grid-template-columns:28px minmax(0,1fr) 68px 68px 68px minmax(0,1fr) 32px;gap:.4rem;align-items:center;margin-bottom:.45rem}.admin-question-video-row select,.admin-question-video-row input{min-width:0;padding:.48rem .55rem;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:.78rem}.admin-question-video-number{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#eef4ff;color:var(--blue);font-size:.72rem;font-weight:800}
+.admin-solution-video-row{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(0,1fr) 32px;gap:.4rem;align-items:center;margin-bottom:.45rem}.admin-solution-video-row input{min-width:0;padding:.48rem .55rem;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:.78rem}.admin-solution-video-row>span{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#eef4ff;color:var(--blue);font-size:.72rem;font-weight:800}
 .admin-marker-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.6rem;margin:.7rem 0 1rem;padding:.7rem;border:1px solid var(--line);border-radius:10px;background:#f7f9ff}.admin-marker-preview-item{display:grid;grid-template-columns:72px minmax(0,1fr);gap:.65rem;align-items:center;padding:.55rem;background:#fff;border:1px solid #e1e7f2;border-radius:8px}.admin-marker-page{position:relative;height:96px;background:linear-gradient(#fff,#f8fafc);border:1px solid #cfd8e8;border-radius:3px;overflow:hidden;box-shadow:0 2px 5px rgba(15,23,42,.06)}.admin-marker-band{position:absolute;left:4px;right:4px;display:grid;place-items:center;background:rgba(37,99,235,.18);border:2px solid #2563eb;color:#1748a5;font-size:.65rem;z-index:2}.admin-marker-line{position:absolute;left:10px;right:10px;height:3px;border-radius:2px;background:#d9e1ef}.admin-marker-line.one{top:18px}.admin-marker-line.two{top:42px}.admin-marker-line.three{top:70px}.admin-marker-copy{display:grid;gap:.18rem;min-width:0}.admin-marker-copy strong{font-size:.76rem;color:var(--ink)}.admin-marker-copy span,.admin-marker-copy small{font-size:.68rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.admin-marker-copy small{color:var(--blue);font-weight:700}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
 .err{color:var(--bad);font-size:.8rem;font-weight:600;background:#fff5f5;border:1px solid #f4cfcf;border-radius:9px;padding:.6rem .8rem;margin:0}
@@ -1994,6 +1995,7 @@ body.settings-compact th,body.settings-compact td{padding-top:.58rem;padding-bot
       <div class="field">
         <label for="f-title">Title *</label>
         <input id="f-title" required maxlength="120" />
+        <span class="hint">Type a descriptive title and the form will suggest the type, stage, subject, year, difficulty and thumbnail.</span>
       </div>
 
       <div class="field">
@@ -2010,8 +2012,9 @@ body.settings-compact th,body.settings-compact td{padding-top:.58rem;padding-bot
 
       <div class="field" id="f-solutions-video-field">
         <label style="display:flex;align-items:center;gap:.55rem"><input id="f-solutions-video-enabled" type="checkbox" style="width:auto" /> <span>Solutions video link</span></label>
-        <div id="f-solutions-video-input"><input id="f-solutions-video" type="url" placeholder="https://youtube.com/watch?v=…" />
-        <span class="hint">Paste the video showing the worked solution.</span></div>
+        <div id="f-solutions-video-input"><div id="f-solutions-video-links"></div>
+        <button class="btn btn-light btn-sm" type="button" id="f-add-solutions-video">+ Add video link</button>
+        <span class="hint">Add a title and video link for each video. All videos will be shown on the solutions page.</span></div>
       </div>
 
       <div class="two">

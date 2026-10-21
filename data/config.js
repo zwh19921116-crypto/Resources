@@ -53,6 +53,15 @@ window.EDG_CONFIG = {
     // 'ai-tool': { label: 'AI Tool', blurb: '...', colour: 'indigo', icon: 'spark', action: 'link' }
   },
 
+  categoryArt: {
+    'practice-questions': 'questions',
+    'practice-exam': 'examCard',
+    checklist: 'checklistCard',
+    'knowledge-sheet': 'knowledge',
+    'interactive-app': 'interactive',
+    video: 'videoCard'
+  },
+
   subjects: ['Maths', 'Biology', 'Chemistry', 'Physics', 'English'],
 
   educationStages: {

@@ -109,7 +109,7 @@ function buildSitemapXml() {
     const path = resourcePagePath(item);
     const lastmod = item.added || new Date().toISOString().slice(0, 10);
     const pages = [{ url: `${SITE_URL}/resource-pages/${path}/`, lastmod }];
-    if (item.solutions || item.solutionsVideo) pages.push({ url: `${SITE_URL}/resource-pages/${path}/solutions/`, lastmod });
+    if (item.solutions || solutionVideoUrls(item).length) pages.push({ url: `${SITE_URL}/resource-pages/${path}/solutions/`, lastmod });
     return pages;
   });
   const entries = [
@@ -5607,6 +5607,117 @@ function resourcePagePath(resource) {
   return encodeURIComponent(resource.id);
 }
 
+function resourceTutoringCtaMarkup(resource) {
+  const subject = String(resource.subject || '').trim();
+  const subjectLower = subject.toLowerCase();
+  const year = String(resource.year || '').trim();
+  const tags = Array.isArray(resource.tags) ? resource.tags : [];
+  const classification = [resource.stage, resource.year, resource.title, resource.type, ...tags]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  const isSelective = classification.includes('selective');
+  const isVce = !isSelective && (stageFor(resource) === 'vce' || /^vce\b/i.test(year));
+  const isPrimary = !isSelective && !isVce && stageFor(resource) === 'primary';
+  const subjectText = escapeHtml(subject);
+  const yearText = escapeHtml(year);
+  const focus = [subjectText, yearText].filter(Boolean).join(' · ');
+  let specificCopy;
+  let programLink = '';
+
+  if (isSelective) {
+    specificCopy = 'Preparing for Selective School Entry? Edgeducate offers structured selective school preparation to develop reasoning, problem-solving and examination skills.';
+  } else if (isVce && subject) {
+    specificCopy = `Looking for VCE ${subjectText} Tutoring in Melbourne's West? Edgeducate offers structured tuition and examination preparation for VCE ${subjectText} students${year ? ` studying ${yearText}` : ''}.`;
+    const programText = `${subjectLower} ${year.toLowerCase()}`;
+    const program = /biology/.test(programText) ? ['VCE Biology Tutoring', 'https://edgeducate.com.au/vce-biology']
+      : /chemistry/.test(programText) ? ['VCE Chemistry Tutoring', 'https://edgeducate.com.au/vce-chemistry']
+        : /physics/.test(programText) ? ['VCE Physics Tutoring', 'https://edgeducate.com.au/vce-physics']
+          : /mathematical methods|methods/.test(programText) ? ['VCE Mathematical Methods Tutoring', 'https://edgeducate.com.au/vce-mathematical-methods']
+            : /general mathematics|general maths/.test(programText) ? ['VCE General Mathematics Tutoring', 'https://edgeducate.com.au/vce-general-mathematics']
+              : /math/.test(programText) ? ['Explore VCE Tutoring Programs', 'https://edgeducate.com.au/vce-preparation-program']
+                : null;
+    if (program) programLink = `<a class="resource-tutoring-cta__program-link" href="${program[1]}">${program[0]}</a>`;
+  } else if (isPrimary && /math/.test(subjectLower)) {
+    specificCopy = "Looking for Primary Maths Tutoring in Melbourne's West? Edgeducate helps primary school students strengthen mathematical foundations through structured face-to-face tuition.";
+  } else if (isPrimary) {
+    specificCopy = "Looking for Primary School Tutoring in Melbourne's West? Edgeducate helps students build strong academic foundations through structured face-to-face tuition.";
+  } else if (/math/.test(subjectLower)) {
+    specificCopy = 'Need Secondary School Maths Tutoring? Edgeducate supports students in developing algebra, numeracy and problem-solving skills.';
+  } else if (subject) {
+    specificCopy = `This ${subjectText} resource is for secondary school students${year ? ` in ${yearText}` : ''}. Edgeducate provides structured secondary school tutoring to help students strengthen understanding and prepare for assessments.`;
+  } else {
+    specificCopy = 'Edgeducate provides structured secondary school tutoring to help students strengthen understanding and prepare for assessments.';
+  }
+
+  const programRow = ([key, label, href, icon]) => `<li><a class="resource-tutoring-cta__row resource-tutoring-cta__row--${key}" href="${href}"><span class="resource-tutoring-cta__icon" aria-hidden="true">${icon}</span><span class="resource-tutoring-cta__label">${label}</span><span class="resource-tutoring-cta__chevron" aria-hidden="true">›</span></a></li>`;
+  const svgIcon = (paths) => `<svg viewBox="0 0 24 24">${paths}</svg>`;
+  const corePrograms = [
+    ['primary', 'Primary School Mathematics Tutoring', 'https://edgeducate.com.au/', svgIcon('<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>')],
+    ['secondary', 'Secondary School Tutoring', 'https://edgeducate.com.au/', svgIcon('<path d="M3 5.5c3-1 6-1 9 1 3-2 6-2 9-1V19c-3-1-6-1-9 1-3-2-6-2-9-1z"/><path d="M12 6.5V20"/>')],
+    ['selective', 'Selective School Preparation', 'https://edgeducate.com.au/', svgIcon('<path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z"/>')],
+    ['vce-prep', 'VCE Tutoring and Examination Preparation', 'https://edgeducate.com.au/vce-preparation-program', svgIcon('<path d="M2.5 9.5L12 5l9.5 4.5L12 14z"/><path d="M6.5 11.5v4c3 2 8 2 11 0v-4"/>')]
+  ].map(programRow).join('');
+  const vcePrograms = [
+    ['biology', '<small>VCE</small> Biology', 'https://edgeducate.com.au/vce-biology', svgIcon('<path d="M5 19c0-8 5-13.5 14-14-.5 9-6 14-14 14z"/><path d="M5 19c3-4.5 6.5-7.5 10.5-10"/>')],
+    ['physics', '<small>VCE</small> Physics', 'https://edgeducate.com.au/vce-physics', svgIcon('<circle cx="12" cy="12" r="1.4"/><ellipse cx="12" cy="12" rx="9" ry="3.5"/><ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(120 12 12)"/>')],
+    ['chemistry', '<small>VCE</small> Chemistry', 'https://edgeducate.com.au/vce-chemistry', svgIcon('<path d="M9 3h6M10 3v6l-5.2 9.2A1.9 1.9 0 0 0 6.5 21h11a1.9 1.9 0 0 0 1.7-2.8L14 9V3"/><path d="M7.4 15h9.2"/>')],
+    ['general', '<small>VCE</small> General Mathematics', 'https://edgeducate.com.au/vce-general-mathematics', '<b>π</b>'],
+    ['methods', '<small>VCE</small> Mathematical Methods', 'https://edgeducate.com.au/vce-mathematical-methods', '<b>∫</b>']
+  ].map(programRow).join('');
+  const contactIcon = svgIcon('<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.5 7l8.5 6 8.5-6"/>');
+
+  return `<section class="resource-tutoring-cta" aria-labelledby="resource-tutoring-cta-heading"><div class="container"><div class="resource-tutoring-cta__inner"><div class="resource-tutoring-cta__specific"><p class="resource-tutoring-cta__eyebrow">Tutoring related to this resource</p><p>${specificCopy}</p>${focus ? `<p class="resource-tutoring-cta__focus">Resource focus: ${focus}</p>` : ''}${programLink}</div><div class="resource-tutoring-cta__universal"><div class="resource-tutoring-cta__about"><h2 id="resource-tutoring-cta-heading">Looking for Quality Tutoring in Melbourne's Western Suburbs?</h2><p>Edgeducate provides structured, face-to-face tutoring for primary school, secondary school, selective school preparation and VCE students.</p><p>Our programs help students build strong academic foundations, develop confidence, strengthen problem-solving skills and prepare for school assessments and examinations.</p><p>We welcome enquiries from families across Melbourne's western suburbs, including Yarraville, Footscray, Seddon, Newport, Altona, Point Cook and surrounding areas.</p><a class="resource-tutoring-cta__contact" href="https://edgeducate.com.au/contact-us"><span class="resource-tutoring-cta__icon" aria-hidden="true">${contactIcon}</span><span>Contact Edgeducate</span><span class="resource-tutoring-cta__chevron" aria-hidden="true">›</span></a></div><div class="resource-tutoring-cta__panel"><div class="resource-tutoring-cta__column"><h3>Our Tutoring Programs</h3><ul class="resource-tutoring-cta__list resource-tutoring-cta__list--core">${corePrograms}</ul></div><div class="resource-tutoring-cta__column"><h3>VCE Programs</h3><ul class="resource-tutoring-cta__list resource-tutoring-cta__list--vce">${vcePrograms}</ul></div></div></div></div></div></section>`;
+}
+
+function includeResourceTutoringCta(markup, resource, rootPrefix = '../../') {
+  const pageWithoutResourceFaq = markup
+    .replace(/<script type="application\/ld\+json">\{"@context":"https:\/\/schema.org","@type":"FAQPage"[\s\S]*?<\/script>/, '')
+    .replace(/<section class="resource-faq">[\s\S]*?<\/section>/, '');
+  if (markup.includes('<section class="resource-tutoring-cta"')) {
+    throw new Error('Could not add tutoring CTA: resource page template already contains one.');
+  }
+  if (markup.includes('<section class="section" id="categories">')) {
+    throw new Error('Could not add resource categories: resource page template already contains them.');
+  }
+  const closingTags = '</article></main>';
+  if (!pageWithoutResourceFaq.includes(closingTags)) throw new Error('Could not add tutoring CTA: resource page template is missing its main closing tags.');
+  return pageWithoutResourceFaq.replace(closingTags, `</article>${resourceTutoringCtaMarkup(resource)}${resourceCategorySectionMarkup(rootPrefix)}</main>`);
+}
+
+function resourceCategorySectionMarkup(rootPrefix) {
+  const published = items.filter((item) => item.status !== 'draft');
+  const cards = Object.entries(CONFIG.types).map(([key, type]) => {
+    const total = published.filter((item) => item.type === key).length;
+    const label = key === 'video' ? 'Video Lessons' : type.label;
+    const href = `${rootPrefix}all-resources.html?type=${encodeURIComponent(key)}`;
+    return `<a class="category-card category-${escapeAttr(type.colour)}" href="${escapeAttr(href)}"><span class="cat-art">${window.edgThumb(CONFIG.categoryArt[key])}</span><span class="cat-body"><span class="cat-title">${escapeHtml(label)}</span><span class="cat-blurb">${escapeHtml(type.blurb)}</span></span><span class="cat-foot"><span class="cat-count">${total} ${total === 1 ? 'resource' : 'resources'}</span><svg class="ico arrow" aria-hidden="true"><use href="#i-arrow"/></svg></span></a>`;
+  }).join('');
+  return `<section class="section" id="categories"><svg class="sprite" aria-hidden="true" focusable="false"><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol></svg><div class="container"><div class="section-head"><div><h2 class="section-title">Explore our resource categories</h2></div><a class="btn btn-outline" href="${rootPrefix}all-resources.html">View all resources <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></div><div class="category-grid">${cards}</div></div></section>`;
+}
+
+function resourceSiteHeaderMarkup(prefix) {
+  const menu = `<a href="https://edgeducate.com.au/pricing">Pricing</a><details class="nav-dropdown"><summary>Our Classes</summary><div class="nav-dropdown-menu"><a href="#">Primary</a><a href="#">Secondary</a><a href="#">Selective School</a></div></details><details class="nav-dropdown"><summary><a href="https://edgeducate.com.au/vce-preparation-program">VCE Preparation</a></summary><div class="nav-dropdown-menu"><a href="https://edgeducate.com.au/vce-biology">VCE Biology</a><a href="https://edgeducate.com.au/vce-chemistry">VCE Chemistry</a><a href="https://edgeducate.com.au/vce-physics">VCE Physics</a><a href="https://edgeducate.com.au/vce-general-mathematics">VCE General Mathematics</a><a href="https://edgeducate.com.au/vce-mathematical-methods">VCE Mathematical Methods</a></div></details><a href="${prefix}resources.html">Resources</a><a class="club-nav-link" href="${prefix}club.html">Club</a><a href="https://edgeducate.com.au/contact-us">Contact Us</a>`;
+  return `<a class="skip-link" href="#main">Skip to content</a><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="https://edgeducate.com.au/" aria-label="Edgeducate home"><img class="brand-logo" src="${prefix}assets/logo/logo.svg" alt="Edgeducate" onerror="this.remove()" /><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" aria-label="Toggle navigation"><span></span><span></span><span></span></button><nav id="primary-nav" class="primary-nav" aria-label="Primary">${menu}</nav></div></div></header>`;
+}
+
+function resourceSiteFooterMarkup(prefix) {
+  return `<footer class="site-footer"><div class="container footer-grid"><nav class="footer-column" aria-label="Site links"><h2>Links</h2><a href="https://edgeducate.com.au/">Home</a><a href="https://edgeducate.com.au/pricing">Pricing</a><a href="https://edgeducate.com.au/vce-preparation">VCE Preparation</a><a href="https://edgeducate.com.au/faqs">FAQ</a><a href="https://edgeducate.com.au/contact-us">Contact Us</a></nav><nav class="footer-column" aria-label="Resource links"><h2>Resources</h2><a href="${prefix}all-resources.html?type=interactive-app">Interactive Learning</a><a href="${prefix}all-resources.html?type=video">Videos</a><a href="${prefix}all-resources.html?type=practice-questions">Practice Questions</a><a href="${prefix}all-resources.html?type=practice-exam">Practice Exams</a><a href="${prefix}all-resources.html?type=knowledge-sheet">Knowledge Sheet</a><a href="${prefix}all-resources.html?q=Formula+Sheets">Formula Sheets</a></nav><nav class="footer-column" aria-label="Subject links"><h2>Subjects</h2><a href="${prefix}all-resources.html?subject=Biology">VCE Biology</a><a href="${prefix}all-resources.html?subject=Chemistry">VCE Chemistry</a><a href="https://edgeducate.com.au/vce-general-mathematics">VCE General Mathematics</a><a href="https://edgeducate.com.au/vce-mathematical-methods">VCE Mathematical Methods</a><a href="${prefix}all-resources.html?subject=Physics">VCE Physics</a></nav><nav class="footer-column" aria-label="Legal links"><h2>Legal</h2><a href="https://edgeducate.com.au/code-of-conduct">Code of Conduct</a><a href="https://edgeducate.com.au/terms-and-conditions">Terms and Conditions</a><a href="https://edgeducate.com.au/payment-and-refund-policy">Payment and Refund</a><a href="https://edgeducate.com.au/privacy-policy">Privacy Policy</a><a href="https://edgeducate.com.au/child-safety-statement">Child Safety</a></nav></div></footer>`;
+}
+
+function applyResourceSiteChrome(markup, prefix) {
+  const headerPattern = /<header class="site-header[^"]*">[\s\S]*?<\/header>/;
+  const footerPattern = /<footer class="site-footer">[\s\S]*?<\/footer>/;
+  if (!headerPattern.test(markup) || !footerPattern.test(markup)) {
+    throw new Error('Could not apply shared site navigation: resource page template is missing its header or footer.');
+  }
+  let output = markup
+    .replace(headerPattern, resourceSiteHeaderMarkup(prefix))
+    .replace(footerPattern, resourceSiteFooterMarkup(prefix));
+  if (!/<main\b[^>]*\bid=/.test(output)) output = output.replace(/<main\b/, '<main id="main"');
+  return output;
+}
+
 function relatedResourcesFor(resource) {
   const explicitIds = Array.isArray(resource.relatedIds) ? resource.relatedIds : [];
   const explicitlyLinked = items.filter((item) => item.id !== resource.id
@@ -5646,24 +5757,37 @@ function solutionVideoEmbedUrl(value) {
   }
   return '';
 }
+function solutionVideoUrls(resource) {
+  const values = Array.isArray(resource.solutionsVideos) ? resource.solutionsVideos : [resource.solutionsVideo];
+  return values.map((value) => String(value || '').trim()).filter(Boolean);
+}
+function solutionVideoTitles(resource) {
+  return Array.isArray(resource.solutionsVideoTitles) ? resource.solutionsVideoTitles : [];
+}
 function solutionPageMarkup(resource) {
   const rootPrefix = '../../../';
   const solutionUrl = resource.solutions || '';
-  const videoUrl = resource.solutionsVideo || '';
-  const videoEmbedUrl = solutionVideoEmbedUrl(videoUrl);
+  const videoUrls = solutionVideoUrls(resource);
+  const videoTitles = solutionVideoTitles(resource);
+  const videoEmbeds = videoUrls.map(solutionVideoEmbedUrl);
+  const videoEmbedUrl = videoEmbeds[0];
   const previewMarkup = solutionUrl ? `<iframe src="${escapeAttr(solutionUrl)}#page=1&view=Fit&zoom=page-fit" title="Solutions PDF"></iframe>` : videoEmbedUrl ? `<div class="solution-video"><iframe src="${escapeAttr(videoEmbedUrl)}" title="Solutions video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>` : '<div class="preview-note"><p>Solutions are not available yet.</p></div>';
-  const videoMarkup = videoUrl && !videoEmbedUrl ? `<a class="btn btn-light btn-block" href="${escapeAttr(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch video</a>` : '';
+  const videoMarkup = videoUrls.map((videoUrl, index) => videoEmbeds[index]
+    ? `<div class="solution-video"><iframe src="${escapeAttr(videoEmbeds[index])}" title="Solutions video ${index + 1}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`
+    : `<a class="btn btn-light btn-block" href="${escapeAttr(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch video ${index + 1}</a>`).join('');
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Solutions for ${escapeHtml(resource.title)} | Edgeducate Resources</title><meta name="description" content="Solutions for ${escapeHtml(resource.title)}."><link rel="canonical" href="https://zwh19921116-crypto.github.io/Resources/resource-pages/${resourcePagePath(resource)}/solutions/"><link rel="stylesheet" href="${rootPrefix}styles.css?v=20261012buttons"></head><body class="resource-detail-page solutions-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header><main><article class="resource-detail solutions-detail"><div class="container"><nav class="crumbs"><a href="${rootPrefix}resources.html">Library</a><span>/</span><a href="../index.html">${escapeHtml(resource.title)}</a><span>/</span><span>Solutions</span></nav><div class="resource-detail-layout"><div class="resource-detail-preview solution-preview">${previewMarkup}</div><div class="resource-detail-copy"><span class="badge badge-purple">Solutions</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">Work through the solutions and review the explanation video where available.</p>${solutionUrl ? `<a class="btn btn-primary btn-block" href="${escapeAttr(solutionUrl)}" target="_blank" rel="noopener noreferrer">Open PDF</a>` : ''}${videoMarkup}<a class="resource-back btn btn-light btn-block" href="../index.html">Back to resource</a></div></div></div></article></main><footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer></body></html>`;
 }
 
 function solutionPageMarkup(resource) {
   const rootPrefix = '../../../';
   const solutionUrl = resource.solutions || '';
-  const videoUrl = resource.solutionsVideo || '';
-  const videoEmbedUrl = solutionVideoEmbedUrl(videoUrl);
+  const videoUrls = solutionVideoUrls(resource);
+  const videoTitles = solutionVideoTitles(resource);
+  const videoEmbeds = videoUrls.map(solutionVideoEmbedUrl);
+  const videoEmbedUrl = videoEmbeds[0];
   const pdfMarkup = solutionUrl ? `<iframe src="${escapeAttr(solutionUrl)}#page=1&view=Fit&zoom=page-fit" title="Solutions PDF"></iframe>` : '<div class="preview-note"><p>Solutions are not available yet.</p></div>';
-  const videoPanel = videoEmbedUrl ? `<section class="solution-video-panel" data-solution-video-panel hidden><iframe src="${escapeAttr(videoEmbedUrl)}" title="Solutions video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></section>` : '';
-  const videoAction = videoEmbedUrl ? '<button class="btn btn-solutions btn-block" type="button" data-solution-video-toggle>Watch solutions video</button>' : videoUrl ? `<a class="btn btn-solutions btn-block" href="${escapeAttr(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch solutions video</a>` : '';
+  const videoPanel = videoUrls.length ? `<section class="solution-video-panel" data-solution-video-panel hidden>${videoUrls.map((videoUrl, index) => { const title = videoTitles[index] || `Solutions video ${index + 1}`; return `<div class="solution-video-entry"><h2>${escapeHtml(title)}</h2>${videoEmbeds[index] ? `<div class="solution-video"><iframe src="${escapeAttr(videoEmbeds[index])}" title="${escapeAttr(title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>` : `<a class="btn btn-light btn-block" href="${escapeAttr(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch ${escapeHtml(title)}</a>`}</div>`; }).join('')}</section>` : '';
+  const videoAction = videoUrls.length ? '<button class="btn btn-solutions btn-block" type="button" data-solution-video-toggle>Watch solutions video</button>' : '';
   const parentUrl = `${SITE_URL}/resource-pages/${resourcePagePath(resource)}/`;
   const solutionsBreadcrumb = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
     { '@type': 'ListItem', position: 1, name: 'Resources', item: `${SITE_URL}/resources.html` },
@@ -5740,6 +5864,7 @@ function renderTable() {
         <td><span class="status status-${item.status || 'published'}">${item.status === 'draft' ? 'Draft' : 'Published'}</span></td>
         <td>
           <div class="row-actions">
+            <button class="icon-btn" data-act="preview" title="Preview resource page" aria-label="Preview ${escapeAttr(item.title)}">👁</button>
             <button class="icon-btn" data-act="up" title="Move up">↑</button>
             <button class="icon-btn" data-act="down" title="Move down">↓</button>
             <button class="icon-btn" data-act="log" title="View this resource's history">◴</button>
@@ -5835,6 +5960,7 @@ function bindRow(tr) {
   tr.querySelectorAll('[data-act]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const act = btn.dataset.act;
+      if (act === 'preview') return openResourcePagePreview(items[index]);
       if (act === 'edit') return openForm(index);
       if (act === 'replicate') return replicateResource(index);
       if (act === 'log') return openLog(items[index].id, items[index].title);
@@ -7547,7 +7673,7 @@ function showWarn(el, msg) {
   el.hidden = false;
 }
 
-['f-title', 'f-url', 'f-solutions', 'f-solutions-video', 'f-type', 'f-art', 'f-image', 'f-stage', 'f-unit', 'f-year', 'f-level', 'f-details'].forEach((id) => {
+['f-title', 'f-url', 'f-solutions', 'f-type', 'f-art', 'f-image', 'f-stage', 'f-unit', 'f-year', 'f-level', 'f-details'].forEach((id) => {
   const node = $(id);
   node.addEventListener('input', renderPreview);
   node.addEventListener('change', renderPreview);
@@ -7559,9 +7685,36 @@ function syncSolutionFields() {
   $('f-solutions-input').hidden = !solutionsEnabled;
   $('f-solutions-video-input').hidden = !solutionsVideoEnabled;
   $('f-solutions').disabled = !solutionsEnabled;
-  $('f-solutions-video').disabled = !solutionsVideoEnabled;
   if (!solutionsEnabled) $('f-solutions').value = '';
-  if (!solutionsVideoEnabled) $('f-solutions-video').value = '';
+  $('f-solutions-video-links').querySelectorAll('input').forEach((input) => { input.disabled = !solutionsVideoEnabled; });
+}
+
+function renderSolutionVideoLinks(values = [], titles = []) {
+  const host = $('f-solutions-video-links');
+  if (!host) return;
+  const links = values.length ? values : [''];
+  host.innerHTML = links.map((value, index) => `<div class="admin-solution-video-row"><span>${index + 1}</span><input type="text" data-solution-video-title value="${escapeAttr(titles[index] || '')}" placeholder="Video title" aria-label="Solutions video title ${index + 1}" /><input type="url" data-solution-video value="${escapeAttr(value)}" placeholder="https://youtube.com/watch?v=…" aria-label="Solutions video link ${index + 1}" /><button class="icon-btn" type="button" data-remove-solution-video aria-label="Remove solutions video link">×</button></div>`).join('');
+  host.querySelectorAll('input').forEach((input) => {
+    input.addEventListener('input', renderPreview);
+    input.addEventListener('change', renderPreview);
+  });
+  host.querySelectorAll('[data-remove-solution-video]').forEach((button) => button.addEventListener('click', () => {
+    const current = readSolutionVideoLinks();
+    const currentTitles = readSolutionVideoTitles();
+    const index = Number(button.closest('.admin-solution-video-row')?.querySelector('span')?.textContent || 1) - 1;
+    current.splice(index, 1);
+    currentTitles.splice(index, 1);
+    renderSolutionVideoLinks(current, currentTitles);
+    renderPreview();
+  }));
+  syncSolutionFields();
+}
+
+function readSolutionVideoLinks() {
+  return [...document.querySelectorAll('[data-solution-video]')].map((input) => input.value.trim()).filter(Boolean);
+}
+function readSolutionVideoTitles() {
+  return [...document.querySelectorAll('[data-solution-video-title]')].map((input) => input.value.trim());
 }
 
 $('f-solutions-enabled').addEventListener('change', () => {
@@ -7572,18 +7725,90 @@ $('f-solutions-video-enabled').addEventListener('change', () => {
   syncSolutionFields();
   renderPreview();
 });
+$('f-add-solutions-video').addEventListener('click', () => {
+  renderSolutionVideoLinks([...readSolutionVideoLinks(), ''], [...readSolutionVideoTitles(), '']);
+});
 
 /* ---------- form ---------- */
+let resourceAutoFields = new Set();
+
+function inferResourceMetadata(title, url) {
+  const text = `${title} ${url}`.toLowerCase().replace(/[_-]+/g, ' ');
+  const has = (...terms) => terms.some((term) => text.includes(term));
+  const metadata = {
+    type: typeKeys[0],
+    stage: stageKeys[0],
+    unit: '',
+    subject: CONFIG.subjects[0],
+    year: CONFIG.years[0],
+    level: CONFIG.levels[0],
+    art: CONFIG.artStyles[0]
+  };
+
+  if (has('youtube.', 'youtu.be', 'video', 'watch?v=')) metadata.type = 'video';
+  else if (has('checklist', 'check list')) metadata.type = 'checklist';
+  else if (has('knowledge sheet', 'knowledge-sheet', 'summary', 'notes', 'formula sheet', 'cheat sheet')) metadata.type = 'knowledge-sheet';
+  else if (has('interactive', 'app', 'game', 'simulator')) metadata.type = 'interactive-app';
+  else if (has('exam', 'trial', 'mock', 'assessment', 'test paper', 'question paper')) metadata.type = 'practice-exam';
+  else if (has('practice', 'worksheet', 'questions', 'question')) metadata.type = 'practice-questions';
+
+  if (has('vce', 'unit 1', 'unit 2', 'unit 3', 'unit 4', 'units 1&2', 'units 3&4')) {
+    metadata.stage = 'vce';
+    metadata.unit = has('unit 3', 'unit 4', 'units 3&4') ? 'VCE Units 3&4' : 'VCE Units 1&2';
+    metadata.year = metadata.unit;
+  } else if (has('prep', 'foundation', 'primary') || /(^|\s)year [1-6](\s|$)/.test(text)) {
+    metadata.stage = 'primary';
+  } else {
+    metadata.stage = stageKeys.includes('secondary') ? 'secondary' : stageKeys[0];
+  }
+
+  const subject = CONFIG.subjects.find((candidate) => has(candidate.toLowerCase()));
+  if (subject) metadata.subject = subject;
+
+  const year = CONFIG.years.find((candidate) => text.includes(candidate.toLowerCase()));
+  if (year && metadata.stage !== 'vce') metadata.year = year;
+
+  if (has('hard', 'challenging', 'trial', 'exam')) metadata.level = 'Hard';
+  else if (has('easy', 'intro', 'beginner')) metadata.level = 'Easy';
+  else if (has('reference', 'notes', 'summary', 'checklist')) metadata.level = 'Reference';
+  else if (has('fun', 'game', 'interactive')) metadata.level = 'Fun';
+
+  const artByType = {
+    'practice-questions': 'maths',
+    'practice-exam': 'exam',
+    checklist: 'checklist',
+    'knowledge-sheet': 'leaf',
+    'interactive-app': 'maths',
+    video: 'video'
+  };
+  if (CONFIG.artStyles.includes(artByType[metadata.type])) metadata.art = artByType[metadata.type];
+  return metadata;
+}
+
+function applyInferredResourceMetadata() {
+  if (editingIndex >= 0) return;
+  const metadata = inferResourceMetadata($('f-title').value, $('f-url').value);
+  const fields = ['type', 'stage', 'unit', 'subject', 'year', 'level', 'art'];
+  fields.forEach((field) => {
+    if (resourceAutoFields.has(field)) return;
+    $(`f-${field}`).value = metadata[field];
+  });
+  updateUnitField();
+  renderPreview();
+}
+
 function openForm(index) {
   editingIndex = index;
+  resourceAutoFields = new Set();
   const r = index >= 0 ? items[index] : {};
   $('dlg-title').textContent = index >= 0 ? 'Edit resource' : 'Add resource';
   $('f-title').value = r.title || '';
   $('f-url').value = r.url || '';
   $('f-solutions').value = r.solutions || '';
-  $('f-solutions-video').value = r.solutionsVideo || '';
+  const existingVideos = Array.isArray(r.solutionsVideos) ? r.solutionsVideos : (r.solutionsVideo ? [r.solutionsVideo] : []);
+  renderSolutionVideoLinks(existingVideos, Array.isArray(r.solutionsVideoTitles) ? r.solutionsVideoTitles : []);
   $('f-solutions-enabled').checked = Boolean(r.solutions);
-  $('f-solutions-video-enabled').checked = Boolean(r.solutionsVideo);
+  $('f-solutions-video-enabled').checked = Boolean((Array.isArray(r.solutionsVideos) ? r.solutionsVideos : [r.solutionsVideo]).filter(Boolean).length);
   syncSolutionFields();
   relatedResourceId = r.id || '__new__';
   relatedSelection = new Set(Array.isArray(r.relatedIds) ? r.relatedIds : []);
@@ -7628,7 +7853,16 @@ $('f-stage').addEventListener('change', updateUnitField);
 $('f-title').addEventListener('input', () => {
   if (editingIndex >= 0) return;
   $('f-id').value = slugify($('f-title').value);
+  applyInferredResourceMetadata();
 });
+$('f-url').addEventListener('input', applyInferredResourceMetadata);
+$('f-type').addEventListener('change', () => { resourceAutoFields.add('type'); });
+$('f-stage').addEventListener('change', () => { resourceAutoFields.add('stage'); });
+$('f-unit').addEventListener('change', () => { resourceAutoFields.add('unit'); });
+$('f-subject').addEventListener('change', () => { resourceAutoFields.add('subject'); });
+$('f-year').addEventListener('change', () => { resourceAutoFields.add('year'); });
+$('f-level').addEventListener('change', () => { resourceAutoFields.add('level'); });
+$('f-art').addEventListener('change', () => { resourceAutoFields.add('art'); });
 $('btn-add').addEventListener('click', () => openForm(-1));
 $('btn-cancel').addEventListener('click', () => dlg.close());
 $('search').addEventListener('input', renderTable);
@@ -7655,16 +7889,17 @@ $('btn-save-item').addEventListener('click', () => {
   const title = $('f-title').value.trim();
   const url = $('f-url').value.trim();
   const solutions = $('f-solutions-enabled').checked ? $('f-solutions').value.trim() : '';
-  const solutionsVideo = $('f-solutions-video-enabled').checked ? $('f-solutions-video').value.trim() : '';
+  const solutionsVideos = $('f-solutions-video-enabled').checked ? readSolutionVideoLinks() : [];
+  const solutionsVideoTitles = $('f-solutions-video-enabled').checked ? readSolutionVideoTitles() : [];
   let id = $('f-id').value.trim() || slugify(title);
 
   if (!title) return showErr(err, 'Please enter a title.');
   if (!url) return showErr(err, 'Please paste the link this card should open.');
   if (!/^https?:\/\//i.test(url)) return showErr(err, 'The link must start with http:// or https://');
   if ($('f-solutions-enabled').checked && !solutions) return showErr(err, 'Paste a Solutions link or turn off the Solutions link toggle.');
-  if ($('f-solutions-video-enabled').checked && !solutionsVideo) return showErr(err, 'Paste a Solutions video link or turn off the Solutions video link toggle.');
+  if ($('f-solutions-video-enabled').checked && !solutionsVideos.length) return showErr(err, 'Paste at least one Solutions video link or turn off the Solutions video link toggle.');
   if (solutions && !/^https?:\/\//i.test(solutions)) return showErr(err, 'The Solutions link must start with http:// or https://');
-  if (solutionsVideo && !/^https?:\/\//i.test(solutionsVideo)) return showErr(err, 'The Solutions video link must start with http:// or https://');
+  if (solutionsVideos.some((videoUrl) => !/^https?:\/\//i.test(videoUrl))) return showErr(err, 'Each Solutions video link must start with http:// or https://');
   if (items.some((r, i) => r.id === id && i !== editingIndex)) return showErr(err, `The ID "${id}" is already used. Give this one a different ID.`);
 
   const record = {
@@ -7688,7 +7923,9 @@ $('btn-save-item').addEventListener('click', () => {
     relatedIds: [...relatedSelection],
     url,
     solutions,
-    solutionsVideo,
+    solutionsVideo: solutionsVideos[0] || '',
+    solutionsVideos,
+    solutionsVideoTitles,
     added: (editingIndex >= 0 && items[editingIndex].added) || new Date().toISOString().slice(0, 10),
     status: $('f-status').value
   };
@@ -7745,6 +7982,8 @@ function serialize() {
       `    url: ${js(r.url)},`,
       `    solutions: ${js(r.solutions || '')},`,
       `    solutionsVideo: ${js(r.solutionsVideo || '')},`,
+      `    solutionsVideos: [${(Array.isArray(r.solutionsVideos) ? r.solutionsVideos : (r.solutionsVideo ? [r.solutionsVideo] : [])).map(js).join(', ')}],`,
+      `    solutionsVideoTitles: [${(Array.isArray(r.solutionsVideoTitles) ? r.solutionsVideoTitles : []).map(js).join(', ')}],`,
       `    added: ${js(r.added)},`,
       `    status: ${js(r.status)}`
     ];
@@ -7886,7 +8125,7 @@ function resourcePageMarkup(resource) {
   const staticPath = resourcePagePath(resource);
   const rootPrefix = '../../';
   const resourcePagesPrefix = '../';
-  const metadata = [['Subject', resource.subject], ['Year level', resource.year], ['Difficulty', resource.level], ['Details', resource.details], ['Solutions', resource.solutions], ['Solutions video', resource.solutionsVideo]]
+  const metadata = [['Subject', resource.subject], ['Year level', resource.year], ['Difficulty', resource.level], ['Details', resource.details], ['Solutions', resource.solutions], ['Solutions videos', solutionVideoUrls(resource).join(', ')]]
     .filter(([, value]) => value)
     .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${label === 'Solutions' ? '<a href="solutions/">View solutions</a>' : label === 'Solutions video' ? `<a href="${escapeAttr(value)}">Watch solutions video</a>` : escapeHtml(value)}</dd></div>`).join('');
   const related = (sitemapRelatedPlan && sitemapRelatedPlan.get(resource.id)) || relatedResourcesFor(resource);
@@ -7901,8 +8140,9 @@ function resourcePageMarkup(resource) {
   const canonical = `https://zwh19921116-crypto.github.io/Resources/resource-pages/${staticPath}/`;
   const description = resource.desc || type.blurb;
   const actionLabel = resource.type === 'video' ? 'Watch video' : /\.pdf(\?|#|$)/i.test(String(resource.url || '')) ? 'View full document' : 'Open resource';
-  const videoEmbedUrl = solutionVideoEmbedUrl(resource.solutionsVideo || '');
-  const solutionsButton = resource.solutions || resource.solutionsVideo ? '<a class="btn btn-solutions btn-block" href="solutions/">View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>' : '';
+  const videoUrls = solutionVideoUrls(resource);
+  const videoEmbedUrl = solutionVideoEmbedUrl(videoUrls[0] || '');
+  const solutionsButton = resource.solutions || videoUrls.length ? '<a class="btn btn-solutions btn-block" href="solutions/">View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>' : '';
   const publisher = { '@type': 'Organization', name: 'Edgeducate', url: 'https://edgeducate.com.au/' };
   const schema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'LearningResource', name: resource.title, description, educationalLevel: resource.year, learningResourceType: type.label, url: canonical, about: resource.subject || undefined, keywords: resource.tags || [], audience: { '@type': 'EducationalAudience', educationalRole: 'student' }, creator: publisher, publisher, isAccessibleForFree: true, inLanguage: 'en-AU', datePublished: resource.added || undefined, isBasedOn: resource.url || undefined });
   const breadcrumbSchema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
@@ -7910,7 +8150,7 @@ function resourcePageMarkup(resource) {
     { '@type': 'ListItem', position: 2, name: 'Library', item: 'https://zwh19921116-crypto.github.io/Resources/resources.html' },
     { '@type': 'ListItem', position: 3, name: resource.title, item: canonical }
   ] });
-  const videoSchema = resource.solutionsVideo ? JSON.stringify({ '@context': 'https://schema.org', '@type': 'VideoObject', name: `Solutions video for ${resource.title}`, description: `Worked solutions for ${resource.title}.`, thumbnailUrl: videoEmbedUrl && videoEmbedUrl.includes('youtube.com/embed/') ? `https://i.ytimg.com/vi/${videoEmbedUrl.split('/embed/')[1].split('?')[0]}/hqdefault.jpg` : undefined, uploadDate: resource.added || undefined, embedUrl: videoEmbedUrl || resource.solutionsVideo, contentUrl: resource.solutionsVideo, publisher }) : '';
+  const videoSchema = videoUrls.length ? JSON.stringify(videoUrls.map((videoUrl, index) => ({ '@context': 'https://schema.org', '@type': 'VideoObject', name: `Solutions video ${index + 1} for ${resource.title}`, description: `Worked solutions for ${resource.title}.`, thumbnailUrl: videoEmbedUrl && videoEmbedUrl.includes('youtube.com/embed/') ? `https://i.ytimg.com/vi/${videoEmbedUrl.split('/embed/')[1].split('?')[0]}/hqdefault.jpg` : undefined, uploadDate: resource.added || undefined, embedUrl: solutionVideoEmbedUrl(videoUrl) || videoUrl, contentUrl: videoUrl, publisher }))) : '';
   const faqSchema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [
     { '@type': 'Question', name: `Who is ${resource.title} for?`, acceptedAnswer: { '@type': 'Answer', text: `${resource.title} is suitable for ${resource.year || 'students'} studying ${resource.subject || 'this topic'}.` } },
     { '@type': 'Question', name: `How should I use ${resource.title}?`, acceptedAnswer: { '@type': 'Answer', text: description } }
@@ -7921,6 +8161,32 @@ function resourcePageMarkup(resource) {
 <body class="resource-detail-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories">Categories</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header>
 <main><article class="resource-detail${hasInlinePreview(resource) ? ' has-inline-preview' : ''}"${hasInlinePreview(resource) ? ` data-resource-title="${escapeAttr(resource.title)}" data-resource-context="${escapeAttr(`${type.label} · ${resource.subject} · ${resource.year}`)}"` : ''}><div class="container"><nav class="crumbs"><a href="${rootPrefix}index.html">Resources</a><span>/</span><a href="${rootPrefix}all-resources.html">Library</a><span>/</span><span>${escapeHtml(resource.title)}</span></nav><div class="resource-detail-layout"><div class="resource-detail-preview">${preview}</div><div class="resource-detail-copy"><span class="badge badge-${type.colour}">${escapeHtml(type.label)}</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">${escapeHtml(description)}</p><dl class="resource-detail-meta">${metadata}</dl><a class="btn btn-primary btn-block" href="${escapeHtml(resource.url)}">${actionLabel}</a><a class="resource-back" href="${rootPrefix}all-resources.html">Back to all resources</a></div></div><section class="resource-faq"><h2>About this resource</h2><dl><div><dt>Who is this for?</dt><dd>${escapeHtml(resource.title)} is suitable for ${escapeHtml(resource.year || 'students')} studying ${escapeHtml(resource.subject || 'this topic')}.</dd></div><div><dt>How should I use it?</dt><dd>${escapeHtml(description)}</dd></div></dl></section>${relatedSection}</div></article></main>
   <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><nav class="footer-resource-links"><a href="${rootPrefix}resource-pages/">Browse all resources</a></nav><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}reader-layout.js"></script><script src="${rootPrefix}carousel.js"></script><script type="module" src="${rootPrefix}pdf-reader.js?v=20261012native"></script><script src="${rootPrefix}site-menu.js"></script></body></html>`.replace('</div></div><section class="resource-faq"', `</div></div>${questionPaperSection}<section class="resource-faq"`).replace('<a class="resource-back"', `${solutionsButton}<a class="resource-back"`);
+}
+
+function openResourcePagePreview(resource) {
+  const previewWindow = window.open('', '_blank');
+  if (!previewWindow) {
+    flash('Allow pop-ups to preview resource pages.', 'warning');
+    return;
+  }
+
+  try {
+    const previewBase = new URL(`resource-pages/${resourcePagePath(resource)}/`, window.location.href).href;
+    const pageMarkup = applyResourceSiteChrome(linkGeneratedPagesToMainSite(
+      replaceLegacySiteUrls(removeHeaderLibraryButton(resourcePageMarkup(resource)))
+    ), '../../');
+    const previewMarkup = includeResourceTutoringCta(pageMarkup, resource)
+      .replace('<head>', `<head><base href="${escapeAttr(previewBase)}">`)
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+    previewWindow.opener = null;
+    previewWindow.document.open();
+    previewWindow.document.write(previewMarkup);
+    previewWindow.document.close();
+  } catch (error) {
+    previewWindow.close();
+    log(`Resource preview failed: ${error.name} - ${error.message}`, 'bad');
+    flash('Could not open the resource preview.', 'warning');
+  }
 }
 
 const removeHeaderLibraryButton = (markup) => markup.replace(/<a class="btn btn-cta" href="[^"]*">Browse library<\/a>/g, '');
@@ -7949,19 +8215,28 @@ async function writeStaticPages() {
     for (const segment of resourcePagePath(resource).split('/')) pageDirectory = await pageDirectory.getDirectoryHandle(segment, { create: true });
     const pageFile = await pageDirectory.getFileHandle('index.html', { create: true });
     const writable = await pageFile.createWritable();
-    await writable.write(linkGeneratedPagesToMainSite(replaceLegacySiteUrls(removeHeaderLibraryButton(resourcePageMarkup(resource)))));
+    const pageMarkup = applyResourceSiteChrome(
+      linkGeneratedPagesToMainSite(replaceLegacySiteUrls(removeHeaderLibraryButton(resourcePageMarkup(resource)))),
+      '../../'
+    );
+    await writable.write(includeResourceTutoringCta(pageMarkup, resource));
     await writable.close();
-    if (resource.solutions || resource.solutionsVideo) {
+    if (resource.solutions || solutionVideoUrls(resource).length) {
       const solutionsDirectory = await pageDirectory.getDirectoryHandle('solutions', { create: true });
       const solutionsFile = await solutionsDirectory.getFileHandle('index.html', { create: true });
       const solutionsWritable = await solutionsFile.createWritable();
-      await solutionsWritable.write(linkGeneratedPagesToMainSite(replaceLegacySiteUrls(removeHeaderLibraryButton(solutionPageMarkup(resource)))));
+      const solutionsMarkup = applyResourceSiteChrome(
+        linkGeneratedPagesToMainSite(replaceLegacySiteUrls(removeHeaderLibraryButton(solutionPageMarkup(resource)))),
+        '../../../'
+      );
+      await solutionsWritable.write(includeResourceTutoringCta(solutionsMarkup, resource, '../../../'));
       await solutionsWritable.close();
     }
   }
   const hubFile = await pagesDirectory.getFileHandle('index.html', { create: true });
   const hubWritable = await hubFile.createWritable();
-  await hubWritable.write(linkGeneratedPagesToMainSite(replaceLegacySiteUrls(resourceHubMarkup())));
+  const hubMarkup = linkGeneratedPagesToMainSite(replaceLegacySiteUrls(resourceHubMarkup()));
+  await hubWritable.write(applyResourceSiteChrome(hubMarkup, '../'));
   await hubWritable.close();
   sitemapRelatedPlan = null;
   const sitemapFile = await projectHandle.getFileHandle('sitemap.xml', { create: true });
