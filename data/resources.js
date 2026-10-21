@@ -51,7 +51,7 @@ window.EDG_RESOURCES = [
     tags: [],
     relatedIds: [],
     url: 'https://files.edgeducate.com.au/biology/units-3-4/practice-exams/VCE_Biology_Trial_Paper_1.pdf',
-    solutions: '',
+    solutions: 'https://files.edgeducate.com.au/biology/units-3-4/practice-exams/VCE_Biology_Trial_Paper_1.pdf',
     solutionsVideo: '',
     solutionsVideos: [],
     solutionsVideoTitles: [],
