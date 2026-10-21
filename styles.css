@@ -1290,6 +1290,7 @@ body.modal-open{overflow:hidden}
 .solution-stage.is-video-open .solution-return:hover{background:#f1f5ff;text-decoration:none}
 .resource-detail.has-inline-preview .resource-detail-copy .resource-back{margin-top:.75rem}
 .solutions-page{background:#f7f9fe;color:var(--ink)}
+.resource-detail-meta{display:none!important}
 .solutions-page .resource-detail{padding-top:1.25rem}
 .solutions-detail .resource-detail-copy .badge-purple{display:none}
 .solutions-page main{padding:0}
