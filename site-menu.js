@@ -200,7 +200,7 @@
   void hydrateSolutionsDetails();
 
   const solutionsCopy = document.querySelector('.solutions-detail .resource-detail-copy');
-  if (solutionsCopy && !solutionsCopy.querySelector('.resource-back')) {
+  if (solutionsCopy && !solutionsCopy.querySelector('.resource-back') && !document.querySelector('.solutions-page .solution-back-top')) {
     const backLink = document.createElement('a');
     backLink.className = 'resource-back solution-back-link btn btn-light btn-block';
     backLink.href = '../';

@@ -2,6 +2,7 @@ const stage = document.querySelector('[data-solution-stage]');
 const toggle = document.querySelector('[data-solution-video-toggle]');
 const videoPanel = document.querySelector('[data-solution-video-panel]');
 const videoSelector = document.querySelector('.solution-video-selector');
+const currentVideoLabel = videoPanel?.querySelector('[data-solution-video-current]');
 const resourceBack = stage?.querySelector('.resource-back');
 const pdfButton = stage?.querySelector('.resource-detail-copy .btn-primary');
 const libraryCrumb = stage?.parentElement.querySelector('.crumbs a');
@@ -37,6 +38,7 @@ if (videoSelector) {
   const players = [...videoPanel.querySelectorAll('[data-solution-video-item]')];
   selectors.forEach((selector) => selector.addEventListener('click', () => {
     const index = Number(selector.dataset.solutionVideoIndex);
+    if (currentVideoLabel) currentVideoLabel.textContent = `Video ${index + 1} of ${selectors.length}`;
     selectors.forEach((item, itemIndex) => {
       const active = itemIndex === index;
       item.classList.toggle('is-active', active);
