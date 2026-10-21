@@ -30,5 +30,32 @@ window.EDG_RESOURCES = [
     solutionsVideoTitles: ['q1', 'q2', 'q32'],
     added: '2026-10-17',
     status: 'published'
+  },
+  {
+    id: 'test-copy',
+    title: 'test (Copy)',
+    type: 'practice-questions',
+    viewType: 'standard',
+    questionResourceId: '',
+    videoResourceId: '',
+    questionVideoPairs: [],
+    stage: 'secondary',
+    unit: '',
+    subject: 'Maths',
+    year: 'Year 7',
+    level: 'Easy',
+    desc: '',
+    details: '',
+    art: 'maths',
+    image: '',
+    tags: [],
+    relatedIds: [],
+    url: 'https://files.edgeducate.com.au/biology/units-3-4/practice-exams/VCE_Biology_Trial_Paper_1.pdf',
+    solutions: '',
+    solutionsVideo: '',
+    solutionsVideos: [],
+    solutionsVideoTitles: [],
+    added: '2026-10-21',
+    status: 'published'
   }
 ];
