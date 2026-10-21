@@ -1321,6 +1321,15 @@ body.modal-open{overflow:hidden}
 .resource-detail.has-inline-preview .resource-detail-layout{position:relative;display:grid;grid-template-rows:max-content max-content;align-content:start;min-height:780px}
 .resource-detail.has-inline-preview .resource-detail-preview{position:absolute;inset:0 auto 0 0;grid-column:auto;grid-row:auto;width:calc(100% - 320px);min-height:0!important;height:auto}
 .resource-detail.has-inline-preview .resource-detail-copy{grid-column:2;grid-row:1}
+.resource-detail.has-inline-preview .related-carousel{overflow:visible;scroll-snap-type:none;padding:0}
+.resource-detail.has-inline-preview .related-track{display:flex;flex-direction:column;width:100%;gap:.85rem}
+.resource-detail.has-inline-preview .related-track .resource-card{width:100%;scroll-snap-align:none}
+.resource-detail.has-inline-preview .related-track .resource-card .thumb{aspect-ratio:2.3/1;margin-bottom:.4rem}
+.resource-detail.has-inline-preview .related-track .resource-card h3{font-size:.74rem}
+.resource-detail.has-inline-preview .related-track .resource-card .meta{font-size:.7rem;margin-top:.15rem}
+.resource-detail.has-inline-preview .related-view-more{display:flex;align-items:center;justify-content:center;width:100%;min-height:34px;margin-top:.85rem;padding:.45rem .7rem;border:1px solid #c8d5e8;border-radius:7px;background:#fff;color:#1f478f;font:inherit;font-size:.74rem;font-weight:800;cursor:pointer}
+.resource-detail.has-inline-preview .related-view-more:hover{background:#f1f5ff;border-color:#8fb2f5}
+.resource-detail.has-inline-preview .carousel-controls{display:none}
 .solutions-page .resource-detail{padding-top:1.25rem}
 .solutions-page .solution-stage .resource-detail-copy{display:grid;grid-column:1 / -1;grid-row:1;padding:.75rem 1.1rem}
 .solutions-page .solution-stage .resource-detail-copy .btn{display:none!important}
@@ -1373,6 +1382,27 @@ body.modal-open{overflow:hidden}
   animation:session-spin .8s linear infinite;
 }
 @keyframes session-spin{to{transform:rotate(360deg)}}
+@media (max-width:900px){
+  .resource-detail.has-inline-preview .resource-detail-layout{display:flex!important;flex-direction:column;gap:1rem;min-height:0;position:static}
+  .resource-detail.has-inline-preview .resource-detail-copy{order:-1;width:100%;box-sizing:border-box}
+  .resource-detail.has-inline-preview .resource-detail-preview{order:0;position:relative!important;inset:auto!important;width:100%!important;height:420px!important;min-height:420px!important}
+  .resource-detail.has-inline-preview .related-resources{order:1;width:100%;max-height:none!important;margin-top:0}
+  .solution-stage.has-solution-video{display:flex!important;flex-direction:column;gap:1rem;width:100%;min-width:0}
+  .solution-stage.has-solution-video .resource-detail-copy{order:-1;display:block!important;width:100%;box-sizing:border-box;grid-column:auto;grid-row:auto}
+  .solution-stage.has-solution-video .resource-detail-copy .solution-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.4rem;margin-top:.8rem}
+  .solution-stage.has-solution-video .solution-video-panel{order:1;width:100%;min-height:0;max-height:none;display:block}
+  .solution-stage.has-solution-video .solution-pdf-panel{order:2;width:100%;min-height:420px}
+  .solution-stage.has-solution-video .solution-video-panel .solution-video{aspect-ratio:16/9}
+  .solution-stage.has-solution-video .solution-video-panel .solution-video iframe{height:auto;min-height:0;aspect-ratio:16/9}
+  .solution-stage.has-solution-video .solution-video-panel-head>div{display:flex;align-items:baseline;gap:.5rem;min-width:0}
+  .solution-stage.has-solution-video .solution-video-panel-head .solution-video-hint{display:none}
+  .solution-stage.has-solution-video .solution-video-panel{display:contents}
+  .solution-stage.has-solution-video .solution-video-panel-head{order:1;width:100%;box-sizing:border-box}
+  .solution-stage.has-solution-video .solution-video-selector{order:2;width:100%;box-sizing:border-box}
+  .solution-stage.has-solution-video .solution-video-player{order:3;width:100%;box-sizing:border-box}
+  .solution-stage.has-solution-video .solution-pdf-panel{order:4}
+  .solution-stage.has-solution-video .solution-video-panel>.recommended-learning{order:5;width:100%;box-sizing:border-box}
+}
 .session-loading-status{font-size:.85rem;color:#dce8ff;font-weight:600}
 .session-loading-ad{
   margin-top:2rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);
