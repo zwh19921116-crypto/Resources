@@ -6,7 +6,7 @@ const el = (id) => document.getElementById(id);
 const grid = el('resource-grid');
 const searchInput = el('q');
 
-const state = { q: '', type: '', subject: '', mathsType: '', year: '', solutions: false, video: false, sort: 'published-desc', shown: CONFIG.pageSize };
+const state = { q: '', type: '', subject: '', mathsType: '', year: '', solutions: false, video: false, sort: 'az', shown: CONFIG.pageSize };
 
 const footerYearNode = el('year');
 if (footerYearNode) footerYearNode.textContent = new Date().getFullYear();
