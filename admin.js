@@ -8469,7 +8469,7 @@ function openResourcePagePreview(resource) {
 
 const removeHeaderLibraryButton = (markup) => markup.replace(/<a class="btn btn-cta" href="[^"]*">Browse library<\/a>/g, '');
 const replaceLegacySiteUrls = (markup) => markup.replaceAll(LEGACY_SITE_URL, SITE_URL);
-const FAVICON_TAG = '<link rel="icon" href="/favicon.ico" sizes="any">';
+const FAVICON_TAG = '<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/favicon.png" sizes="256x256"><link rel="apple-touch-icon" href="/favicon.png"><meta name="theme-color" content="#071d46">';
 // Every generated page declares the site favicon so browsers, Google and SEO checks find it.
 const linkGeneratedPagesToMainSite = (markup) => {
   const linked = markup.replace(/(<a class="brand" href=")[^"]+(">)/, '$1https://edgeducate.com.au/$2');
