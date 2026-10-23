@@ -5506,9 +5506,40 @@ fillSelect($('f-type'), typeKeys, typeKeys.map((k) => CONFIG.types[k].label));
 fillSelect($('f-art'), CONFIG.artStyles);
 fillSelect($('f-stage'), stageKeys, stageKeys.map((k) => CONFIG.educationStages[k].label));
 fillSelect($('f-subject'), CONFIG.subjects);
-fillSelect($('f-year'), CONFIG.years);
 fillSelect($('f-unit'), CONFIG.vceUnits || []);
 fillSelect($('f-level'), CONFIG.levels);
+const estimatedMinuteValues = CONFIG.estimatedMinutes || [10, 15, 30, 45, 60];
+fillSelect($('f-estimated-minutes'), estimatedMinuteValues, estimatedMinuteValues.map((minutes) => {
+  if (minutes < 60) return `${minutes} minutes`;
+  return minutes % 60 ? `${Math.floor(minutes / 60)} hour ${minutes % 60} minutes` : `${minutes / 60} hour${minutes === 60 ? '' : 's'}`;
+}));
+$('f-estimated-minutes').value = '30';
+
+function yearsForStage(stage) {
+  return CONFIG.yearsByStage?.[stage] || CONFIG.years;
+}
+
+const allYearValues = [...new Set(Object.values(CONFIG.yearsByStage || {}).flat().concat(CONFIG.years))];
+
+function updateYearOptions(stage, preferredValue = $('f-year').value) {
+  const years = yearsForStage(stage);
+  fillSelect($('f-year'), years);
+  $('f-year').value = years.includes(preferredValue) ? preferredValue : (years[0] || '');
+  $('f-year-field').hidden = stage === 'primary';
+}
+
+function levelsForStage(stage) {
+  return CONFIG.levelsByStage?.[stage] || CONFIG.levels;
+}
+
+function updateLevelOptions(stage, preferredValue = $('f-level').value) {
+  const levels = levelsForStage(stage);
+  fillSelect($('f-level'), levels);
+  $('f-level').value = levels.includes(preferredValue) ? preferredValue : (levels[0] || '');
+}
+
+updateYearOptions($('f-stage').value);
+updateLevelOptions($('f-stage').value);
 
 function fillAssociatedResourceSelect(select, resourceType, emptyLabel) {
   const currentValue = select.value;
@@ -5596,6 +5627,21 @@ document.addEventListener('input', (event) => {
 /* ---------- table ---------- */
 function slugify(text) {
   return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+}
+
+function titleCaseWords(text) {
+  return text.trim().replace(/(^|[\s-])([a-z])/g, (match, boundary, letter) => `${boundary}${letter.toUpperCase()}`);
+}
+
+function defaultArtForSubject(subject) {
+  const subjectArt = {
+    Maths: 'maths',
+    Biology: 'biology',
+    Chemistry: 'chemistry',
+    Physics: 'physics',
+    English: 'english'
+  };
+  return subjectArt[subject] || CONFIG.artStyles[0];
 }
 
 function stageFor(resource) {
@@ -5779,7 +5825,7 @@ function solutionPageMarkup(resource) {
   const videoMarkup = videoUrls.map((videoUrl, index) => videoEmbeds[index]
     ? `<div class="solution-video"><iframe src="${escapeAttr(videoEmbeds[index])}" title="Solutions video ${index + 1}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>`
     : `<a class="btn btn-light btn-block" href="${escapeAttr(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch video ${index + 1}</a>`).join('');
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Solutions for ${escapeHtml(resource.title)} | Edgeducate Resources</title><meta name="description" content="Solutions for ${escapeHtml(resource.title)}."><link rel="canonical" href="https://zwh19921116-crypto.github.io/Resources/resource-pages/${resourcePagePath(resource)}/solutions/"><link rel="stylesheet" href="${rootPrefix}styles.css?v=20261021video-height2"></head><body class="resource-detail-page solutions-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header><main><article class="resource-detail solutions-detail"><div class="container"><nav class="crumbs"><a href="${rootPrefix}resources.html">Library</a><span>/</span><a href="../index.html">${escapeHtml(resource.title)}</a><span>/</span><span>Solutions</span></nav><div class="resource-detail-layout"><div class="resource-detail-preview solution-preview">${previewMarkup}</div><div class="resource-detail-copy"><span class="badge badge-purple">Solutions</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">Work through the solutions and review the explanation video where available.</p>${solutionUrl ? `<a class="btn btn-primary btn-block" href="${escapeAttr(solutionUrl)}" target="_blank" rel="noopener noreferrer">Open PDF</a>` : ''}${videoMarkup}<a class="resource-back btn btn-light btn-block" href="../index.html">Back to resource</a></div></div></div></article></main><footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer></body></html>`;
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Solutions for ${escapeHtml(resource.title)} | Edgeducate Resources</title><meta name="description" content="Solutions for ${escapeHtml(resource.title)}."><link rel="canonical" href="https://zwh19921116-crypto.github.io/Resources/resource-pages/${resourcePagePath(resource)}/solutions/"><link rel="stylesheet" href="${rootPrefix}styles.css?v=20261021video-height2"></head><body class="resource-detail-page solutions-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header><main><article class="resource-detail solutions-detail">  <div class="container"><nav class="crumbs"><a href="https://edgeducate.com.au/">Edgeducate</a><span>/</span><a href="${rootPrefix}resources.html">Resources</a><span>/</span><a href="../index.html">${escapeHtml(resource.title)}</a><span>/</span><span>Solutions</span></nav><div class="resource-detail-layout"><div class="resource-detail-preview solution-preview">${previewMarkup}</div><div class="resource-detail-copy"><span class="badge badge-purple">Solutions</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">Work through the solutions and review the explanation video where available.</p>${solutionUrl ? `<a class="btn btn-primary btn-block" href="${escapeAttr(solutionUrl)}" target="_blank" rel="noopener noreferrer">Open PDF</a>` : ''}${videoMarkup}<a class="resource-back btn btn-light btn-block" href="../index.html">Back to resource</a></div></div></div></article></main><footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer></body></html>`;
 }
 
 function solutionPageMarkup(resource) {
@@ -5799,18 +5845,21 @@ function solutionPageMarkup(resource) {
       ${videoUrls.map((videoUrl, index) => { const title = videoTitles[index] || `Solutions video ${index + 1}`; return `<div class="solution-video-entry${index === 0 ? ' is-active' : ''}" data-solution-video-item="${index}" role="tabpanel"${index === 0 ? '' : ' hidden'}>${videoEmbeds[index] ? `<div class="solution-video"><iframe src="${escapeAttr(videoEmbeds[index])}" title="${escapeAttr(title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>` : `<a class="btn btn-light btn-block" href="${escapeAttr(videoUrl)}" target="_blank" rel="noopener noreferrer">Watch ${escapeHtml(title)}</a>`}</div>`; }).join('')}
     </div>
   </section>` : '';
-  const solutionMetadata = [['Subject', resource.subject], ['Year level', resource.year], ['Difficulty', resource.level], ['Details', resource.details]]
+  const stageLabel = CONFIG.educationStages?.[stageFor(resource)]?.label || stageFor(resource);
+  const solutionMetadata = [['Education stage', stageLabel], ['Subject', resource.subject], ['Year level', resource.year], ['Estimated time', `${formatEstimatedMinutes(resource.estimatedMinutes)} study`], ['Difficulty', resource.level], ['Details', resource.details]]
     .filter(([, value]) => value)
     .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
   const videoAction = solutionMetadata ? `<dl class="solution-meta">${solutionMetadata}</dl>` : '';
   const parentUrl = `${SITE_URL}/resource-pages/${resourcePagePath(resource)}/`;
   const solutionsBreadcrumb = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Resources', item: `${SITE_URL}/resources.html` },
-    { '@type': 'ListItem', position: 2, name: resource.title, item: parentUrl },
-    { '@type': 'ListItem', position: 3, name: 'Solutions', item: `${parentUrl}solutions/` }
+    { '@type': 'ListItem', position: 1, name: 'Edgeducate', item: 'https://edgeducate.com.au/' },
+    { '@type': 'ListItem', position: 2, name: 'Resources', item: `${SITE_URL}/resources.html` },
+    { '@type': 'ListItem', position: 3, name: resource.title, item: parentUrl },
+    { '@type': 'ListItem', position: 4, name: 'Solutions', item: `${parentUrl}solutions/` }
   ] }).replace(/</g, '\\u003c');
-  const parentLinkTags = `<link rel="up" href="../"><script type="application/ld+json">${solutionsBreadcrumb}</script>`;
-  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Solutions for ${escapeHtml(resource.title)} | Edgeducate Resources</title><meta name="description" content="Solutions for ${escapeHtml(resource.title)}."><link rel="canonical" href="https://zwh19921116-crypto.github.io/Resources/resource-pages/${resourcePagePath(resource)}/solutions/"><link rel="stylesheet" href="${rootPrefix}styles.css?v=20261021video-height2">${parentLinkTags}</head><body class="resource-detail-page solutions-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories"><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header><main><article class="resource-detail solutions-detail"><div class="container"><nav class="crumbs"><a href="${rootPrefix}resources.html">Library</a><span>/</span><a href="../index.html">${escapeHtml(resource.title)}</a><span>/</span><span>Solutions</span></nav><div class="solution-stage${videoUrls.length ? ' has-solution-video' : ''}" data-solution-stage><div class="solution-pdf-panel">${pdfMarkup}</div>${videoPanel}<div class="resource-detail-copy"><span class="badge badge-purple">Solutions</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">Work through the solutions and review the explanation video where available.</p>${videoAction}<a class="resource-back btn btn-light btn-block" href="../index.html">Back to resource</a></div></div></div></article></main><footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}solutions-page.js"></script><script src="${rootPrefix}site-menu.js"></script></body></html>`;
+  const solutionSchema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'LearningResource', name: `Solutions for ${resource.title}`, description: `Worked solutions for ${resource.title}.`, educationalLevel: [stageLabel, resource.year].filter(Boolean), learningResourceType: 'Solutions', url: `${parentUrl}solutions/`, isPartOf: { '@type': 'LearningResource', name: resource.title, url: parentUrl }, additionalProperty: [{ '@type': 'PropertyValue', name: 'Education stage', value: stageLabel }, { '@type': 'PropertyValue', name: 'Difficulty', value: resource.level || undefined }, { '@type': 'PropertyValue', name: 'Estimated study time', value: `${formatEstimatedMinutes(resource.estimatedMinutes)} study` }] });
+  const parentLinkTags = `<link rel="up" href="../"><script type="application/ld+json">${solutionsBreadcrumb}</script><script type="application/ld+json">${solutionSchema}</script>`;
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Solutions for ${escapeHtml(resource.title)} | Edgeducate Resources</title><meta name="description" content="Solutions for ${escapeHtml(resource.title)}."><link rel="canonical" href="https://zwh19921116-crypto.github.io/Resources/resource-pages/${resourcePagePath(resource)}/solutions/"><link rel="stylesheet" href="${rootPrefix}styles.css?v=20261021video-height2">${parentLinkTags}</head><body class="resource-detail-page solutions-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories"><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header><main><article class="resource-detail solutions-detail">  <div class="container"><nav class="crumbs"><a href="https://edgeducate.com.au/">Edgeducate</a><span>/</span><a href="${rootPrefix}resources.html">Resources</a><span>/</span><a href="../index.html">${escapeHtml(resource.title)}</a><span>/</span><span>Solutions</span></nav><div class="solution-stage${videoUrls.length ? ' has-solution-video' : ''}" data-solution-stage><div class="solution-pdf-panel">${pdfMarkup}</div>${videoPanel}<div class="resource-detail-copy"><span class="badge badge-purple">Solutions</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">Work through the solutions and review the explanation video where available.</p>${videoAction}<a class="resource-back btn btn-light btn-block" href="../index.html">Back to resource</a></div></div></div></article></main><footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}solutions-page.js"></script><script src="${rootPrefix}site-menu.js"></script></body></html>`;
 }
 
 function renderRelatedResourceOptions(resource) {
@@ -7637,26 +7686,143 @@ const loadAdsHandle = () => idb('readonly', (s) => s.get('ads'));
 
 /* ---------- live preview ---------- */
 const LEVEL_TONE = { Easy: 'easy', Medium: 'medium', Hard: 'hard', Fun: 'fun' };
+const formatEstimatedMinutes = (value) => {
+  const minutes = Number(value) || 30;
+  if (minutes < 60) return `${minutes} min`;
+  return minutes % 60 ? `${Math.floor(minutes / 60)} hr ${minutes % 60} min` : `${minutes / 60} hr`;
+};
+
+function normalizeResourceUrl(value) {
+  const original = value.trim();
+  if (!original) return '';
+  try {
+    const parsed = new URL(original);
+    const backblazePrefix = '/file/edgeducate-resources';
+    if (parsed.origin.toLowerCase() !== 'https://f004.backblazeb2.com'
+      || !parsed.pathname.toLowerCase().startsWith(`${backblazePrefix}/`)) return original;
+    const resourcePath = parsed.pathname.slice(backblazePrefix.length);
+    return `https://files.edgeducate.com.au${resourcePath}${parsed.search}${parsed.hash}`;
+  } catch (e) {
+    return original;
+  }
+}
+
+function formatDetailDuration(value) {
+  const minutes = Number(value) || 30;
+  if (minutes < 60) return `${minutes} mins`;
+  return minutes % 60 ? `${Math.floor(minutes / 60)} hr ${minutes % 60} mins` : `${minutes / 60} hr`;
+}
+
+function updateDetailsFromFields() {
+  const questionCount = Number($('f-question-count').value);
+  const pageCount = Number($('f-page-count').value);
+  if (editingIndex >= 0 && !questionCount && !pageCount) return;
+  const details = [];
+  if (questionCount > 0) details.push(`${questionCount} Question${questionCount === 1 ? '' : 's'}`);
+  details.push(formatDetailDuration($('f-estimated-minutes').value));
+  if (pageCount > 0) details.push(`${pageCount} page${pageCount === 1 ? '' : 's'}`);
+  $('f-details').value = details.join(' / ');
+}
+
+function clearGeneratedDetails() {
+  $('f-details').value = '';
+}
 
 function currentDraft() {
   return {
     title: $('f-title').value.trim(),
     type: $('f-type').value,
     stage: $('f-stage').value,
+    subject: $('f-subject').value,
+    topic: $('f-topic').value.trim(),
     year: $('f-year').value,
     level: $('f-level').value,
+    questionCount: Number($('f-question-count').value) || 0,
+    pageCount: Number($('f-page-count').value) || 0,
     details: $('f-details').value.trim(),
+    estimatedMinutes: Number($('f-estimated-minutes').value) || 30,
+    description: $('f-desc').value.trim(),
+    tags: $('f-tags').value.split(',').map((tag) => tag.trim()).filter(Boolean),
     art: $('f-art').value,
     image: $('f-image').value.trim(),
-    url: $('f-url').value.trim()
+    url: $('f-url').value.trim(),
+    solutions: $('f-solutions').value.trim()
   };
+}
+
+function renderSeoHelper(d) {
+  const checks = [];
+  let score = 0;
+  const addCheck = (condition, good, next, points) => {
+    checks.push({ condition, text: condition ? good : next });
+    if (condition) score += points;
+  };
+  const titleLength = d.title.length;
+  addCheck(titleLength >= 30 && titleLength <= 65, 'Title length is search-friendly.', 'Write a clear title of about 30-65 characters.', 20);
+  addCheck(Boolean(d.topic), 'A focused topic/search phrase is set.', 'Add the specific topic, such as linear equations or fractions.', 15);
+  addCheck(d.description.length >= 80 && d.description.length <= 220, 'Description is a useful search snippet.', 'Write a natural 80-220 character description.', 20);
+  addCheck(Boolean(d.stage && d.subject), 'Education stage and subject are set.', 'Choose the education stage and subject.', 15);
+  addCheck(d.tags.length >= 2, 'Search tags add related phrases.', 'Add at least two related search phrases.', 10);
+  addCheck(Boolean(d.url && /^https?:\/\//i.test(d.url)), 'Resource link is ready.', 'Add the public resource link.', 10);
+  addCheck(Boolean(d.image || d.art), 'A thumbnail is available for sharing.', 'Choose a thumbnail style or add a custom image.', 5);
+  addCheck(Boolean(d.details), 'The detail line adds useful context.', 'Add a detail such as question count or page count.', 5);
+  const firstNext = checks.find((check) => !check.condition);
+  $('seo-score').textContent = `${score}/100`;
+  $('seo-summary').textContent = score >= 85
+    ? 'Strong draft. Review the preview, then save.'
+    : firstNext ? firstNext.text : 'Complete the remaining fields to improve the score.';
+  $('seo-checks').innerHTML = checks.map((check) => `<li class="${check.condition ? 'is-good' : 'is-next'}">${escapeHtml(check.text)}</li>`).join('');
+}
+
+function updateTitleConvention(stage) {
+  const guidance = $('f-title-convention');
+  if (!guidance) return;
+  guidance.textContent = stage === 'primary'
+    ? 'Naming convention: Primary School [subject]: [topic] [resource type] (Level [number]). Example: Primary School Mathematics: Addition Practice Questions (Level 1).'
+    : stage === 'vce'
+      ? 'Naming convention: VCE + [subject/topic] + [unit or resource type] + [purpose]. Example: VCE Biology Unit 3 Exam Revision.'
+      : 'Naming convention: [year] + [topic] + [resource type] + [purpose]. Example: Year 8 Linear Equations Practice Questions.';
+}
+
+function buildTitleFromFields() {
+  const stage = $('f-stage').value;
+  const subject = $('f-subject').value;
+  const topic = $('f-topic').value.trim();
+  const type = CONFIG.types[$('f-type').value]?.label || $('f-type').value;
+  const year = stage === 'primary' ? 'Primary' : stage === 'vce' ? ($('f-unit').value || 'VCE') : $('f-year').value;
+  if (stage === 'primary') {
+    const primarySubject = subject === 'Maths' ? 'Mathematics' : subject;
+    const primaryType = type;
+    const resourceName = [topic, primaryType].filter(Boolean).join(' ');
+    const level = $('f-level').value ? ` (Level ${$('f-level').value})` : '';
+    return titleCaseWords(`Primary School ${primarySubject}${resourceName ? `: ${resourceName}` : ''}${level}`);
+  }
+  return titleCaseWords([year, subject, topic, type].filter(Boolean).join(' '));
+}
+
+function buildDescriptionFromFields() {
+  const title = titleCaseWords($('f-title').value) || buildTitleFromFields();
+  const stage = $('f-stage').value === 'primary' ? 'Primary students'
+    : $('f-stage').value === 'vce' ? 'VCE students' : `${$('f-year').value || 'Secondary'} students`;
+  const topic = $('f-topic').value.trim() || $('f-subject').value;
+  const level = $('f-level').value;
+  const difficulty = level ? ` at ${level} level` : '';
+  return `${title} helps ${stage} practise ${topic} skills${difficulty}, build confidence and prepare for classroom learning.`;
+}
+
+function autoTitleFromFields() {
+  $('f-title').value = titleCaseWords(buildTitleFromFields());
+  $('f-id').value = slugify($('f-title').value);
+  updateDetailsFromFields();
+  renderPreview();
 }
 
 function renderPreview() {
   const d = currentDraft();
+  updateTitleConvention(d.stage);
   const type = CONFIG.types[d.type] || { label: d.type, colour: 'blue', action: 'link' };
   const tone = LEVEL_TONE[d.level] || 'info';
-  const meta = [d.year, d.details].filter(Boolean).join(' &nbsp;\u2022&nbsp; ');
+  const meta = [d.year, `${formatEstimatedMinutes(d.estimatedMinutes)} study`, d.details].filter(Boolean).join(' &nbsp;\u2022&nbsp; ');
 
   $('preview').innerHTML = `
     <div class="pv-card">
@@ -7681,14 +7847,18 @@ function renderPreview() {
   } else {
     warn.hidden = true;
   }
+
+  renderSeoHelper(d);
 }
+
+$('btn-auto-title').addEventListener('click', autoTitleFromFields);
 
 function showWarn(el, msg) {
   el.textContent = msg;
   el.hidden = false;
 }
 
-['f-title', 'f-url', 'f-solutions', 'f-type', 'f-art', 'f-image', 'f-stage', 'f-unit', 'f-year', 'f-level', 'f-details'].forEach((id) => {
+['f-title', 'f-url', 'f-solutions', 'f-type', 'f-art', 'f-image', 'f-stage', 'f-unit', 'f-subject', 'f-topic', 'f-year', 'f-level', 'f-details', 'f-desc', 'f-tags'].forEach((id) => {
   const node = $(id);
   node.addEventListener('input', renderPreview);
   node.addEventListener('change', renderPreview);
@@ -7750,14 +7920,33 @@ let resourceAutoFields = new Set();
 function inferResourceMetadata(title, url) {
   const text = `${title} ${url}`.toLowerCase().replace(/[_-]+/g, ' ');
   const has = (...terms) => terms.some((term) => text.includes(term));
+  let decodedUrl = url;
+  try { decodedUrl = decodeURIComponent(url); } catch (e) { /* keep the original URL */ }
+  const urlParts = decodedUrl.split(/[/?#]/).filter(Boolean);
+  const fileName = urlParts[urlParts.length - 1] || '';
+  const parentFolder = urlParts[urlParts.length - 2] || '';
+  const humanize = (value) => value
+    .replace(/\.[a-z0-9]+$/i, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\d{8}_\d{6}\b/g, '')
+    .replace(/\bsolutions?\b/ig, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const folderTopic = humanize(parentFolder);
+  const filenameTopic = humanize(fileName).replace(/\([^)]*\)/g, '').trim();
+  const inferredTopic = folderTopic && !/^(primary school|secondary school|vce|mathematics?|maths?)$/i.test(folderTopic)
+    ? folderTopic
+    : filenameTopic;
   const metadata = {
     type: typeKeys[0],
     stage: stageKeys[0],
     unit: '',
     subject: CONFIG.subjects[0],
+    topic: inferredTopic,
     year: CONFIG.years[0],
     level: CONFIG.levels[0],
-    art: CONFIG.artStyles[0]
+    art: defaultArtForSubject(CONFIG.subjects[0]),
+    tags: []
   };
 
   if (has('youtube.', 'youtu.be', 'video', 'watch?v=')) metadata.type = 'video';
@@ -7779,8 +7968,13 @@ function inferResourceMetadata(title, url) {
 
   const subject = CONFIG.subjects.find((candidate) => has(candidate.toLowerCase()));
   if (subject) metadata.subject = subject;
+  if (/\bmathematics?\b|\bmaths?\b/i.test(decodedUrl)) metadata.subject = 'Maths';
+  metadata.art = defaultArtForSubject(metadata.subject);
 
-  const year = CONFIG.years.find((candidate) => text.includes(candidate.toLowerCase()));
+  const primaryLevel = decodedUrl.match(/\blevel[_ -]?(\d{1,2})\b/i);
+  if (primaryLevel && metadata.stage === 'primary') metadata.level = primaryLevel[1];
+
+  const year = allYearValues.find((candidate) => text.includes(candidate.toLowerCase()));
   if (year && metadata.stage !== 'vce') metadata.year = year;
 
   if (has('hard', 'challenging', 'trial', 'exam')) metadata.level = 'Hard';
@@ -7796,18 +7990,27 @@ function inferResourceMetadata(title, url) {
     'interactive-app': 'maths',
     video: 'video'
   };
-  if (CONFIG.artStyles.includes(artByType[metadata.type])) metadata.art = artByType[metadata.type];
+  if (metadata.subject === 'Maths' && CONFIG.artStyles.includes(artByType[metadata.type])) {
+    metadata.art = artByType[metadata.type];
+  }
+  metadata.tags = [...new Set([metadata.subject, metadata.topic, metadata.stage === 'primary' ? 'Primary' : metadata.stage === 'vce' ? 'VCE' : metadata.year, metadata.level].filter(Boolean))];
   return metadata;
 }
 
 function applyInferredResourceMetadata() {
   if (editingIndex >= 0) return;
   const metadata = inferResourceMetadata($('f-title').value, $('f-url').value);
-  const fields = ['type', 'stage', 'unit', 'subject', 'year', 'level', 'art'];
+  const fields = ['type', 'stage', 'unit', 'subject', 'topic', 'year', 'level', 'art'];
   fields.forEach((field) => {
     if (resourceAutoFields.has(field)) return;
     $(`f-${field}`).value = metadata[field];
   });
+  if (editingIndex < 0 && !$('f-desc').value.trim() && $('f-url').value.trim() && !resourceAutoFields.has('desc')) {
+    $('f-desc').value = buildDescriptionFromFields();
+  }
+  if (editingIndex < 0 && !$('f-tags').value.trim() && $('f-url').value.trim() && !resourceAutoFields.has('tags')) {
+    $('f-tags').value = metadata.tags.join(', ');
+  }
   updateUnitField();
   renderPreview();
 }
@@ -7834,20 +8037,25 @@ function openForm(index) {
   $('f-question-resource').value = r.questionResourceId || '';
   $('f-video-resource').value = r.videoResourceId || '';
   renderQuestionVideoPairs(Array.isArray(r.questionVideoPairs) ? r.questionVideoPairs : []);
-  $('f-art').value = r.art || CONFIG.artStyles[0];
+  $('f-art').value = r.art || defaultArtForSubject(r.subject || CONFIG.subjects[0]);
   $('f-image').value = r.image || '';
   $('f-stage').value = stageFor(r);
   $('f-unit').value = r.unit || (String(r.year || '').startsWith('VCE') ? r.year : '');
   $('f-subject').value = r.subject || CONFIG.subjects[0];
-  $('f-year').value = r.year || CONFIG.years[0];
+  $('f-topic').value = r.topic || '';
+  updateYearOptions($('f-stage').value, r.year || '');
   $('f-level').value = r.level || CONFIG.levels[0];
+  $('f-question-count').value = r.questionCount || '';
+  $('f-page-count').value = r.pageCount || '';
   $('f-details').value = r.details || '';
+  $('f-estimated-minutes').value = String(r.estimatedMinutes || 30);
   $('f-desc').value = r.desc || '';
   $('f-tags').value = (r.tags || []).join(', ');
   renderRelatedResourceOptions(r);
   $('f-status').value = r.status || 'published';
   $('f-id').value = r.id || '';
   updateUnitField();
+  updateLevelOptions($('f-stage').value, r.level || '');
   $('form-err').hidden = true;
   renderPreview();
   dlg.showModal();
@@ -7861,6 +8069,8 @@ function updateUnitField() {
   $('f-unit-field').hidden = !isVce;
   $('f-unit').disabled = !isVce;
   if (!isVce) $('f-unit').value = '';
+  updateYearOptions($('f-stage').value);
+  updateLevelOptions($('f-stage').value);
 }
 
 $('f-stage').addEventListener('change', updateUnitField);
@@ -7870,21 +8080,46 @@ $('f-title').addEventListener('input', () => {
   $('f-id').value = slugify($('f-title').value);
   applyInferredResourceMetadata();
 });
-$('f-url').addEventListener('input', applyInferredResourceMetadata);
+$('f-title').addEventListener('blur', () => {
+  const normalized = titleCaseWords($('f-title').value);
+  if ($('f-title').value !== normalized) {
+    $('f-title').value = normalized;
+    $('f-id').value = slugify(normalized);
+    renderPreview();
+  }
+});
+$('f-url').addEventListener('input', () => {
+  const normalized = normalizeResourceUrl($('f-url').value);
+  if ($('f-url').value !== normalized) $('f-url').value = normalized;
+  applyInferredResourceMetadata();
+});
+$('f-solutions').addEventListener('input', () => {
+  const normalized = normalizeResourceUrl($('f-solutions').value);
+  if ($('f-solutions').value !== normalized) $('f-solutions').value = normalized;
+});
 $('f-type').addEventListener('change', () => { resourceAutoFields.add('type'); });
 $('f-stage').addEventListener('change', () => { resourceAutoFields.add('stage'); });
 $('f-unit').addEventListener('change', () => { resourceAutoFields.add('unit'); });
-$('f-subject').addEventListener('change', () => { resourceAutoFields.add('subject'); });
+$('f-subject').addEventListener('change', () => {
+  resourceAutoFields.add('subject');
+  if (!resourceAutoFields.has('art')) $('f-art').value = defaultArtForSubject($('f-subject').value);
+});
+$('f-topic').addEventListener('change', () => { resourceAutoFields.add('topic'); });
 $('f-year').addEventListener('change', () => { resourceAutoFields.add('year'); });
 $('f-level').addEventListener('change', () => { resourceAutoFields.add('level'); });
 $('f-art').addEventListener('change', () => { resourceAutoFields.add('art'); });
+$('f-question-count').addEventListener('input', clearGeneratedDetails);
+$('f-page-count').addEventListener('input', clearGeneratedDetails);
+$('f-estimated-minutes').addEventListener('change', clearGeneratedDetails);
+$('f-desc').addEventListener('input', () => { resourceAutoFields.add('desc'); });
+$('f-tags').addEventListener('input', () => { resourceAutoFields.add('tags'); });
 $('btn-add').addEventListener('click', () => openForm(-1));
 $('btn-cancel').addEventListener('click', () => dlg.close());
 $('search').addEventListener('input', renderTable);
 $('btn-select-visible').addEventListener('click', () => {
   const query = $('search').value.trim().toLowerCase();
   const visibleIds = items
-    .filter((item) => !query || `${item.title} ${item.subject} ${item.year} ${(item.tags || []).join(' ')}`.toLowerCase().includes(query))
+    .filter((item) => !query || `${item.title} ${item.subject} ${item.topic || ''} ${item.year} ${(item.tags || []).join(' ')}`.toLowerCase().includes(query))
     .map((item) => item.id);
   const shouldSelect = !visibleIds.length || !visibleIds.every((id) => selectedResourceIds.has(id));
   visibleIds.forEach((id) => {
@@ -7901,7 +8136,7 @@ $('btn-delete-selected').addEventListener('click', deleteSelectedResources);
 
 $('btn-save-item').addEventListener('click', () => {
   const err = $('form-err');
-  const title = $('f-title').value.trim();
+  const title = titleCaseWords($('f-title').value);
   const url = $('f-url').value.trim();
   const solutions = $('f-solutions-enabled').checked ? $('f-solutions').value.trim() : '';
   const solutionsVideos = $('f-solutions-video-enabled').checked ? readSolutionVideoLinks() : [];
@@ -7928,10 +8163,14 @@ $('btn-save-item').addEventListener('click', () => {
     stage: $('f-stage').value,
     unit: $('f-stage').value === 'vce' ? $('f-unit').value : '',
     subject: $('f-subject').value,
+    topic: $('f-topic').value.trim(),
     year: $('f-year').value,
     level: $('f-level').value,
+    questionCount: Number($('f-question-count').value) || 0,
+    pageCount: Number($('f-page-count').value) || 0,
     desc: $('f-desc').value.trim(),
     details: $('f-details').value.trim(),
+    estimatedMinutes: Number($('f-estimated-minutes').value) || 30,
     art: $('f-art').value,
     image: $('f-image').value.trim(),
     tags: $('f-tags').value.split(',').map((t) => t.trim()).filter(Boolean),
@@ -7986,10 +8225,14 @@ function serialize() {
       `    stage: ${js(stageFor(r))},`,
       `    unit: ${js(r.unit || '')},`,
       `    subject: ${js(r.subject)},`,
+      `    topic: ${js(r.topic || '')},`,
       `    year: ${js(r.year)},`,
       `    level: ${js(r.level)},`,
+      `    questionCount: ${Number(r.questionCount) || 0},`,
+      `    pageCount: ${Number(r.pageCount) || 0},`,
       `    desc: ${js(r.desc)},`,
       `    details: ${js(r.details)},`,
+      `    estimatedMinutes: ${Number(r.estimatedMinutes) || 30},`,
       `    art: ${js(r.art)},`,
       `    image: ${js(r.image || '')},`,
       `    tags: [${(r.tags || []).map(js).join(', ')}],`,
@@ -8131,7 +8374,7 @@ function resourceHubMarkup() {
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>All resources | Edgeducate Resources</title><meta name="description" content="Browse every resource in the Edgeducate library."><link rel="canonical" href="${canonical}"><meta property="og:title" content="All resources | Edgeducate Resources"><meta property="og:description" content="Browse every resource in the Edgeducate library."><meta property="og:type" content="website"><meta property="og:url" content="${canonical}"><link rel="stylesheet" href="${rootPrefix}styles.css?v=20261021video-height2"></head>
 <body class="resource-detail-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories">Categories</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header>
-<main><article class="resource-index"><div class="container"><nav class="crumbs"><a href="${rootPrefix}index.html">Resources</a><span>/</span><a href="${rootPrefix}all-resources.html">Library</a><span>/</span><span>All resources</span></nav><h1>All resources</h1><p class="resource-index-intro">Browse all ${total} resource${total === 1 ? '' : 's'} in the Edgeducate library.</p>${groups}</div></article></main>
+<main><article class="resource-index"><div class="container"><nav class="crumbs"><a href="https://edgeducate.com.au/">Edgeducate</a><span>/</span><a href="${rootPrefix}resources.html">Resources</a><span>/</span><span>All resources</span></nav><h1>All resources</h1><p class="resource-index-intro">Browse all ${total} resource${total === 1 ? '' : 's'} in the Edgeducate library.</p>${groups}</div></article></main>
 <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}site-menu.js"></script></body></html>`;
 }
 
@@ -8140,14 +8383,15 @@ function resourcePageMarkup(resource) {
   const staticPath = resourcePagePath(resource);
   const rootPrefix = '../../';
   const resourcePagesPrefix = '../';
-  const metadata = [['Subject', resource.subject], ['Year level', resource.year], ['Difficulty', resource.level], ['Details', resource.details], ['Solutions', resource.solutions]]
+  const stageLabel = CONFIG.educationStages?.[stageFor(resource)]?.label || stageFor(resource);
+  const metadata = [['Education stage', stageLabel], ['Subject', resource.subject], ['Year level', resource.year], ['Estimated time', `${formatEstimatedMinutes(resource.estimatedMinutes)} study`], ['Difficulty', resource.level], ['Details', resource.details], ['Solutions', resource.solutions]]
     .filter(([, value]) => value)
     .map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${label === 'Solutions' ? '<a href="solutions/index.html">View solutions</a>' : label === 'Solutions video' ? `<a href="${escapeAttr(value)}">Watch solutions video</a>` : escapeHtml(value)}</dd></div>`).join('');
   const related = (sitemapRelatedPlan && sitemapRelatedPlan.get(resource.id)) || relatedResourcesFor(resource);
   const relatedMarkup = related.map((item) => {
     const relatedType = CONFIG.types[item.type] || { label: item.type, colour: 'blue' };
     const relatedPath = resourcePagePath(item);
-    return `<article class="resource-card"><a class="thumb" href="${resourcePagesPrefix}${relatedPath}/index.html"><span class="badge badge-${relatedType.colour}">${escapeHtml(relatedType.label)}</span>${window.edgThumb(item.art, item.image)}</a><a class="card-link" href="${resourcePagesPrefix}${relatedPath}/index.html"><h3>${escapeHtml(item.title)}</h3><p class="meta">${escapeHtml(item.year || '')}</p></a></article>`;
+    return `<article class="resource-card"><a class="thumb" href="${resourcePagesPrefix}${relatedPath}/index.html"><span class="badge badge-${relatedType.colour}">${escapeHtml(relatedType.label)}</span>${window.edgThumb(item.art, item.image)}</a><a class="card-link" href="${resourcePagesPrefix}${relatedPath}/index.html"><h3>${escapeHtml(item.title)}</h3><p class="meta">${escapeHtml(item.year || '')}${item.year ? ' · ' : ''}${escapeHtml(formatEstimatedMinutes(item.estimatedMinutes))} study</p></a></article>`;
   }).join('');
   const relatedSection = relatedMarkup ? `<section class="related-resources" data-carousel><a class="reader-download" href="${escapeAttr(resource.url)}" download>Download resource</a><div class="related-resources-head"><div><p class="section-eyebrow">More resources</p><h2>More ${escapeHtml(resource.subject)} resources</h2></div></div><div class="related-carousel" tabindex="0" aria-label="Related ${escapeHtml(resource.subject)} resources"><div class="related-track">${relatedMarkup}</div></div></section>` : '';
   const questionPaperSection = questionPaperMarkup(resource, resourcePagesPrefix);
@@ -8159,22 +8403,23 @@ function resourcePageMarkup(resource) {
   const videoEmbedUrl = solutionVideoEmbedUrl(videoUrls[0] || '');
   const solutionsButton = resource.solutions || videoUrls.length ? '<a class="btn btn-solutions btn-block" href="solutions/index.html">View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>' : '';
   const publisher = { '@type': 'Organization', name: 'Edgeducate', url: 'https://edgeducate.com.au/' };
-  const schema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'LearningResource', name: resource.title, description, educationalLevel: resource.year, learningResourceType: type.label, url: canonical, about: resource.subject || undefined, keywords: resource.tags || [], audience: { '@type': 'EducationalAudience', educationalRole: 'student' }, creator: publisher, publisher, isAccessibleForFree: true, inLanguage: 'en-AU', datePublished: resource.added || undefined, isBasedOn: resource.url || undefined });
+  const educationalLevel = [stageLabel, resource.year].filter(Boolean);
+  const schema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'LearningResource', name: resource.title, description, educationalLevel: educationalLevel.length === 1 ? educationalLevel[0] : educationalLevel, learningResourceType: type.label, url: canonical, about: resource.subject || undefined,   keywords: [...new Set([resource.topic, ...(resource.tags || [])].filter(Boolean))], audience: { '@type': 'EducationalAudience', educationalRole: 'student' }, additionalProperty: [{ '@type': 'PropertyValue', name: 'Education stage', value: stageLabel }, { '@type': 'PropertyValue', name: 'Difficulty', value: resource.level || undefined }, { '@type': 'PropertyValue', name: 'Estimated study time', value: `${formatEstimatedMinutes(resource.estimatedMinutes)} study` }], creator: publisher, publisher, isAccessibleForFree: true, inLanguage: 'en-AU', datePublished: resource.added || undefined, isBasedOn: resource.url || undefined });
   const breadcrumbSchema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Resources', item: 'https://zwh19921116-crypto.github.io/Resources/' },
-    { '@type': 'ListItem', position: 2, name: 'Library', item: 'https://zwh19921116-crypto.github.io/Resources/resources.html' },
+    { '@type': 'ListItem', position: 1, name: 'Edgeducate', item: 'https://edgeducate.com.au/' },
+    { '@type': 'ListItem', position: 2, name: 'Resources', item: 'https://zwh19921116-crypto.github.io/Resources/resources.html' },
     { '@type': 'ListItem', position: 3, name: resource.title, item: canonical }
   ] });
   const videoSchema = videoUrls.length ? JSON.stringify(videoUrls.map((videoUrl, index) => ({ '@context': 'https://schema.org', '@type': 'VideoObject', name: `Solutions video ${index + 1} for ${resource.title}`, description: `Worked solutions for ${resource.title}.`, thumbnailUrl: videoEmbedUrl && videoEmbedUrl.includes('youtube.com/embed/') ? `https://i.ytimg.com/vi/${videoEmbedUrl.split('/embed/')[1].split('?')[0]}/hqdefault.jpg` : undefined, uploadDate: resource.added || undefined, embedUrl: solutionVideoEmbedUrl(videoUrl) || videoUrl, contentUrl: videoUrl, publisher }))) : '';
   const faqSchema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: [
-    { '@type': 'Question', name: `Who is ${resource.title} for?`, acceptedAnswer: { '@type': 'Answer', text: `${resource.title} is suitable for ${resource.year || 'students'} studying ${resource.subject || 'this topic'}.` } },
+    { '@type': 'Question', name: `Who is ${resource.title} for?`, acceptedAnswer: { '@type': 'Answer', text: `${resource.title} is suitable for ${resource.year || stageLabel || 'students'} studying ${resource.subject || 'this topic'}.` } },
     { '@type': 'Question', name: `How should I use ${resource.title}?`, acceptedAnswer: { '@type': 'Answer', text: description } }
   ] });
 
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(resource.title)} | Edgeducate Resources</title><meta name="description" content="${escapeHtml(description)}"><link rel="canonical" href="${canonical}"><meta property="og:title" content="${escapeHtml(resource.title)} | Edgeducate Resources"><meta property="og:description" content="${escapeHtml(description)}"><meta property="og:type" content="article"><meta property="og:url" content="${canonical}"><script type="application/ld+json">${schema}</script><script type="application/ld+json">${breadcrumbSchema}</script><script type="application/ld+json">${faqSchema}</script>${videoSchema ? `<script type="application/ld+json">${videoSchema}</script>` : ''}<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="${rootPrefix}styles.css?v=20261021video-height2"></head>
 <body class="resource-detail-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories">Categories</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header>
-<main><article class="resource-detail${hasInlinePreview(resource) ? ' has-inline-preview' : ''}"${hasInlinePreview(resource) ? ` data-resource-title="${escapeAttr(resource.title)}" data-resource-context="${escapeAttr(`${type.label} · ${resource.subject} · ${resource.year}`)}"` : ''}><div class="container"><nav class="crumbs"><a href="${rootPrefix}index.html">Resources</a><span>/</span><a href="${rootPrefix}all-resources.html">Library</a><span>/</span><span>${escapeHtml(resource.title)}</span></nav><div class="resource-detail-layout"><div class="resource-detail-preview">${preview}</div><div class="resource-detail-copy"><span class="badge badge-${type.colour}">${escapeHtml(type.label)}</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">${escapeHtml(description)}</p><dl class="resource-detail-meta">${metadata}</dl><a class="btn btn-primary btn-block" href="${escapeHtml(resource.url)}">${actionLabel}</a><a class="resource-back" href="${rootPrefix}all-resources.html">Back to all resources</a></div></div><section class="resource-faq"><h2>About this resource</h2><dl><div><dt>Who is this for?</dt><dd>${escapeHtml(resource.title)} is suitable for ${escapeHtml(resource.year || 'students')} studying ${escapeHtml(resource.subject || 'this topic')}.</dd></div><div><dt>How should I use it?</dt><dd>${escapeHtml(description)}</dd></div></dl></section>${relatedSection}</div></article></main>
+<main><article class="resource-detail${hasInlinePreview(resource) ? ' has-inline-preview' : ''}"${hasInlinePreview(resource) ? ` data-resource-title="${escapeAttr(resource.title)}" data-resource-context="${escapeAttr(`${type.label} · ${resource.subject} · ${resource.year}`)}"` : ''}><div class="container"><nav class="crumbs"><a href="https://edgeducate.com.au/">Edgeducate</a><span>/</span><a href="${rootPrefix}resources.html">Resources</a><span>/</span><span>${escapeHtml(resource.title)}</span></nav><div class="resource-detail-layout"><div class="resource-detail-preview">${preview}</div><div class="resource-detail-copy"><span class="badge badge-${type.colour}">${escapeHtml(type.label)}</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">${escapeHtml(description)}</p><dl class="resource-detail-meta">${metadata}</dl><a class="btn btn-primary btn-block" href="${escapeHtml(resource.url)}">${actionLabel}</a><a class="resource-back" href="${rootPrefix}all-resources.html">Back to all resources</a></div></div><section class="resource-faq"><h2>About this resource</h2><dl><div><dt>Who is this for?</dt><dd>${escapeHtml(resource.title)} is suitable for ${escapeHtml(resource.year || 'students')} studying ${escapeHtml(resource.subject || 'this topic')}.</dd></div><div><dt>How should I use it?</dt><dd>${escapeHtml(description)}</dd></div></dl></section>${relatedSection}</div></article></main>
   <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><nav class="footer-resource-links"><a href="${rootPrefix}resource-pages/">Browse all resources</a></nav><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}reader-layout.js"></script><script src="${rootPrefix}carousel.js"></script><script type="module" src="${rootPrefix}pdf-reader.js?v=20261012native"></script><script src="${rootPrefix}site-menu.js"></script></body></html>`.replace('</div></div><section class="resource-faq"', `</div></div>${questionPaperSection}<section class="resource-faq"`).replace('<a class="resource-back"', `${solutionsButton}<a class="resource-back"`);
 }
 

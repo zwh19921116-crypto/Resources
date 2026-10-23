@@ -1034,7 +1034,8 @@ body.modal-open{overflow:hidden}
 .study-builder-page .study-builder-page-head{max-width:570px;margin:0;text-align:left}
 .study-builder-page .study-builder-page-head .section-badge{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#dce8ff;box-shadow:none}
 .study-builder-page .study-builder-page-head h1{color:#fff!important;font-size:clamp(2.1rem,3.6vw,3.6rem);line-height:1.02;letter-spacing:-.04em}
-.study-builder-page .study-builder-page-head h1 span{color:var(--builder-yellow)!important}
+.study-builder-page .study-builder-page-head h1 span,.study-builder-page .study-builder-page-head h2 span{color:#fff!important}
+.study-builder-page .study-builder-page-head h1,.study-builder-page .study-builder-page-head h2{color:#fff!important}
 .study-builder-page .study-builder-page-head p{color:#d7e4fb}
 .study-builder-page .builder-promises{display:grid;gap:.75rem;margin-top:2.4rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,.2);color:#d7e4fb;font-size:.78rem;font-weight:700}
 .study-builder-page .builder-promises span{display:flex;align-items:center;gap:.7rem}

@@ -2,6 +2,13 @@ const DETAIL_CONFIG = window.EDG_CONFIG;
 const DETAIL_ALL = (window.EDG_RESOURCES || []).filter((resource) => resource.status !== 'draft');
 const detailElement = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+const resourceStageLabel = (resource) => DETAIL_CONFIG.educationStages?.[resource.stage]?.label
+  || (String(resource.year || '').startsWith('VCE') ? 'VCE' : 'Secondary');
+const formatEstimatedMinutes = (value) => {
+  const minutes = Number(value) || 30;
+  if (minutes < 60) return `${minutes} min`;
+  return minutes % 60 ? `${Math.floor(minutes / 60)} hr ${minutes % 60} min` : `${minutes / 60} hr`;
+};
 
 function youtubeVideoId(url) {
   const match = String(url).match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/);
@@ -18,7 +25,7 @@ function buildRelatedCard(resource) {
   const type = DETAIL_CONFIG.types[resource.type];
   const prefix = document.body.dataset.resourceId ? '../' : 'resource-pages/';
   const url = `${prefix}${encodeURIComponent(resource.id)}/`;
-  return `<article class="resource-card"><a class="thumb" href="${url}"><span class="badge badge-${type.colour}">${escapeHtml(type.label)}</span>${window.edgThumb(resource.art, resource.image)}</a><a class="card-link" href="${url}"><h3>${escapeHtml(resource.title)}</h3><p class="meta">${escapeHtml(resource.year || '')}</p></a></article>`;
+  return `<article class="resource-card"><a class="thumb" href="${url}"><span class="badge badge-${type.colour}">${escapeHtml(type.label)}</span>${window.edgThumb(resource.art, resource.image)}</a><a class="card-link" href="${url}"><h3>${escapeHtml(resource.title)}</h3><p class="meta">${escapeHtml(resource.year || '')}${resource.year ? ' · ' : ''}${formatEstimatedMinutes(resource.estimatedMinutes)} study</p></a></article>`;
 }
 
 function relatedResourcesFor(resource) {
@@ -91,7 +98,7 @@ function renderResourceDetail() {
     solutions.innerHTML = 'View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>';
   }
 
-  const metadata = [['Subject', resource.subject], ['Year level', resource.year], ['Difficulty', resource.level], ['Details', resource.details]].filter(([, value]) => value);
+  const metadata = [['Education stage', resourceStageLabel(resource)], ['Subject', resource.subject], ['Year level', resource.year], ['Estimated time', `${formatEstimatedMinutes(resource.estimatedMinutes)} study`], ['Difficulty', resource.level], ['Details', resource.details]].filter(([, value]) => value);
   detailElement('resource-meta').innerHTML = metadata.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
 
   const questionPaperLinks = detailElement('question-paper-links');
@@ -107,7 +114,7 @@ function renderResourceDetail() {
 
   const schema = document.createElement('script');
   schema.type = 'application/ld+json';
-  schema.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'LearningResource', name: resource.title, description: resource.desc || type.blurb, educationalLevel: resource.year, learningResourceType: type.label, url: location.href });
+  schema.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'LearningResource', name: resource.title, description: resource.desc || type.blurb, educationalLevel: [resourceStageLabel(resource), resource.year].filter(Boolean), learningResourceType: type.label, url: location.href, keywords: [...new Set([resource.topic, ...(resource.tags || [])].filter(Boolean))], additionalProperty: [{ '@type': 'PropertyValue', name: 'Education stage', value: resourceStageLabel(resource) }, { '@type': 'PropertyValue', name: 'Difficulty', value: resource.level || undefined }] });
   document.head.appendChild(schema);
 }
 

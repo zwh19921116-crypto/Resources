@@ -74,8 +74,20 @@ window.EDG_CONFIG = {
 
   vceUnits: ['VCE Units 1&2', 'VCE Units 3&4'],
 
+  yearsByStage: {
+    primary: [],
+    secondary: ['Year 7', 'Year 8', 'Year 9', 'Year 10'],
+    vce: ['VCE Units 1&2', 'VCE Units 3&4']
+  },
+
   levels: ['Easy', 'Medium', 'Hard', 'Reference', 'Fun'],
 
+  levelsByStage: {
+    primary: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
+  },
+
+  estimatedMinutes: [10, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180, 195, 210, 225, 240, 255, 270, 285, 300, 315, 330, 345, 360, 375, 390, 405, 420, 435, 450, 465, 480],
+
   // Thumbnail illustrations available to choose from.
-  artStyles: ['maths', 'exam', 'leaf', 'space', 'video', 'checklist']
+  artStyles: ['maths', 'biology', 'chemistry', 'physics', 'english', 'exam', 'leaf', 'space', 'video', 'checklist']
 };

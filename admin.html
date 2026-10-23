@@ -16,6 +16,7 @@ body{margin:0;font-family:'Inter',system-ui,sans-serif;background:#f4f6fb;color:
 body.modal-open{overflow:hidden}
 h1,h2,h3,h4{color:var(--ink);margin:0;letter-spacing:-.02em}
 button{font:inherit;cursor:pointer}
+input,textarea{caret-color:var(--ink)}
 [hidden]{display:none !important}
 :focus-visible{outline:2px solid #93b4ff;outline-offset:2px}
 .wrap{width:min(1680px,95vw);margin:0 auto;padding:1.75rem 0 5rem}
@@ -164,11 +165,15 @@ dialog::backdrop{background:rgba(9,13,35,.55);backdrop-filter:blur(3px)}
 @media (max-width:900px){.dlg-cols{grid-template-columns:1fr}.dlg-preview{border-left:0;border-top:1px solid var(--line)}}
 .dlg-foot{display:flex;gap:.6rem;justify-content:flex-end;padding:1.1rem 1.5rem;border-top:1px solid var(--line);background:#fafbff}
 .field{display:grid;gap:.32rem}
+.field-label-row{display:flex;align-items:center;justify-content:space-between;gap:.75rem}
 .field label{font-size:.77rem;font-weight:700;color:var(--ink);letter-spacing:.01em}
+.auto-title-btn{border:0;padding:0;color:var(--blue);background:transparent;font-size:.72rem;font-weight:800;cursor:pointer}
+.auto-title-btn:hover{text-decoration:underline}
 .field .hint{font-size:.75rem;color:var(--muted);line-height:1.45}
+.title-convention{display:block;padding:.45rem .55rem;border:1px solid #dbe7ff;border-radius:7px;background:#f5f8ff;color:#31518e!important}
 .field input,.field select,.field textarea{
   width:100%;padding:.65rem .85rem;border:1px solid var(--line);border-radius:10px;
-  font:inherit;font-size:.9rem;color:var(--ink);background:#fff;
+  font:inherit;font-size:.9rem;color:var(--ink);background:#fff;caret-color:var(--ink);
   transition:border-color .15s ease,box-shadow .15s ease;
 }
 .field input:hover,.field select:hover,.field textarea:hover{border-color:#cfdaee}
@@ -184,7 +189,7 @@ dialog::backdrop{background:rgba(9,13,35,.55);backdrop-filter:blur(3px)}
 .admin-question-video-row{display:grid;grid-template-columns:28px minmax(0,1fr) 68px 68px 68px minmax(0,1fr) 32px;gap:.4rem;align-items:center;margin-bottom:.45rem}.admin-question-video-row select,.admin-question-video-row input{min-width:0;padding:.48rem .55rem;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:.78rem}.admin-question-video-number{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#eef4ff;color:var(--blue);font-size:.72rem;font-weight:800}
 .admin-solution-video-row{display:grid;grid-template-columns:28px minmax(0,1fr) minmax(0,1fr) 32px;gap:.4rem;align-items:center;margin-bottom:.45rem}.admin-solution-video-row input{min-width:0;padding:.48rem .55rem;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:.78rem}.admin-solution-video-row>span{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#eef4ff;color:var(--blue);font-size:.72rem;font-weight:800}
 .admin-marker-preview{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.6rem;margin:.7rem 0 1rem;padding:.7rem;border:1px solid var(--line);border-radius:10px;background:#f7f9ff}.admin-marker-preview-item{display:grid;grid-template-columns:72px minmax(0,1fr);gap:.65rem;align-items:center;padding:.55rem;background:#fff;border:1px solid #e1e7f2;border-radius:8px}.admin-marker-page{position:relative;height:96px;background:linear-gradient(#fff,#f8fafc);border:1px solid #cfd8e8;border-radius:3px;overflow:hidden;box-shadow:0 2px 5px rgba(15,23,42,.06)}.admin-marker-band{position:absolute;left:4px;right:4px;display:grid;place-items:center;background:rgba(37,99,235,.18);border:2px solid #2563eb;color:#1748a5;font-size:.65rem;z-index:2}.admin-marker-line{position:absolute;left:10px;right:10px;height:3px;border-radius:2px;background:#d9e1ef}.admin-marker-line.one{top:18px}.admin-marker-line.two{top:42px}.admin-marker-line.three{top:70px}.admin-marker-copy{display:grid;gap:.18rem;min-width:0}.admin-marker-copy strong{font-size:.76rem;color:var(--ink)}.admin-marker-copy span,.admin-marker-copy small{font-size:.68rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.admin-marker-copy small{color:var(--blue);font-weight:700}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:1rem}.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
 .err{color:var(--bad);font-size:.8rem;font-weight:600;background:#fff5f5;border:1px solid #f4cfcf;border-radius:9px;padding:.6rem .8rem;margin:0}
 
 .saved-flash{
@@ -204,6 +209,7 @@ dialog::backdrop{background:rgba(9,13,35,.55);backdrop-filter:blur(3px)}
 .saved-flash.is-error{background:linear-gradient(140deg,#6a1d1d 0%,#8a2323 100%);border-color:rgba(255,184,184,.38)}
 @media (max-width:680px){
   .saved-flash{right:.8rem;left:.8rem;bottom:.8rem;max-width:none}
+  .three{grid-template-columns:1fr}
 }
 
 /* Activity log */
@@ -239,6 +245,16 @@ dialog::backdrop{background:rgba(9,13,35,.55);backdrop-filter:blur(3px)}
 .pv-bars i:nth-child(1){height:6px}.pv-bars i:nth-child(2){height:10px}.pv-bars i:nth-child(3){height:14px}
 .tone-easy{color:#16a34a}.tone-medium{color:#e08a1e}.tone-hard{color:#dc2626}.tone-info{color:#94a3b8}.tone-fun{color:#e0409b}
 .pv-warn{font-size:.72rem;color:var(--warn);margin:.75rem 0 0}
+.seo-tool{margin-top:1rem;padding:.85rem;background:#fff;border:1px solid #d9e3f7;border-radius:12px;box-shadow:0 4px 14px rgba(15,23,42,.05)}
+.seo-tool-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem}
+.seo-tool-head h4{margin:0;color:var(--ink);font-size:.72rem}
+.seo-tool-head strong{color:var(--blue);font-size:.78rem}
+.seo-summary{margin:.35rem 0 .55rem;color:var(--muted);font-size:.72rem;line-height:1.4}
+.seo-checks{display:grid;gap:.3rem;margin:0;padding:0;list-style:none}
+.seo-checks li{font-size:.7rem;line-height:1.35;color:var(--muted)}
+.seo-checks li::before{display:inline-block;width:1.1rem;font-weight:800}
+.seo-checks li.is-good{color:#15803d}.seo-checks li.is-good::before{content:'✓';color:#16a34a}
+.seo-checks li.is-next::before{content:'→';color:var(--blue)}
 
 /* Ad editor side panel */
 .ad-dlg-cols{grid-template-columns:minmax(0,1fr) 340px}
@@ -1993,13 +2009,17 @@ body.settings-compact th,body.settings-compact td{padding-top:.58rem;padding-bot
     <div class="dlg-cols">
     <div class="dlg-body">
       <div class="field">
-        <label for="f-title">Title *</label>
-        <input id="f-title" required maxlength="120" />
-        <span class="hint">Type a descriptive title and the form will suggest the type, stage, subject, year, difficulty and thumbnail.</span>
+        <div class="field-label-row">
+          <label for="f-title" title="Use the phrase a student or parent would search for. Include the topic, resource type and year or stage when useful.">Title *</label>
+          <button type="button" class="auto-title-btn" id="btn-auto-title" title="Build the title and detail line from the selected fields">Auto</button>
+        </div>
+        <input id="f-title" required maxlength="120" placeholder="Year 8 Linear Equations Practice Questions" />
+        <span class="hint">Type or edit the title freely. Use <b>Auto</b> to generate a title from the selected fields.</span>
+        <span class="hint title-convention" id="f-title-convention">Naming convention: [year] + [topic] + [resource type] + [purpose]. Example: Year 8 Linear Equations Practice Questions.</span>
       </div>
 
       <div class="field">
-        <label for="f-url">Link *</label>
+        <label for="f-url" title="Use the direct, publicly accessible URL for the PDF, video or activity.">Link *</label>
         <input id="f-url" type="url" required placeholder="https://drive.google.com/… or https://youtu.be/…" />
         <span class="hint">Where the card sends people. Paste your Google Drive or YouTube share link.</span>
       </div>
@@ -2019,11 +2039,11 @@ body.settings-compact th,body.settings-compact td{padding-top:.58rem;padding-bot
 
       <div class="two">
         <div class="field">
-          <label for="f-type">Type *</label>
+          <label for="f-type" title="Choose the resource format. This appears in the resource badge and structured data.">Type *</label>
           <select id="f-type"></select>
         </div>
         <div class="field">
-          <label for="f-art">Thumbnail style</label>
+          <label for="f-art" title="Choose the visual style that best matches the subject or resource type.">Thumbnail style</label>
           <select id="f-art"></select>
         </div>
       </div>
@@ -2056,14 +2076,14 @@ body.settings-compact th,body.settings-compact td{padding-top:.58rem;padding-bot
       </div>
 
       <div class="field">
-        <label for="f-image">Custom thumbnail image</label>
+        <label for="f-image" title="Optional image path. A relevant image improves visual sharing and the resource card.">Custom thumbnail image</label>
         <input id="f-image" placeholder="assets/thumbs/trigonometry.jpg" />
         <span class="hint">Optional. Put the picture in <b>assets\thumbs</b> and type its path here. Leave blank to use the style above. Best at 600 × 360px.</span>
       </div>
 
       <div class="two">
         <div class="field">
-          <label for="f-stage">Education stage *</label>
+          <label for="f-stage" title="Choose the audience: Primary, Secondary or VCE. This is used on the page and in SEO structured data.">Education stage *</label>
           <select id="f-stage"></select>
         </div>
         <div class="field" id="f-unit-field" hidden>
@@ -2073,33 +2093,54 @@ body.settings-compact th,body.settings-compact td{padding-top:.58rem;padding-bot
       </div>
       <div class="two">
         <div class="field">
-          <label for="f-subject">Subject</label>
+          <label for="f-subject" title="Select the subject students are likely to search for.">Subject</label>
           <select id="f-subject"></select>
+        </div>
+        <div class="field">
+          <label for="f-topic" title="Enter the specific concept or phrase people are likely to search for. This is used by Auto title and SEO keywords.">Main topic / search phrase</label>
+          <input id="f-topic" placeholder="Linear equations" />
+          <span class="hint">Use the exact topic students, parents or teachers might search for.</span>
         </div>
       </div>
       <div class="two">
-        <div class="field">
-          <label for="f-year">Year level</label>
+        <div class="field" id="f-year-field">
+          <label for="f-year" title="Use the curriculum year level for Secondary and VCE resources. Primary resources do not need a year level.">Year level</label>
           <select id="f-year"></select>
         </div>
         <div class="field">
-          <label for="f-level">Difficulty</label>
+          <label for="f-level" title="For Primary, use 1-10 to indicate difficulty. For Secondary and VCE, use the descriptive difficulty options.">Difficulty</label>
           <select id="f-level"></select>
         </div>
       </div>
 
-      <div class="field">
-        <label for="f-details">Detail line</label>
-        <input id="f-details" placeholder="20 questions / 8 min / 2 pages" />
+      <div class="three">
+        <div class="field">
+          <label for="f-question-count" title="Enter the number of questions in the resource.">Number of questions</label>
+          <input id="f-question-count" type="number" min="1" step="1" inputmode="numeric" placeholder="20" />
+        </div>
+        <div class="field">
+          <label for="f-estimated-minutes" title="The approximate time a student needs to complete or meaningfully use this resource. The Study Session Creator uses this value to build sessions.">Estimated study time</label>
+          <select id="f-estimated-minutes"></select>
+          <span class="hint">Used for study-session planning.</span>
+        </div>
+        <div class="field">
+          <label for="f-page-count" title="Enter the number of pages in the resource.">Number of pages</label>
+          <input id="f-page-count" type="number" min="1" step="1" inputmode="numeric" placeholder="2" />
+        </div>
       </div>
 
       <div class="field">
-        <label for="f-desc">Description</label>
+        <label for="f-details" title="Automatically generated from the question count, estimated study time and page count.">Detail line</label>
+        <input id="f-details" readonly placeholder="20 Questions / 30 mins / 2 pages" />
+      </div>
+
+      <div class="field">
+        <label for="f-desc" title="Write one natural sentence describing what the resource helps students do. This becomes the SEO description.">Description</label>
         <textarea id="f-desc" maxlength="220" placeholder="One sentence describing the resource."></textarea>
       </div>
 
       <div class="field">
-        <label for="f-tags">Search tags</label>
+        <label for="f-tags" title="Add related search phrases separated by commas, such as algebra, equations, revision.">Search tags</label>
         <input id="f-tags" placeholder="algebra, equations, revision" />
         <span class="hint">Comma separated. Extra words people might search for.</span>
       </div>
@@ -2134,6 +2175,11 @@ body.settings-compact th,body.settings-compact td{padding-top:.58rem;padding-bot
       <p class="hint">Exactly how the card will look.</p>
       <div id="preview"></div>
       <p class="pv-warn" id="pv-warn" hidden></p>
+      <section class="seo-tool" aria-live="polite">
+        <div class="seo-tool-head"><h4>SEO helper</h4><strong id="seo-score">0/100</strong></div>
+        <p id="seo-summary" class="seo-summary">Complete the title and description to start.</p>
+        <ul id="seo-checks" class="seo-checks"></ul>
+      </section>
     </aside>
     </div>
     <div class="dlg-foot">

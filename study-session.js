@@ -1,8 +1,10 @@
 const SS_CONFIG = window.EDG_CONFIG;
 const SS_ALL = (window.EDG_RESOURCES || []).filter((r) => r.status !== 'draft');
 const SS_LOADING_MS = 2600;
+const SS_HISTORY_KEY = 'edgeducate-study-session-history-v1';
 const ss = (id) => document.getElementById(id);
 const ssEsc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const resourceStage = (resource) => resource.stage || (String(resource.year || '').startsWith('VCE') ? 'vce' : 'secondary');
 const EDG_TIMEZONE = 'Australia/Melbourne';
 const edgTimezoneFormatter = new Intl.DateTimeFormat('en-AU', {
   timeZone: EDG_TIMEZONE,
@@ -73,6 +75,65 @@ function formatMinutes(mins) {
   if (mins < 60) return `${mins} min`;
   if (mins % 60) return `${Math.floor(mins / 60)} hr ${mins % 60} min`;
   return `${mins / 60} hr`;
+}
+
+function planResources(candidates, availableMinutes) {
+  if (!availableMinutes) return candidates;
+  const best = Array.from({ length: availableMinutes + 1 }, () => null);
+  best[0] = [];
+  candidates.forEach((resource) => {
+    const duration = Number(resource.estimatedMinutes) || 30;
+    for (let total = availableMinutes; total >= duration; total -= 1) {
+      if (!best[total - duration]) continue;
+      const option = [...best[total - duration], resource];
+      if (!best[total] || option.length < best[total].length) best[total] = option;
+    }
+  });
+  for (let total = availableMinutes; total >= 0; total -= 1) {
+    if (best[total]) return best[total];
+  }
+  return [];
+}
+
+function shuffledResources(resources) {
+  const result = resources.slice();
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [result[index], result[swapIndex]] = [result[swapIndex], result[index]];
+  }
+  return result;
+}
+
+function recentSessionResourceIds() {
+  try {
+    const history = JSON.parse(localStorage.getItem(SS_HISTORY_KEY) || '[]');
+    return new Set(Array.isArray(history) ? history.flat().filter(Boolean) : []);
+  } catch (error) {
+    return new Set();
+  }
+}
+
+function rememberSessionResources(resources) {
+  try {
+    const history = JSON.parse(localStorage.getItem(SS_HISTORY_KEY) || '[]');
+    const sessions = Array.isArray(history) ? history.filter(Array.isArray) : [];
+    sessions.push(resources.map((resource) => resource.id));
+    localStorage.setItem(SS_HISTORY_KEY, JSON.stringify(sessions.slice(-5)));
+  } catch (error) {
+    // Storage may be unavailable in private browsing; random selection still works.
+  }
+}
+
+function sessionBreakdown(resources) {
+  const counts = new Map();
+  resources.forEach((resource) => {
+    const minutes = Number(resource.estimatedMinutes) || 30;
+    counts.set(minutes, (counts.get(minutes) || 0) + 1);
+  });
+  return [...counts.entries()]
+    .sort((left, right) => right[0] - left[0])
+    .map(([minutes, count]) => `${count} x ${formatMinutes(minutes)}`)
+    .join(' + ');
 }
 
 function setupStudyTimer(minutes) {
@@ -219,7 +280,7 @@ function renderStudySession() {
   const byType = SS_ALL;
   const bySubject = subject ? byType.filter((r) => r.subject === subject) : byType;
   const subjectPool = subject ? bySubject : byType;
-  const byStage = stage === 'vce' ? subjectPool.filter((r) => String(r.year).startsWith('VCE')) : subjectPool;
+  const byStage = stage ? subjectPool.filter((r) => resourceStage(r) === stage) : subjectPool;
   const byUnit = unit ? byStage.filter((r) => (r.unit || r.year) === unit) : byStage;
   const practiceCandidates = byUnit.filter((r) => r.type === 'video' || r.type === 'practice-questions');
   const hasPracticeLinks = practiceCandidates.some((resource) =>
@@ -246,8 +307,19 @@ function renderStudySession() {
     : type === 'practice-questions'
       ? byUnit.filter((r) => r.type === 'practice-questions')
       : goalPool;
-  const list = (level ? (goalPool.length ? goalPool : fallbackPool).filter((r) => r.level === level) : (goalPool.length ? goalPool : fallbackPool))
-    .sort((a, b) => new Date(b.added) - new Date(a.added));
+  const candidates = shuffledResources(level ? (goalPool.length ? goalPool : fallbackPool).filter((r) => r.level === level) : (goalPool.length ? goalPool : fallbackPool));
+  const recentIds = recentSessionResourceIds();
+  const freshCandidates = candidates.filter((resource) => !recentIds.has(resource.id));
+  const recentCandidates = candidates.filter((resource) => recentIds.has(resource.id));
+  let list = planResources(freshCandidates, minutes);
+  if (list.reduce((total, resource) => total + (Number(resource.estimatedMinutes) || 30), 0) < minutes) {
+    list = planResources([...freshCandidates, ...recentCandidates], minutes);
+  }
+  const plannedMinutes = list.reduce((total, resource) => total + (Number(resource.estimatedMinutes) || 30), 0);
+  const breakdown = sessionBreakdown(list);
+  const summary = summaryParts.length ? `Your session: ${summaryParts.join(' ')}${minutes ? ` (${formatMinutes(plannedMinutes)} planned${breakdown ? `: ${breakdown}` : ''})` : ''}` : 'Your study session';
+  ss('session-summary').textContent = summary;
+  if (list.length) rememberSessionResources(list);
 
   // Reveal the matched content only once the mandatory loading screen has finished.
   const reveal = () => {
@@ -275,7 +347,7 @@ function renderStudySession() {
       return `<button type="button" class="session-tile${i === 0 ? ' is-on' : ''}" data-id="${ssEsc(r.id)}">
         <span class="badge badge-${t.colour}">${ssEsc(t.label)}</span>
         <strong>${ssEsc(r.title)}</strong>
-        <span class="session-tile-meta">${[r.subject, r.year].filter(Boolean).map(ssEsc).join(' · ')}</span>
+        <span class="session-tile-meta">${[r.subject, r.year, formatMinutes(Number(r.estimatedMinutes) || 30)].filter(Boolean).map(ssEsc).join(' · ')}</span>
       </button>`;
     })
     .join('');

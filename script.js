@@ -63,6 +63,11 @@ function driveId(url) {
 const isPdf = (url) => /\.pdf(\?|#|$)/i.test(String(url));
 const solutionVideoUrls = (resource) => (Array.isArray(resource.solutionsVideos) ? resource.solutionsVideos : [resource.solutionsVideo])
   .map((url) => String(url || '').trim()).filter(Boolean);
+const formatEstimatedMinutes = (value) => {
+  const minutes = Number(value) || 30;
+  if (minutes < 60) return `${minutes} min`;
+  return minutes % 60 ? `${Math.floor(minutes / 60)} hr ${minutes % 60} min` : `${minutes / 60} hr`;
+};
 
 /* ---------- cards ---------- */
 function buildCard(r) {
@@ -87,7 +92,7 @@ function buildCard(r) {
     </a>
     <a class="card-link" href="${detailUrl}">
       <span class="card-title-row"><h3>${esc(r.title)}</h3>${availability}</span>
-      <p class="meta">${[r.year, r.details].filter(Boolean).map(esc).join(' &nbsp;•&nbsp; ')}</p>
+      <p class="meta">${[r.year, `${formatEstimatedMinutes(r.estimatedMinutes)} study`, r.details].filter(Boolean).map(esc).join(' &nbsp;•&nbsp; ')}</p>
     </a>
     <p class="foot">
       <span class="level ${tone}">${esc(r.level || '')}</span>
@@ -145,6 +150,7 @@ function openDetail(r) {
   const rows = [
     ['Subject', r.subject],
     ['Year level', r.year],
+    ['Estimated time', `${formatEstimatedMinutes(r.estimatedMinutes)} study`],
     ['Difficulty', r.level],
     ['Details', r.details],
     ['Added', r.added]
@@ -709,7 +715,7 @@ function matches(r) {
   if (state.video && !solutionVideoUrls(r).length) return false;
   if (!state.q) return true;
   const type = CONFIG.types[r.type];
-  const haystack = [r.title, r.desc, r.subject, r.year, r.level, r.details, type && type.label, (r.tags || []).join(' ')]
+  const haystack = [r.title, r.desc, r.subject, r.topic, r.year, r.level, r.details, type && type.label, (r.tags || []).join(' ')]
     .join(' ')
     .toLowerCase();
   return state.q.toLowerCase().split(/\s+/).filter(Boolean).every((w) => haystack.includes(w));
