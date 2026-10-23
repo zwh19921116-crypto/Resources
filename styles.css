@@ -135,6 +135,7 @@ button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
   background:#fff;border-color:var(--line);color:var(--ink);
   border-radius:999px;padding:.6rem 1.3rem;font-size:.87rem;
 }
+.section-head .btn-outline,.latest-head .btn-outline{color:var(--blue)}
 .btn-outline:hover{border-color:#a5c0ff;color:var(--blue)}
 .btn .ico{width:16px;height:16px}
 
