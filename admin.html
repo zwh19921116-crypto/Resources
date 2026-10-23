@@ -2392,7 +2392,7 @@ body.settings-compact th,body.settings-compact td{padding-top:.58rem;padding-bot
   }
 
   const cacheBust = `?v=${Date.now()}`;
-  for (const src of ['data/config.js', `data/resources.js${cacheBust}`, `data/ads.js${cacheBust}`, `data/club-deals.js${cacheBust}`, `data/packages.js${cacheBust}`, 'art.js?v=20260914', `admin.js${cacheBust}`]) {
+  for (const src of ['data/config.js', `data/resources.js${cacheBust}`, `data/ads.js${cacheBust}`, `data/club-deals.js${cacheBust}`, `data/packages.js${cacheBust}`, 'art.js?v=20261024tiles', `admin.js${cacheBust}`]) {
     await new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = src;
