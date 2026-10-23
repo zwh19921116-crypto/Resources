@@ -91,11 +91,11 @@ function buildCard(r) {
       ${type.action === 'embed' ? '<span class="play-overlay"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg></span>' : ''}
     </a>
     <a class="card-link" href="${detailUrl}">
-      <span class="card-title-row"><h3>${esc(r.title)}</h3>${availability}</span>
+      <span class="card-title-row"><h3>${esc(r.title)}</h3></span>
       <p class="meta">${[r.year, `${formatEstimatedMinutes(r.estimatedMinutes)} study`, r.details].filter(Boolean).map(esc).join(' &nbsp;•&nbsp; ')}</p>
     </a>
     <p class="foot">
-      <span class="level ${tone}">${esc(r.level || '')}</span>
+      ${availability || `<span class="level ${tone}">${esc(r.level || '')}</span>`}
       <span class="card-actions">
         <button class="card-info" type="button" aria-label="Preview and details for ${esc(r.title)}">Info</button>
       </span>

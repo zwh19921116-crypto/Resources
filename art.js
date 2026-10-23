@@ -71,8 +71,8 @@ window.EDG_ART = {
     <g stroke="#ff7676" stroke-width="4" stroke-linecap="round"><path d="M26 53h18M35 44v18M252 104h18M261 95v18"/></g>`,
 
   maths: `
-    <rect width="300" height="180" fill="#eef0fb"/>
-    <g stroke="#c3cbe8" stroke-width="1.4" fill="none" opacity=".85">
+    <rect width="300" height="180" fill="#f8c1b1"/>
+    <g stroke="#e48f7c" stroke-width="1.4" fill="none" opacity=".85">
       <path d="M22 46h34M39 29v34"/>
       <path d="M96 40l26 26M122 40l-26 26"/>
       <path d="M168 36c14 0 14 30 28 30"/>
@@ -83,7 +83,7 @@ window.EDG_ART = {
       <path d="M256 96v36M248 132h30"/>
       <path d="M40 150h70M150 150h40M214 150h52"/>
     </g>
-    <g fill="#aeb9de" opacity=".9">
+    <g fill="#d87866" opacity=".9">
       <circle cx="170" cy="78" r="3"/><circle cx="92" cy="152" r="3"/><circle cx="274" cy="64" r="3"/>
     </g>`,
 
