@@ -8041,10 +8041,10 @@ function openForm(index) {
   $('f-title').value = r.title || '';
   $('f-url').value = r.url || '';
   $('f-solutions').value = r.solutions || '';
-  const existingVideos = Array.isArray(r.solutionsVideos) ? r.solutionsVideos : (r.solutionsVideo ? [r.solutionsVideo] : []);
-  renderSolutionVideoLinks(existingVideos, Array.isArray(r.solutionsVideoTitles) ? r.solutionsVideoTitles : []);
   $('f-solutions-enabled').checked = Boolean(r.solutions);
   $('f-solutions-video-enabled').checked = Boolean((Array.isArray(r.solutionsVideos) ? r.solutionsVideos : [r.solutionsVideo]).filter(Boolean).length);
+  const existingVideos = Array.isArray(r.solutionsVideos) ? r.solutionsVideos : (r.solutionsVideo ? [r.solutionsVideo] : []);
+  renderSolutionVideoLinks(existingVideos, Array.isArray(r.solutionsVideoTitles) ? r.solutionsVideoTitles : []);
   syncSolutionFields();
   relatedResourceId = r.id || '__new__';
   relatedSelection = new Set(Array.isArray(r.relatedIds) ? r.relatedIds : []);
