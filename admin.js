@@ -5627,7 +5627,7 @@ document.addEventListener('input', (event) => {
 
 /* ---------- table ---------- */
 function slugify(text) {
-  return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+  return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 100);
 }
 
 function titleCaseWords(text) {
@@ -5899,17 +5899,42 @@ $('f-related-search').addEventListener('input', () => {
 function renderTable() {
   keepDraft();
   const q = $('search').value.trim().toLowerCase();
+  const filters = {
+    stage: $('filter-stage').value,
+    subject: $('filter-subject').value,
+    type: $('filter-type').value,
+    level: $('filter-level').value,
+    status: $('filter-status').value
+  };
+  const stageLabel = (stage) => CONFIG.educationStages?.[stage]?.label || stage;
+  const optionValues = (selector, values, allLabel) => {
+    const current = selector.value;
+    selector.innerHTML = `<option value="">${allLabel}</option>${values.map(([value, label]) => `<option value="${escapeAttr(value)}">${escapeHtml(label)}</option>`).join('')}`;
+    selector.value = values.some(([value]) => value === current) ? current : '';
+  };
+  const uniqueValues = (values) => [...new Set(values.filter(Boolean).map(String))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  optionValues($('filter-stage'), uniqueValues(items.map((item) => stageFor(item))).map((value) => [value, stageLabel(value)]), 'All stages');
+  optionValues($('filter-subject'), uniqueValues(items.map((item) => item.subject)).map((value) => [value, value]), 'All subjects');
+  optionValues($('filter-type'), uniqueValues(items.map((item) => item.type)).map((value) => [value, CONFIG.types[value]?.label || value]), 'All types');
+  optionValues($('filter-level'), uniqueValues(items.map((item) => item.level)).map((value) => [value, formatDifficulty(value)]), 'All difficulty levels');
   const wrap = $('table-wrap');
   const visible = items
     .map((item, index) => ({ item, index }))
-    .filter(({ item }) => !q || `${item.title} ${item.subject} ${item.year} ${(item.tags || []).join(' ')}`.toLowerCase().includes(q));
+    .filter(({ item }) => {
+      const searchable = `${item.title} ${item.subject} ${item.year} ${item.type} ${stageLabel(stageFor(item))} ${item.level} ${(item.tags || []).join(' ')}`.toLowerCase();
+      return (!q || searchable.includes(q))
+        && (!filters.stage || stageFor(item) === filters.stage)
+        && (!filters.subject || item.subject === filters.subject)
+        && (!filters.type || item.type === filters.type)
+        && (!filters.level || String(item.level || '') === filters.level)
+        && (!filters.status || (item.status || 'published') === filters.status);
+    });
 
   const resourceIds = new Set(items.map((item) => item.id));
   selectedResourceIds.forEach((id) => {
     if (!resourceIds.has(id)) selectedResourceIds.delete(id);
   });
 
-  $('count').textContent = `${items.length} resource${items.length === 1 ? '' : 's'}`;
   updateResourceSelectionUi(visible.map(({ item }) => item.id));
   renderDashboard();
 
@@ -7824,6 +7849,7 @@ function buildDescriptionFromFields() {
 }
 
 function autoTitleFromFields() {
+  if (editingIndex < 0 && $('f-url').value.trim()) applyInferredResourceMetadata();
   $('f-title').value = titleCaseWords(buildTitleFromFields());
   $('f-id').value = slugify($('f-title').value);
   updateDetailsFromFields();
@@ -8134,11 +8160,27 @@ $('f-tags').addEventListener('input', () => { resourceAutoFields.add('tags'); })
 $('btn-add').addEventListener('click', () => openForm(-1));
 $('btn-cancel').addEventListener('click', () => dlg.close());
 $('search').addEventListener('input', renderTable);
+['filter-stage', 'filter-subject', 'filter-type', 'filter-level', 'filter-status'].forEach((id) => $(id).addEventListener('change', renderTable));
+
 $('btn-select-visible').addEventListener('click', () => {
-  const query = $('search').value.trim().toLowerCase();
-  const visibleIds = items
-    .filter((item) => !query || `${item.title} ${item.subject} ${item.topic || ''} ${item.year} ${(item.tags || []).join(' ')}`.toLowerCase().includes(query))
-    .map((item) => item.id);
+ const query = $('search').value.trim().toLowerCase();
+ const filters = {
+   stage: $('filter-stage').value,
+   subject: $('filter-subject').value,
+   type: $('filter-type').value,
+   level: $('filter-level').value,
+   status: $('filter-status').value
+ };
+ const stageLabel = (stage) => CONFIG.educationStages?.[stage]?.label || stage;
+ const visibleIds = items.filter((item) => {
+   const searchable = `${item.title} ${item.subject} ${item.year} ${item.type} ${stageLabel(stageFor(item))} ${item.level} ${(item.tags || []).join(' ')}`.toLowerCase();
+   return (!query || searchable.includes(query))
+     && (!filters.stage || stageFor(item) === filters.stage)
+     && (!filters.subject || item.subject === filters.subject)
+     && (!filters.type || item.type === filters.type)
+     && (!filters.level || String(item.level || '') === filters.level)
+     && (!filters.status || (item.status || 'published') === filters.status);
+ }).map((item) => item.id);
   const shouldSelect = !visibleIds.length || !visibleIds.every((id) => selectedResourceIds.has(id));
   visibleIds.forEach((id) => {
     if (shouldSelect) selectedResourceIds.add(id);
