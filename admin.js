@@ -5862,7 +5862,7 @@ function solutionPageMarkup(resource) {
   ] }).replace(/</g, '\\u003c');
   const solutionSchema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'LearningResource', name: `Solutions for ${resource.title}`, description: `Worked solutions for ${resource.title}.`, educationalLevel: [stageLabel, resource.year].filter(Boolean), learningResourceType: 'Solutions', url: `${parentUrl}solutions/`, isPartOf: { '@type': 'LearningResource', name: resource.title, url: parentUrl }, additionalProperty: [{ '@type': 'PropertyValue', name: 'Education stage', value: stageLabel }, { '@type': 'PropertyValue', name: 'Difficulty', value: resource.level || undefined }, { '@type': 'PropertyValue', name: 'Estimated study time', value: `${formatEstimatedMinutes(resource.estimatedMinutes)} study` }] });
   const solutionCanonical = `${parentUrl}solutions/`;
-  const solutionDescription = `Worked solutions for ${resource.title}.`;
+  const solutionDescription = `Step-by-step worked solutions for ${resource.title}, with answers and explanation support to help students check their work and strengthen understanding.`;
   const solutionSocialImage = /^https?:\/\//i.test(String(resource.image || '')) ? resource.image : `${SITE_URL}/assets/logo/logo.png`;
   const solutionWebPageSchema = JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebPage', name: `Solutions for ${resource.title}`, description: solutionDescription, url: solutionCanonical, inLanguage: 'en-AU', isPartOf: { '@type': 'WebPage', name: resource.title, url: parentUrl }, about: { '@type': 'LearningResource', name: `Solutions for ${resource.title}`, url: solutionCanonical }, publisher: { '@type': 'Organization', name: 'Edgeducate', url: 'https://edgeducate.com.au/' } });
   const parentLinkTags = `<link rel="up" href="../"><script type="application/ld+json">${solutionsBreadcrumb}</script><script type="application/ld+json">${solutionSchema}</script><script type="application/ld+json">${solutionWebPageSchema}</script>`;
@@ -8438,8 +8438,19 @@ function resourceHubMarkup() {
     }).join('');
   const total = published.length;
   const canonical = `${SITE_URL}/resource-pages/`;
+  const hubSchema = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    '@id': `${canonical}#webpage`,
+    url: canonical,
+    name: 'All resources | Edgeducate Resources',
+    description: RESOURCE_HUB_DESCRIPTION,
+    isPartOf: { '@type': 'WebSite', url: `${SITE_URL}/`, name: 'Edgeducate Resources' },
+    publisher: { '@type': 'Organization', name: 'Edgeducate', url: 'https://edgeducate.com.au/' },
+    inLanguage: 'en-AU'
+  });
   return `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>All resources | Edgeducate Resources</title><meta name="description" content="${RESOURCE_HUB_DESCRIPTION}"><link rel="canonical" href="${canonical}"><meta property="og:title" content="All resources | Edgeducate Resources"><meta property="og:description" content="${RESOURCE_HUB_DESCRIPTION}"><meta property="og:type" content="website"><meta property="og:url" content="${canonical}"><link rel="stylesheet" href="${rootPrefix}styles.css?v=20261024brand"></head>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>All resources | Edgeducate Resources</title><meta name="description" content="${RESOURCE_HUB_DESCRIPTION}"><meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"><link rel="canonical" href="${canonical}"><meta property="og:site_name" content="Edgeducate Resources"><meta property="og:title" content="All resources | Edgeducate Resources"><meta property="og:description" content="${RESOURCE_HUB_DESCRIPTION}"><meta property="og:type" content="website"><meta property="og:url" content="${canonical}"><meta property="og:image" content="${SITE_URL}/assets/logo/logo.png"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="All resources | Edgeducate Resources"><meta name="twitter:description" content="${RESOURCE_HUB_DESCRIPTION}"><meta name="twitter:image" content="${SITE_URL}/assets/logo/logo.png"><script type="application/ld+json">${hubSchema}</script><link rel="stylesheet" href="${rootPrefix}styles.css?v=20261024brand"><link rel="icon" href="${SITE_URL}/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="${SITE_URL}/favicon.png" sizes="256x256"><link rel="apple-touch-icon" href="${SITE_URL}/favicon.png"><meta name="theme-color" content="#071d46"></head>
 <body class="resource-detail-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories">Categories</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header>
 <main><article class="resource-index"><div class="container"><nav class="crumbs"><a href="https://edgeducate.com.au/">Edgeducate</a><span>/</span><a href="${rootPrefix}resources.html">Resources</a><span>/</span><span>All resources</span></nav><h1>All resources</h1><p class="resource-index-intro">Browse all ${total} resource${total === 1 ? '' : 's'} in the Edgeducate library.</p>${groups}</div></article></main>
 <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}site-menu.js"></script></body></html>`;
