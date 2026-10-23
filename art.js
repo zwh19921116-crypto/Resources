@@ -75,11 +75,9 @@ window.EDG_ART = {
     <circle cx="30" cy="28" r="26" fill="#f3aa99"/>
     <circle cx="270" cy="151" r="38" fill="#f3aa99"/>
     <rect x="35" y="22" width="230" height="138" rx="14" fill="#fffaf8" stroke="#d87866" stroke-width="3"/>
-    <path d="M54 48h192M54 91h192M54 134h192" stroke="#f0c7bd" stroke-width="2"/>
-    <g fill="#9f4337" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-style="italic" font-weight="700" text-anchor="middle">
-      <text x="150" y="43">x² + y² = z²</text>
-      <text x="150" y="86">f(x) = x²</text>
-      <text x="150" y="129">a² + b² = c²</text>
+    <path d="M54 61h192M54 119h192" stroke="#f0c7bd" stroke-width="2"/>
+    <g fill="#9f4337" font-family="Arial, sans-serif" font-size="39" font-weight="800" text-anchor="middle" letter-spacing="2">
+      <text x="150" y="105">MATH</text>
     </g>
     <circle cx="23" cy="112" r="4" fill="#c85f4d"/>
     <circle cx="278" cy="47" r="4" fill="#c85f4d"/>`,
