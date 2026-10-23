@@ -71,21 +71,18 @@ window.EDG_ART = {
     <g stroke="#ff7676" stroke-width="4" stroke-linecap="round"><path d="M26 53h18M35 44v18M252 104h18M261 95v18"/></g>`,
 
   maths: `
-    <rect width="300" height="180" fill="#eaf0ff"/>
-    <circle cx="30" cy="28" r="26" fill="#d8e2ff"/>
-    <circle cx="270" cy="151" r="38" fill="#d8e2ff"/>
-    <rect x="42" y="20" width="216" height="140" rx="14" fill="#fff" stroke="#b8caf5" stroke-width="3"/>
-    <rect x="62" y="38" width="176" height="30" rx="8" fill="#edf3ff"/>
-    <g fill="#1d4ed8" font-family="Arial, sans-serif" font-size="22" font-weight="700" text-anchor="middle">
-      <text x="88" y="60">2</text><text x="126" y="60">+</text><text x="164" y="60">3</text><text x="202" y="60">=</text>
+    <rect width="300" height="180" fill="#f8c1b1"/>
+    <circle cx="30" cy="28" r="26" fill="#f3aa99"/>
+    <circle cx="270" cy="151" r="38" fill="#f3aa99"/>
+    <rect x="35" y="22" width="230" height="138" rx="14" fill="#fffaf8" stroke="#d87866" stroke-width="3"/>
+    <path d="M54 48h192M54 91h192M54 134h192" stroke="#f0c7bd" stroke-width="2"/>
+    <g fill="#9f4337" font-family="Georgia, 'Times New Roman', serif" font-size="22" font-style="italic" font-weight="700" text-anchor="middle">
+      <text x="150" y="43">x² + y² = z²</text>
+      <text x="150" y="86">f(x) = x²</text>
+      <text x="150" y="129">a² + b² = c²</text>
     </g>
-    <rect x="62" y="82" width="48" height="48" rx="9" fill="#2563eb"/>
-    <rect x="126" y="82" width="48" height="48" rx="9" fill="#60a5fa"/>
-    <rect x="190" y="82" width="48" height="48" rx="9" fill="#f5b820"/>
-    <g fill="#fff" font-family="Arial, sans-serif" font-size="27" font-weight="800" text-anchor="middle">
-      <text x="86" y="116">+</text><text x="150" y="116">−</text><text x="214" y="116">×</text>
-    </g>
-    <path d="M79 143h142" stroke="#c8d5f2" stroke-width="4" stroke-linecap="round"/>`,
+    <circle cx="23" cy="112" r="4" fill="#c85f4d"/>
+    <circle cx="278" cy="47" r="4" fill="#c85f4d"/>`,
 
   physics: `
     <rect width="300" height="180" fill="#eaf4ff"/>
