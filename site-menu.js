@@ -123,8 +123,7 @@
     const article = document.querySelector('.resource-detail[data-resource-title], .solutions-detail');
     if (!article || !location.pathname.includes('/resource-pages/')) return;
     const contentContainer = article.querySelector('.container');
-    const recommendationsTarget = article.querySelector('.solution-video-panel')
-      || article.querySelector('.solution-stage, .resource-detail-layout')
+    const recommendationsTarget = article.querySelector('.solution-stage, .resource-detail-layout')
       || contentContainer;
     if (!contentContainer
       || !recommendationsTarget

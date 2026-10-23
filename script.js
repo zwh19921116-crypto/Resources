@@ -73,6 +73,11 @@ const formatEstimatedMinutes = (value) => {
   if (minutes < 60) return `${minutes} min`;
   return minutes % 60 ? `${Math.floor(minutes / 60)} hr ${minutes % 60} min` : `${minutes / 60} hr`;
 };
+const resourceSummary = (resource) => [
+  Number(resource.questionCount) > 0 ? `${Number(resource.questionCount)} question${Number(resource.questionCount) === 1 ? '' : 's'}` : '',
+  formatEstimatedMinutes(resource.estimatedMinutes),
+  Number(resource.pageCount) > 0 ? `${Number(resource.pageCount)} page${Number(resource.pageCount) === 1 ? '' : 's'}` : ''
+].filter(Boolean);
 
 /* ---------- cards ---------- */
 function buildCard(r) {
@@ -97,7 +102,7 @@ function buildCard(r) {
     </a>
     <a class="card-link" href="${detailUrl}">
       <span class="card-title-row"><h3>${esc(r.title)}</h3></span>
-      <p class="meta">${[r.year, `${formatEstimatedMinutes(r.estimatedMinutes)} study`, r.details].filter(Boolean).map(esc).join(' &nbsp;•&nbsp; ')}</p>
+      <p class="meta">${[r.year, ...resourceSummary(r)].filter(Boolean).map(esc).join(' &nbsp;•&nbsp; ')}</p>
     </a>
     <p class="foot">
       ${availability || `<span class="level ${tone}">${esc(displayLevel(r.level || ''))}</span>`}
@@ -155,7 +160,7 @@ function openDetail(r) {
   const rows = [
     ['Subject', r.subject],
     ['Year level', r.year],
-    ['Estimated time', `${formatEstimatedMinutes(r.estimatedMinutes)} study`],
+    ['Details', resourceSummary(r).join(' / ')],
     ['Difficulty', displayLevel(r.level)],
     ['Details', r.details],
     ['Added', r.added]
