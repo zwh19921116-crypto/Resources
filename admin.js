@@ -8416,6 +8416,8 @@ function buildInternalLinkPlan() {
 }
 
 // Static hub that links to every published resource once — the even baseline that removes orphans.
+const RESOURCE_HUB_DESCRIPTION = 'Explore free primary, secondary and VCE practice questions, worksheets and study resources from Edgeducate, organised by subject and education stage.';
+
 function resourceHubMarkup() {
   const rootPrefix = '../';
   const published = items.filter((item) => item.status !== 'draft');
@@ -8437,7 +8439,7 @@ function resourceHubMarkup() {
   const total = published.length;
   const canonical = `${SITE_URL}/resource-pages/`;
   return `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>All resources | Edgeducate Resources</title><meta name="description" content="Browse every resource in the Edgeducate library."><link rel="canonical" href="${canonical}"><meta property="og:title" content="All resources | Edgeducate Resources"><meta property="og:description" content="Browse every resource in the Edgeducate library."><meta property="og:type" content="website"><meta property="og:url" content="${canonical}"><link rel="stylesheet" href="${rootPrefix}styles.css?v=20261024brand"></head>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>All resources | Edgeducate Resources</title><meta name="description" content="${RESOURCE_HUB_DESCRIPTION}"><link rel="canonical" href="${canonical}"><meta property="og:title" content="All resources | Edgeducate Resources"><meta property="og:description" content="${RESOURCE_HUB_DESCRIPTION}"><meta property="og:type" content="website"><meta property="og:url" content="${canonical}"><link rel="stylesheet" href="${rootPrefix}styles.css?v=20261024brand"></head>
 <body class="resource-detail-page"><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html">Home</a><a href="${rootPrefix}index.html#categories">Categories</a><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header>
 <main><article class="resource-index"><div class="container"><nav class="crumbs"><a href="https://edgeducate.com.au/">Edgeducate</a><span>/</span><a href="${rootPrefix}resources.html">Resources</a><span>/</span><span>All resources</span></nav><h1>All resources</h1><p class="resource-index-intro">Browse all ${total} resource${total === 1 ? '' : 's'} in the Edgeducate library.</p>${groups}</div></article></main>
 <footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer><script src="${rootPrefix}site-menu.js"></script></body></html>`;
