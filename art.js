@@ -119,9 +119,16 @@ window.EDG_ART = {
     <circle cx="278" cy="47" r="4" fill="#8cae52"/>`,
 
   english: `
-    <rect width="300" height="180" fill="#fff4ed"/>
-    <path d="M60 40c30-12 62-8 90 8v100c-28-16-60-20-90-8zM240 40c-30-12-62-8-90 8v100c28-16 60-20 90-8z" fill="#fff" stroke="#e58b5b" stroke-width="5" stroke-linejoin="round"/>
-    <g stroke="#f0bd9e" stroke-width="5" stroke-linecap="round"><path d="M82 69h42M82 87h51M82 105h34M176 69h42M176 87h51M176 105h34"/></g>`,
+    <rect width="300" height="180" fill="#f7e5cf"/>
+    <circle cx="30" cy="28" r="26" fill="#efd2b2"/>
+    <circle cx="270" cy="151" r="38" fill="#efd2b2"/>
+    <rect x="35" y="22" width="230" height="138" rx="14" fill="#fffdf9" stroke="#d8aa78" stroke-width="3"/>
+    <path d="M54 61h192M54 119h192" stroke="#f1dfca" stroke-width="2"/>
+    <g fill="#98623a" font-family="Arial, sans-serif" font-size="25" font-weight="800" text-anchor="middle" letter-spacing="1">
+      <text x="150" y="105">ENGLISH</text>
+    </g>
+    <circle cx="23" cy="112" r="4" fill="#bd8954"/>
+    <circle cx="278" cy="47" r="4" fill="#bd8954"/>`,
 
   exam: `
     <rect width="300" height="180" fill="#e8e2d8"/>
