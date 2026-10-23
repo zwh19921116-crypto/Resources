@@ -7807,7 +7807,7 @@ function buildDescriptionFromFields() {
   const topic = $('f-topic').value.trim() || $('f-subject').value;
   const level = $('f-level').value;
   const difficulty = level ? ` at ${level} level` : '';
-  return `${title} helps ${stage} practise ${topic} skills${difficulty}, build confidence and prepare for classroom learning.`;
+  return `${title} helps ${stage} practice ${topic} skills${difficulty}, build confidence and prepare for classroom learning.`;
 }
 
 function autoTitleFromFields() {

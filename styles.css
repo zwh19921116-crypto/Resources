@@ -576,6 +576,7 @@ button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
   content:'';position:absolute;left:0;right:0;top:0;height:4px;
   background:linear-gradient(90deg,var(--path-accent),color-mix(in srgb,var(--path-accent) 45%,#ffffff));
 }
+.pathway-kicker{display:flex;align-items:center;justify-content:flex-start;gap:.65rem;margin-bottom:.8rem}
 .pathway-tag{
   display:inline-flex;align-items:center;justify-content:center;
   padding:.2rem .55rem;border-radius:999px;
@@ -586,7 +587,7 @@ button{font:inherit;cursor:pointer;background:none;border:0;color:inherit}
 }
 .pathway-icon{
   width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
-  margin:.65rem 0 .8rem;background:color-mix(in srgb,var(--path-accent) 14%,#ffffff);
+  margin:0;background:color-mix(in srgb,var(--path-accent) 14%,#ffffff);
   color:var(--path-accent);box-shadow:inset 0 0 0 1px rgba(255,255,255,.72),0 8px 14px rgba(15,35,72,.10);
 }
 .pathway-icon .ico{width:20px;height:20px}
@@ -1038,7 +1039,7 @@ body.modal-open{overflow:hidden}
 .study-builder-page .study-builder-page-head h1 span,.study-builder-page .study-builder-page-head h2 span{color:#fff!important}
 .study-builder-page .study-builder-page-head h1,.study-builder-page .study-builder-page-head h2{color:#fff!important}
 .study-builder-page .study-builder-page-head p{color:#d7e4fb}
-.study-builder-page .builder-promises{display:grid;gap:.75rem;margin-top:2.4rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,.2);color:#d7e4fb;font-size:.78rem;font-weight:700}
+.study-builder-page .builder-promises{display:grid;gap:.75rem;margin-top:2.4rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,.2);color:#d7e4fb;font-size:1rem;font-weight:700;line-height:1.5}
 .study-builder-page .builder-promises span{display:flex;align-items:center;gap:.7rem}
 .study-builder-page .builder-promises b{display:grid;place-items:center;width:29px;height:29px;border-radius:9px;background:var(--builder-yellow);color:var(--builder-navy);font-size:.65rem;box-shadow:0 5px 12px rgba(6,26,64,.16)}
 .study-builder-page .study-builder-card{width:100%;margin:0;padding:2.15rem;border:1px solid #dbe5f2;border-radius:22px;box-shadow:0 26px 70px rgba(15,35,72,.14)}

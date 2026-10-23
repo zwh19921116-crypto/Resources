@@ -20,7 +20,7 @@ window.EDG_RESOURCES = [
     level: '1',
     questionCount: 0,
     pageCount: 0,
-    desc: 'Primary School Mathematics: Addition Practice Questions helps Primary students practise addition skills, build confidence and prepare for classroom learning.',
+    desc: 'Primary School Mathematics: Addition Practice Questions helps Primary students practice addition skills, build confidence and prepare for classroom learning.',
     details: '30 mins',
     estimatedMinutes: 30,
     art: 'maths',

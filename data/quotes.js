@@ -11,7 +11,7 @@
     'The goal is not to know everything at once', 'Every completed task makes the next one easier to start', 'Practice turns unfamiliar ideas into familiar territory', 'A focused session can reset an unproductive day',
     'Keep your plan simple enough to follow', 'The topics you avoid are often the ones that need one kind session', 'Revision works best when you test what you remember', 'You can build momentum from one honest attempt',
     'A checklist is a promise to your future self', 'The answer matters less than the thinking that found it', 'Your effort becomes visible through consistency', 'There is no wasted session when you learn from it',
-    'The next question is always a fresh start', 'Study with curiosity and the details become easier to keep', 'A little preparation makes exam day less mysterious', 'Focus is a skill you can practise today',
+    'The next question is always a fresh start', 'Study with curiosity and the details become easier to keep', 'A little preparation makes exam day less mysterious', 'Focus is a skill you can practice today',
     'Give difficult ideas more than one chance', 'A reliable routine can carry you through a busy week', 'Your learning deserves your full attention for a little while', 'Good habits are built from repeatable choices',
     'The calmest preparation is usually the most useful', 'Short sessions can create long-term confidence', 'Take the topic apart until it makes sense', 'You are allowed to begin before you feel certain',
     'Reviewing an error is how it becomes useful', 'Your next study session does not need to be extraordinary', 'A clear question is the start of a clear answer', 'Learning moves forward when you stay with the problem',
