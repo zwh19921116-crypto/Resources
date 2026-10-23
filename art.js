@@ -95,9 +95,16 @@ window.EDG_ART = {
     <circle cx="278" cy="47" r="4" fill="#62aeb2"/>`,
 
   chemistry: `
-    <rect width="300" height="180" fill="#eafaf7"/>
-    <path d="M126 27h48M137 27v45l-45 69c-7 11 1 25 14 25h88c13 0 21-14 14-25l-45-69V27" fill="#fff" stroke="#0d9488" stroke-width="6" stroke-linejoin="round"/>
-    <path d="M107 125h86l16 25h-118z" fill="#8bd8ce"/><circle cx="142" cy="112" r="7" fill="#0d9488"/><circle cx="172" cy="132" r="5" fill="#f5b820"/>`,
+    <rect width="300" height="180" fill="#cfe0f7"/>
+    <circle cx="30" cy="28" r="26" fill="#b8d0f0"/>
+    <circle cx="270" cy="151" r="38" fill="#b8d0f0"/>
+    <rect x="35" y="22" width="230" height="138" rx="14" fill="#fbfdff" stroke="#8db1df" stroke-width="3"/>
+    <path d="M54 61h192M54 119h192" stroke="#dfebfa" stroke-width="2"/>
+    <g fill="#3568a5" font-family="Arial, sans-serif" font-size="27" font-weight="800" text-anchor="middle" letter-spacing="1">
+      <text x="150" y="105">CHEMISTRY</text>
+    </g>
+    <circle cx="23" cy="112" r="4" fill="#6d98cc"/>
+    <circle cx="278" cy="47" r="4" fill="#6d98cc"/>`,
 
   biology: `
     <rect width="300" height="180" fill="#e4efc7"/>
