@@ -6,7 +6,7 @@ const el = (id) => document.getElementById(id);
 const grid = el('resource-grid');
 const searchInput = el('q');
 
-const state = { q: '', type: '', subject: '', mathsType: '', year: '', solutions: false, video: false, sort: 'newest', shown: CONFIG.pageSize };
+const state = { q: '', type: '', subject: '', mathsType: '', year: '', solutions: false, video: false, sort: 'published-desc', shown: CONFIG.pageSize };
 
 const footerYearNode = el('year');
 if (footerYearNode) footerYearNode.textContent = new Date().getFullYear();
@@ -933,11 +933,12 @@ function renderActiveFilters() {
 }
 
 function renderLibrary() {
-  const results = ALL.filter(matches).sort((a, b) =>
-    state.sort === 'az'
-      ? a.title.localeCompare(b.title)
-      : String(b.added || '').localeCompare(String(a.added || ''))
-  );
+  const results = ALL.filter(matches).sort((a, b) => {
+    if (state.sort === 'az') return a.title.localeCompare(b.title);
+    if (state.sort === 'za') return b.title.localeCompare(a.title);
+    const dateOrder = String(a.added || '').localeCompare(String(b.added || ''));
+    return state.sort === 'published-asc' ? dateOrder : -dateOrder;
+  });
   const page = results.slice(0, state.shown);
 
   grid.innerHTML = '';
