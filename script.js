@@ -66,7 +66,7 @@ function driveId(url) {
   return m ? m[1] : null;
 }
 const isPdf = (url) => /\.pdf(\?|#|$)/i.test(String(url));
-const solutionVideoUrls = (resource) => (Array.isArray(resource.solutionsVideos) ? resource.solutionsVideos : [resource.solutionsVideo])
+const solutionVideoUrls = (resource) => ((Array.isArray(resource.solutionsVideos) && resource.solutionsVideos.length) ? resource.solutionsVideos : [resource.solutionsVideo])
   .map((url) => String(url || '').trim()).filter(Boolean);
 const formatEstimatedMinutes = (value) => {
   const minutes = Number(value) || 30;

@@ -15,6 +15,13 @@ function youtubeVideoId(url) {
   return match ? match[1] : null;
 }
 
+function solutionVideoUrls(resource) {
+  const values = Array.isArray(resource.solutionsVideos) && resource.solutionsVideos.length
+    ? resource.solutionsVideos
+    : [resource.solutionsVideo];
+  return values.map((value) => String(value || '').trim()).filter(Boolean);
+}
+
 function detailPreview(resource) {
   const videoId = youtubeVideoId(resource.url);
   if (videoId) return `<iframe src="https://www.youtube-nocookie.com/embed/${videoId}?rel=0" title="${escapeHtml(resource.title)}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
@@ -93,8 +100,7 @@ function renderResourceDetail() {
 
   const solutions = detailElement('resource-solutions');
   if (solutions) {
-    const solutionVideo = Array.isArray(resource.solutionsVideos) ? resource.solutionsVideos.find(Boolean) : resource.solutionsVideo;
-    const solutionUrl = resource.solutions || solutionVideo;
+    const solutionUrl = String(resource.solutions || '').trim() || solutionVideoUrls(resource)[0];
     solutions.hidden = !solutionUrl;
     if (solutionUrl) solutions.href = solutionUrl;
     solutions.innerHTML = 'View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>';

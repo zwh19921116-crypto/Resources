@@ -1427,11 +1427,14 @@ body.settings-compact th,body.settings-compact td{padding-top:.58rem;padding-bot
           <div class="action-menu-popover">
             <button class="btn btn-ghost" id="btn-log">Activity log</button>
             <button class="btn btn-ghost" id="btn-export">Download file</button>
+            <button class="btn btn-ghost" id="btn-export-backup" type="button">Export library backup</button>
+            <button class="btn btn-ghost" id="btn-import-backup" type="button">Import library backup</button>
             <button class="btn btn-ghost" id="btn-regenerate-pages" type="button" disabled>Regenerate all pages</button>
           </div>
         </details>
       </div>
     </div>
+    <input type="file" id="resource-backup-file" accept=".EdgeducateBKUP,application/octet-stream" hidden>
 
     <div class="notice notice-info" id="draft-bar" hidden>
       <span><b>Unsaved changes restored</b> from <b id="draft-when"></b>. They are not in the file yet — click <b>Save to data/resources.js</b> to keep them.</span>

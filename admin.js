@@ -5805,7 +5805,9 @@ function solutionVideoEmbedUrl(value) {
   return '';
 }
 function solutionVideoUrls(resource) {
-  const values = Array.isArray(resource.solutionsVideos) ? resource.solutionsVideos : [resource.solutionsVideo];
+  const values = Array.isArray(resource.solutionsVideos) && resource.solutionsVideos.length
+    ? resource.solutionsVideos
+    : [resource.solutionsVideo];
   return values.map((value) => String(value || '').trim()).filter(Boolean);
 }
 function solutionVideoTitles(resource) {
@@ -8610,6 +8612,155 @@ $('btn-export').addEventListener('click', () => {
   URL.revokeObjectURL(a.href);
   log('Downloaded resources.js to your Downloads folder.', 'ok');
   flash('Downloaded. Move it into your data folder.', 'info');
+});
+
+const RESOURCE_BACKUP_MAGIC = new TextEncoder().encode('EDGEBKUP1');
+const RESOURCE_BACKUP_SALT_BYTES = 16;
+const RESOURCE_BACKUP_IV_BYTES = 12;
+const RESOURCE_BACKUP_ITERATIONS = 250000;
+const RESOURCE_BACKUP_KEY_TEXT = 'IMPORT';
+
+function confirmResourceBackupImport() {
+  const phrase = prompt('Type IMPORT in capital letters to unlock this backup:');
+  if (phrase !== RESOURCE_BACKUP_KEY_TEXT) {
+    flash('Import cancelled — type IMPORT exactly to unlock the backup.', 'warning');
+    return false;
+  }
+  return true;
+}
+
+async function resourceBackupKey(salt) {
+  if (!window.crypto?.subtle) throw new Error('Secure browser encryption is unavailable. Open Admin over HTTPS or localhost.');
+  const material = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(RESOURCE_BACKUP_KEY_TEXT),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: RESOURCE_BACKUP_ITERATIONS, hash: 'SHA-256' },
+    material,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+function combineResourceBackupParts(parts) {
+  const totalLength = parts.reduce((total, part) => total + part.length, 0);
+  const combined = new Uint8Array(totalLength);
+  let offset = 0;
+  parts.forEach((part) => {
+    combined.set(part, offset);
+    offset += part.length;
+  });
+  return combined;
+}
+
+function resourceBackupPayload() {
+  return {
+    format: 'edgeducate-resource-library',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    resources: JSON.parse(JSON.stringify(items))
+  };
+}
+
+$('btn-export-backup').addEventListener('click', async () => {
+  const button = $('btn-export-backup');
+  button.disabled = true;
+  try {
+    const salt = crypto.getRandomValues(new Uint8Array(RESOURCE_BACKUP_SALT_BYTES));
+    const iv = crypto.getRandomValues(new Uint8Array(RESOURCE_BACKUP_IV_BYTES));
+    const key = await resourceBackupKey(salt);
+    const content = new TextEncoder().encode(JSON.stringify(resourceBackupPayload()));
+    const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, content));
+    const backup = combineResourceBackupParts([RESOURCE_BACKUP_MAGIC, salt, iv, encrypted]);
+    const filenameDate = new Date().toISOString().slice(0, 10);
+    const blob = new Blob([backup], { type: 'application/octet-stream' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `edgeducate-resource-library-backup-${filenameDate}.EdgeducateBKUP`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    log(`Exported an encrypted backup of ${items.length} resources.`, 'ok');
+    flash('Encrypted EdgeducateBKUP backup downloaded.', 'success');
+  } catch (error) {
+    log(`RESOURCE BACKUP EXPORT FAILED: ${error.name} - ${error.message}`, 'bad');
+    flash(`Backup export failed: ${error.message}`, 'error');
+  } finally {
+    button.disabled = false;
+  }
+});
+
+function validateResourceBackup(value) {
+  const resources = Array.isArray(value) ? value : value && value.resources;
+  if (!Array.isArray(resources)) throw new Error('The backup must contain a resources array.');
+  const copy = JSON.parse(JSON.stringify(resources));
+  const ids = new Set();
+  copy.forEach((resource, index) => {
+    if (!resource || typeof resource !== 'object' || Array.isArray(resource)) {
+      throw new Error(`Resource ${index + 1} is not a valid record.`);
+    }
+    if (typeof resource.id !== 'string' || !resource.id.trim()) {
+      throw new Error(`Resource ${index + 1} is missing an ID.`);
+    }
+    if (typeof resource.title !== 'string' || !resource.title.trim()) {
+      throw new Error(`Resource ${index + 1} is missing a title.`);
+    }
+    if (ids.has(resource.id)) throw new Error(`Duplicate resource ID: ${resource.id}`);
+    ids.add(resource.id);
+  });
+  return copy;
+}
+
+$('btn-import-backup').addEventListener('click', () => {
+  $('resource-backup-file').value = '';
+  $('resource-backup-file').click();
+});
+
+$('resource-backup-file').addEventListener('change', async (event) => {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const magic = bytes.slice(0, RESOURCE_BACKUP_MAGIC.length);
+    if (magic.length !== RESOURCE_BACKUP_MAGIC.length || !magic.every((value, index) => value === RESOURCE_BACKUP_MAGIC[index])) {
+      throw new Error('This is not a valid EdgeducateBKUP file.');
+    }
+    const saltStart = RESOURCE_BACKUP_MAGIC.length;
+    const ivStart = saltStart + RESOURCE_BACKUP_SALT_BYTES;
+    const encryptedStart = ivStart + RESOURCE_BACKUP_IV_BYTES;
+    if (bytes.length <= encryptedStart) throw new Error('The backup file is incomplete.');
+    const salt = bytes.slice(saltStart, ivStart);
+    const iv = bytes.slice(ivStart, encryptedStart);
+    if (!confirmResourceBackupImport()) return;
+    const key = await resourceBackupKey(salt);
+    let decrypted;
+    try {
+      decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, bytes.slice(encryptedStart));
+    } catch (error) {
+      throw new Error('Could not decrypt the backup. The file may be damaged or not an EdgeducateBKUP backup.');
+    }
+    const imported = validateResourceBackup(JSON.parse(new TextDecoder().decode(decrypted)));
+    const confirmed = confirm(
+      `Import ${imported.length} resources from "${file.name}"?\n\n` +
+      'This will replace the current resource library. The existing library is not changed until you confirm.'
+    );
+    if (!confirmed) return;
+    items = imported;
+    selectedResourceIds.clear();
+    renderTable();
+    autoSave('import library backup');
+    log(`Imported ${items.length} resources from ${file.name}.`, 'ok');
+    flash(fileHandle
+      ? 'Backup imported and will be saved with regenerated pages.'
+      : 'Backup imported locally — connect the project to save it.', fileHandle ? 'success' : 'warning');
+  } catch (error) {
+    log(`RESOURCE BACKUP IMPORT FAILED: ${error.message}`, 'bad');
+    flash(`Import failed: ${error.message}`, 'error');
+  }
 });
 
 /* ---------- file handle storage ---------- */
