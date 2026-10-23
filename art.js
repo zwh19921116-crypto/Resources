@@ -100,10 +100,16 @@ window.EDG_ART = {
     <path d="M107 125h86l16 25h-118z" fill="#8bd8ce"/><circle cx="142" cy="112" r="7" fill="#0d9488"/><circle cx="172" cy="132" r="5" fill="#f5b820"/>`,
 
   biology: `
-    <rect width="300" height="180" fill="#ecfbf4"/>
-    <path d="M150 157C93 132 83 71 150 28c67 43 57 104 0 129z" fill="#38b879"/>
-    <path d="M150 30v126M150 83L116 64M150 103l38-25M150 126l-31-18M150 64l28-18" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
-    <circle cx="49" cy="43" r="18" fill="#bcefd4"/><circle cx="252" cy="139" r="28" fill="#bcefd4"/>`,
+    <rect width="300" height="180" fill="#e4efc7"/>
+    <circle cx="30" cy="28" r="26" fill="#d4e7ab"/>
+    <circle cx="270" cy="151" r="38" fill="#d4e7ab"/>
+    <rect x="35" y="22" width="230" height="138" rx="14" fill="#fcfff7" stroke="#b7d27e" stroke-width="3"/>
+    <path d="M54 61h192M54 119h192" stroke="#e5f0c9" stroke-width="2"/>
+    <g fill="#5d8135" font-family="Arial, sans-serif" font-size="47" font-weight="800" text-anchor="middle" letter-spacing="2">
+      <text x="150" y="106">BIO</text>
+    </g>
+    <circle cx="23" cy="112" r="4" fill="#8cae52"/>
+    <circle cx="278" cy="47" r="4" fill="#8cae52"/>`,
 
   english: `
     <rect width="300" height="180" fill="#fff4ed"/>
