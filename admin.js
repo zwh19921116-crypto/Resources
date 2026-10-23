@@ -10,6 +10,7 @@ const adsSourceSignature = JSON.stringify({
   ads: window.EDG_ADS || [],
   enabled: window.EDG_ADS_ENABLED !== false
 });
+
 let editingIndex = -1;
 let selectedResourceIds = new Set();
 let relatedResourceId = '';
@@ -7690,6 +7691,11 @@ const loadAdsHandle = () => idb('readonly', (s) => s.get('ads'));
 
 /* ---------- live preview ---------- */
 const LEVEL_TONE = { Easy: 'easy', Medium: 'medium', Hard: 'hard', Fun: 'fun' };
+const difficultyTone = (level) => {
+  const numericLevel = Number(level);
+  if (Number.isInteger(numericLevel)) return numericLevel <= 3 ? 'easy' : numericLevel <= 7 ? 'medium' : 'hard';
+  return LEVEL_TONE[level] || 'info';
+};
 const formatEstimatedMinutes = (value) => {
   const minutes = Number(value) || 30;
   if (minutes < 60) return `${minutes} min`;
@@ -7826,8 +7832,14 @@ function renderPreview() {
   const d = currentDraft();
   updateTitleConvention(d.stage);
   const type = CONFIG.types[d.type] || { label: d.type, colour: 'blue', action: 'link' };
-  const tone = LEVEL_TONE[d.level] || 'info';
-  const meta = [d.year, `${formatEstimatedMinutes(d.estimatedMinutes)} study`, d.details].filter(Boolean).join(' &nbsp;\u2022&nbsp; ');
+  const tone = difficultyTone(d.level);
+  const displayLevel = /^\d+$/.test(String(d.level || '').trim()) ? `Level ${d.level}` : d.level;
+  const numericLevel = Number(d.level);
+  const barCount = Number.isInteger(numericLevel) ? (numericLevel <= 3 ? 1 : numericLevel <= 7 ? 2 : 3) : 3;
+  const difficultyBars = [0, 1, 2].map((index) => `<i${index >= barCount ? ' class="is-muted"' : ''}></i>`).join('');
+  const hasSolutions = Boolean(d.solutions || readSolutionVideoLinks().length);
+  const detailText = String(d.details || '').trim();
+  const meta = [d.year, `${formatEstimatedMinutes(d.estimatedMinutes)} study`, /^\d+\s*mins?$/i.test(detailText) ? '' : detailText].filter(Boolean).join(' &nbsp;\u2022&nbsp; ');
 
   $('preview').innerHTML = `
     <div class="pv-card">
@@ -7839,8 +7851,7 @@ function renderPreview() {
       <h3>${escapeHtml(d.title || 'Untitled resource')}</h3>
       <p class="pv-meta">${meta || '&nbsp;'}</p>
       <p class="pv-foot">
-        <span class="pv-level tone-${tone}">${escapeHtml(d.level || '')}</span>
-        <span class="pv-bars tone-${tone}"><i></i><i></i><i></i></span>
+        ${hasSolutions ? '<span class="pv-availability">Solutions</span>' : `<span class="pv-level tone-${tone}">${escapeHtml(displayLevel || '')}</span><span class="pv-bars tone-${tone}" aria-label="${escapeAttr(displayLevel || '')} difficulty">${difficultyBars}</span>`}
       </p>
     </div>`;
 
@@ -8569,6 +8580,27 @@ async function logConsistencyReport(context, options = {}) {
   }
 }
 
+$('btn-regenerate-pages').addEventListener('click', async () => {
+  if (!projectHandle) {
+    flash('Connect the project before regenerating pages.', 'warning');
+    return;
+  }
+  const button = $('btn-regenerate-pages');
+  button.disabled = true;
+  button.textContent = 'Regenerating…';
+  try {
+    await writeStaticPages();
+    await logConsistencyReport('manual regeneration');
+    flash('All published resource and Solutions pages were regenerated.', 'success');
+  } catch (error) {
+    log(`[Publish] Regeneration failed: ${error.name} - ${error.message}`, 'bad');
+    flash('Page regeneration failed. Check the activity log.', 'warning');
+  } finally {
+    button.textContent = 'Regenerate all pages';
+    button.disabled = !projectHandle;
+  }
+});
+
 $('btn-export').addEventListener('click', () => {
   const blob = new Blob([serialize()], { type: 'text/javascript' });
   const a = document.createElement('a');
@@ -8637,8 +8669,10 @@ function setState(state, text) {
 function setConnectionUi(connected) {
   const connectBtn = $('btn-connect-project');
   const saveBtn = $('btn-save');
+  const regenerateBtn = $('btn-regenerate-pages');
   connectBtn.hidden = connected;
   saveBtn.hidden = !connected;
+  regenerateBtn.disabled = !connected;
 }
 
 let saveTimer = null;

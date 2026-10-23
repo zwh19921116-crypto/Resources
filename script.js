@@ -47,7 +47,11 @@ setHeaderState();
 window.addEventListener('scroll', setHeaderState, { passive: true });
 
 /* ---------- helpers ---------- */
-const levelTone = (level) => ({ Easy: 'easy', Medium: 'medium', Hard: 'hard', Fun: 'fun' }[level] || 'info');
+const levelTone = (level) => {
+  const numericLevel = Number(level);
+  if (Number.isInteger(numericLevel)) return numericLevel <= 3 ? 'easy' : numericLevel <= 7 ? 'medium' : 'hard';
+  return ({ Easy: 'easy', Medium: 'medium', Hard: 'hard', Fun: 'fun' }[level] || 'info');
+};
 const displayLevel = (level) => /^\d+$/.test(String(level || '').trim()) ? `Level ${level}` : level;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 

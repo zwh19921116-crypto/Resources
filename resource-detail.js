@@ -93,8 +93,10 @@ function renderResourceDetail() {
 
   const solutions = detailElement('resource-solutions');
   if (solutions) {
-    solutions.hidden = !resource.solutions;
-    if (resource.solutions) solutions.href = resource.solutions;
+    const solutionVideo = Array.isArray(resource.solutionsVideos) ? resource.solutionsVideos.find(Boolean) : resource.solutionsVideo;
+    const solutionUrl = resource.solutions || solutionVideo;
+    solutions.hidden = !solutionUrl;
+    if (solutionUrl) solutions.href = solutionUrl;
     solutions.innerHTML = 'View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>';
   }
 

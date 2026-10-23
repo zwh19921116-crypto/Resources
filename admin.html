@@ -240,8 +240,10 @@ dialog::backdrop{background:rgba(9,13,35,.55);backdrop-filter:blur(3px)}
 .pv-meta{font-size:.78rem;color:var(--muted);padding:0 .3rem;margin:.4rem 0 0}
 .pv-foot{display:flex;align-items:center;justify-content:space-between;padding:0 .3rem;margin:.85rem 0 0}
 .pv-level{font-size:.78rem;font-weight:600}
+.pv-availability{display:inline-flex;align-items:center;min-height:22px;padding:.25rem .5rem;border-radius:999px;background:#dc2626;color:#fff;font-size:.64rem;font-weight:800;letter-spacing:.02em}
 .pv-bars{display:inline-flex;align-items:flex-end;gap:2px;height:14px}
 .pv-bars i{width:3.5px;border-radius:2px;background:currentColor}
+.pv-bars i.is-muted{opacity:.2}
 .pv-bars i:nth-child(1){height:6px}.pv-bars i:nth-child(2){height:10px}.pv-bars i:nth-child(3){height:14px}
 .tone-easy{color:#16a34a}.tone-medium{color:#e08a1e}.tone-hard{color:#dc2626}.tone-info{color:#94a3b8}.tone-fun{color:#e0409b}
 .pv-warn{font-size:.72rem;color:var(--warn);margin:.75rem 0 0}
@@ -1425,6 +1427,7 @@ body.settings-compact th,body.settings-compact td{padding-top:.58rem;padding-bot
           <div class="action-menu-popover">
             <button class="btn btn-ghost" id="btn-log">Activity log</button>
             <button class="btn btn-ghost" id="btn-export">Download file</button>
+            <button class="btn btn-ghost" id="btn-regenerate-pages" type="button" disabled>Regenerate all pages</button>
           </div>
         </details>
       </div>
