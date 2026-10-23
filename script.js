@@ -48,6 +48,7 @@ window.addEventListener('scroll', setHeaderState, { passive: true });
 
 /* ---------- helpers ---------- */
 const levelTone = (level) => ({ Easy: 'easy', Medium: 'medium', Hard: 'hard', Fun: 'fun' }[level] || 'info');
+const displayLevel = (level) => /^\d+$/.test(String(level || '').trim()) ? `Level ${level}` : level;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 showLibraryLoading();
@@ -95,7 +96,7 @@ function buildCard(r) {
       <p class="meta">${[r.year, `${formatEstimatedMinutes(r.estimatedMinutes)} study`, r.details].filter(Boolean).map(esc).join(' &nbsp;•&nbsp; ')}</p>
     </a>
     <p class="foot">
-      ${availability || `<span class="level ${tone}">${esc(r.level || '')}</span>`}
+      ${availability || `<span class="level ${tone}">${esc(displayLevel(r.level || ''))}</span>`}
       <span class="card-actions">
         <button class="card-info" type="button" aria-label="Preview and details for ${esc(r.title)}">Info</button>
       </span>
@@ -151,7 +152,7 @@ function openDetail(r) {
     ['Subject', r.subject],
     ['Year level', r.year],
     ['Estimated time', `${formatEstimatedMinutes(r.estimatedMinutes)} study`],
-    ['Difficulty', r.level],
+    ['Difficulty', displayLevel(r.level)],
     ['Details', r.details],
     ['Added', r.added]
   ].filter(([, v]) => v);

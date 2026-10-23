@@ -98,7 +98,7 @@ function renderResourceDetail() {
     solutions.innerHTML = 'View Solutions <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg>';
   }
 
-  const metadata = [['Education stage', resourceStageLabel(resource)], ['Subject', resource.subject], ['Year level', resource.year], ['Estimated time', `${formatEstimatedMinutes(resource.estimatedMinutes)} study`], ['Difficulty', resource.level], ['Details', resource.details]].filter(([, value]) => value);
+  const metadata = [['Education stage', resourceStageLabel(resource)], ['Subject', resource.subject], ['Year level', resource.year], ['Estimated time', `${formatEstimatedMinutes(resource.estimatedMinutes)} study`], ['Difficulty', /^\d+$/.test(String(resource.level || '').trim()) ? `Level ${resource.level}` : resource.level], ['Details', resource.details]].filter(([, value]) => value);
   detailElement('resource-meta').innerHTML = metadata.map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join('');
 
   const questionPaperLinks = detailElement('question-paper-links');
