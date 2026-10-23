@@ -71,21 +71,21 @@ window.EDG_ART = {
     <g stroke="#ff7676" stroke-width="4" stroke-linecap="round"><path d="M26 53h18M35 44v18M252 104h18M261 95v18"/></g>`,
 
   maths: `
-    <rect width="300" height="180" fill="#f8c1b1"/>
-    <g stroke="#e48f7c" stroke-width="1.4" fill="none" opacity=".85">
-      <path d="M22 46h34M39 29v34"/>
-      <path d="M96 40l26 26M122 40l-26 26"/>
-      <path d="M168 36c14 0 14 30 28 30"/>
-      <path d="M228 32v34M222 66h48M258 30l-16 40"/>
-      <path d="M28 104h56M28 118h34"/>
-      <path d="M118 96l22 34M140 96l-22 34"/>
-      <path d="M186 100h48M186 116h30"/>
-      <path d="M256 96v36M248 132h30"/>
-      <path d="M40 150h70M150 150h40M214 150h52"/>
+    <rect width="300" height="180" fill="#eaf0ff"/>
+    <circle cx="30" cy="28" r="26" fill="#d8e2ff"/>
+    <circle cx="270" cy="151" r="38" fill="#d8e2ff"/>
+    <rect x="42" y="20" width="216" height="140" rx="14" fill="#fff" stroke="#b8caf5" stroke-width="3"/>
+    <rect x="62" y="38" width="176" height="30" rx="8" fill="#edf3ff"/>
+    <g fill="#1d4ed8" font-family="Arial, sans-serif" font-size="22" font-weight="700" text-anchor="middle">
+      <text x="88" y="60">2</text><text x="126" y="60">+</text><text x="164" y="60">3</text><text x="202" y="60">=</text>
     </g>
-    <g fill="#d87866" opacity=".9">
-      <circle cx="170" cy="78" r="3"/><circle cx="92" cy="152" r="3"/><circle cx="274" cy="64" r="3"/>
-    </g>`,
+    <rect x="62" y="82" width="48" height="48" rx="9" fill="#2563eb"/>
+    <rect x="126" y="82" width="48" height="48" rx="9" fill="#60a5fa"/>
+    <rect x="190" y="82" width="48" height="48" rx="9" fill="#f5b820"/>
+    <g fill="#fff" font-family="Arial, sans-serif" font-size="27" font-weight="800" text-anchor="middle">
+      <text x="86" y="116">+</text><text x="150" y="116">−</text><text x="214" y="116">×</text>
+    </g>
+    <path d="M79 143h142" stroke="#c8d5f2" stroke-width="4" stroke-linecap="round"/>`,
 
   physics: `
     <rect width="300" height="180" fill="#eaf4ff"/>
