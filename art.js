@@ -83,10 +83,16 @@ window.EDG_ART = {
     <circle cx="278" cy="47" r="4" fill="#c85f4d"/>`,
 
   physics: `
-    <rect width="300" height="180" fill="#eaf4ff"/>
-    <circle cx="150" cy="90" r="20" fill="#2563eb"/>
-    <g fill="none" stroke="#7aa8ee" stroke-width="3"><ellipse cx="150" cy="90" rx="92" ry="34"/><ellipse cx="150" cy="90" rx="34" ry="92"/><ellipse cx="150" cy="90" rx="76" ry="58" transform="rotate(45 150 90)"/></g>
-    <g fill="#f5b820"><circle cx="58" cy="90" r="7"/><circle cx="184" cy="27" r="7"/><circle cx="215" cy="135" r="7"/></g>`,
+    <rect width="300" height="180" fill="#c9e9ea"/>
+    <circle cx="30" cy="28" r="26" fill="#b4dfe2"/>
+    <circle cx="270" cy="151" r="38" fill="#b4dfe2"/>
+    <rect x="35" y="22" width="230" height="138" rx="14" fill="#fbffff" stroke="#8cc8cc" stroke-width="3"/>
+    <path d="M54 61h192M54 119h192" stroke="#d2eff0" stroke-width="2"/>
+    <g fill="#247f84" font-family="Arial, sans-serif" font-size="31" font-weight="800" text-anchor="middle" letter-spacing="1">
+      <text x="150" y="105">PHYSICS</text>
+    </g>
+    <circle cx="23" cy="112" r="4" fill="#62aeb2"/>
+    <circle cx="278" cy="47" r="4" fill="#62aeb2"/>`,
 
   chemistry: `
     <rect width="300" height="180" fill="#eafaf7"/>
