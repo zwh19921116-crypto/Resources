@@ -5642,7 +5642,8 @@ function defaultArtForSubject(subject) {
     Physics: 'physics',
     English: 'english'
   };
-  return subjectArt[subject] || CONFIG.artStyles[0];
+  const key = Object.keys(subjectArt).find((name) => name.toLowerCase() === String(subject || '').trim().toLowerCase());
+  return subjectArt[key] || CONFIG.artStyles[0];
 }
 
 function stageFor(resource) {
@@ -8152,7 +8153,8 @@ $('f-stage').addEventListener('change', () => { resourceAutoFields.add('stage');
 $('f-unit').addEventListener('change', () => { resourceAutoFields.add('unit'); });
 $('f-subject').addEventListener('change', () => {
   resourceAutoFields.add('subject');
-  if (!resourceAutoFields.has('art')) $('f-art').value = defaultArtForSubject($('f-subject').value);
+  $('f-art').value = defaultArtForSubject($('f-subject').value);
+  renderPreview();
 });
 $('f-topic').addEventListener('change', () => { resourceAutoFields.add('topic'); });
 $('f-year').addEventListener('change', () => { resourceAutoFields.add('year'); });
