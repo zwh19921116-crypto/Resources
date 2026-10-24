@@ -5839,7 +5839,7 @@ function solutionPageMarkup(resource) {
   const videoTitles = solutionVideoTitles(resource);
   const videoEmbeds = videoUrls.map(solutionVideoEmbedUrl);
   const videoEmbedUrl = videoEmbeds[0];
-  const pdfMarkup = solutionUrl ? `<iframe src="${escapeAttr(solutionUrl)}#page=1&view=Fit&zoom=page-fit" title="Solutions PDF"></iframe>` : '<div class="preview-note"><p>Solutions are not available yet.</p></div>';
+  const pdfMarkup = solutionUrl ? `<iframe src="${escapeAttr(solutionUrl)}#page=1&view=Fit&zoom=130" title="Solutions PDF"></iframe>` : '<div class="preview-note"><p>Solutions are not available yet.</p></div>';
   const videoPanel = videoUrls.length ? `<section class="solution-video-panel" data-solution-video-panel>
     <div class="solution-video-panel-head"><div><span class="solution-video-eyebrow">Solution videos</span><strong data-solution-video-current>Video 1 of ${videoUrls.length}</strong></div><span class="solution-video-hint">Select a video to watch</span></div>
     <div class="solution-video-selector" role="tablist" aria-label="Solutions videos">
