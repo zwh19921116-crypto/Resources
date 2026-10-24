@@ -20,18 +20,36 @@ async function mountPdfReader(reader) {
   let rendering = false;
 
   const updateFullscreenLabel = () => {
-    if (fullscreen) fullscreen.textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
+    if (fullscreen) fullscreen.textContent = document.fullscreenElement || reader.classList.contains('is-mobile-fullscreen') ? 'Exit full screen' : 'Full screen';
   };
 
   fullscreen?.addEventListener('click', async () => {
     try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else await reader.requestFullscreen();
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else if (reader.classList.contains('is-mobile-fullscreen')) {
+        reader.classList.remove('is-mobile-fullscreen');
+        document.body.classList.remove('pdf-reader-fullscreen-open');
+      } else if (typeof reader.requestFullscreen === 'function') {
+        await reader.requestFullscreen();
+      } else {
+        reader.classList.add('is-mobile-fullscreen');
+        document.body.classList.add('pdf-reader-fullscreen-open');
+      }
     } catch (error) {
-      fullscreen.setAttribute('aria-label', 'Fullscreen unavailable');
+      reader.classList.add('is-mobile-fullscreen');
+      document.body.classList.add('pdf-reader-fullscreen-open');
     }
   });
-  document.addEventListener('fullscreenchange', updateFullscreenLabel);
+  document.addEventListener('fullscreenchange', () => {
+    if (document.fullscreenElement) {
+      reader.classList.remove('is-mobile-fullscreen');
+      document.body.classList.add('pdf-reader-fullscreen-open');
+    } else {
+      document.body.classList.remove('pdf-reader-fullscreen-open');
+    }
+    updateFullscreenLabel();
+  });
 
   const showFallback = () => {
     reader.classList.add('is-fallback');
