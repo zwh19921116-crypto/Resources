@@ -1339,7 +1339,7 @@ body.modal-open{overflow:hidden}
 .resource-detail.has-inline-preview .resource-detail-layout{position:relative;display:grid;grid-template-rows:max-content max-content;align-content:start;min-height:780px}
 .resource-detail.has-inline-preview .resource-detail-preview{position:absolute;inset:0 auto 0 0;grid-column:auto;grid-row:auto;width:calc(100% - 320px);min-height:0!important;height:auto}
 .resource-detail.has-inline-preview .resource-detail-copy{grid-column:2;grid-row:1}
-.resource-detail.has-inline-preview .related-carousel{overflow:visible;scroll-snap-type:none;padding:0}
+.resource-detail.has-inline-preview .related-carousel{max-height:620px;overflow-x:hidden;overflow-y:auto;scroll-snap-type:y mandatory;padding:0 .35rem 0 0}
 .resource-detail.has-inline-preview .related-track{display:flex;flex-direction:column;width:100%;gap:.85rem}
 .resource-detail.has-inline-preview .related-track .resource-card{width:100%;scroll-snap-align:none}
 .resource-detail.has-inline-preview .related-track .resource-card .thumb{aspect-ratio:2.3/1;margin-bottom:.4rem}
@@ -1419,7 +1419,7 @@ body.modal-open{overflow:hidden}
   .resource-detail.has-inline-preview .resource-detail-copy{display:none!important}
   .resource-detail.has-inline-preview .resource-detail-copy{order:-1;width:100%;box-sizing:border-box}
   .resource-detail.has-inline-preview .resource-detail-preview{order:0;position:relative!important;inset:auto!important;width:100%!important;height:420px!important;min-height:420px!important}
-  .resource-detail.has-inline-preview .related-resources{order:1;width:100%;max-height:none!important;margin-top:0}
+  .resource-detail.has-inline-preview .related-resources{order:1;width:100%;max-height:620px!important;margin-top:0;overflow:hidden}
   .solution-stage:not(.has-solution-video){display:flex!important;flex-direction:column;gap:1rem;width:100%;min-width:0}
   .solution-stage:not(.has-solution-video) .resource-detail-copy{order:-1;width:100%;box-sizing:border-box}
   .solution-stage:not(.has-solution-video) .solution-pdf-panel{order:0;width:100%;min-height:420px;height:min(70vh,620px)}
