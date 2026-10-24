@@ -8494,6 +8494,7 @@ function applyResourceSiteChrome(markup, rootPrefix) {
   let result = markup;
   const stylesheet = `${rootPrefix}styles.css?v=20261024brand`;
   const menuScript = `${rootPrefix}site-menu.js`;
+  result = result.replaceAll(`<a href="${rootPrefix}index.html#categories"><a href="${rootPrefix}resources.html"`, `<a href="${rootPrefix}index.html#categories">Categories</a><a href="${rootPrefix}resources.html"`);
   if (!/<link[^>]+href="[^"]*styles\.css(?:\?[^"]*)?"/i.test(result)) {
     result = result.replace('</head>', `<link rel="stylesheet" href="${stylesheet}"></head>`);
   }
