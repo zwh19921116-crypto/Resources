@@ -1238,7 +1238,7 @@ body.modal-open{overflow:hidden}
 }
 @media (min-width:901px){
   .resource-detail.has-inline-preview .resource-detail-preview{height:calc(100vh - 120px);min-height:620px;max-height:1100px}
-  .resource-detail.has-inline-preview .related-resources{height:calc(100vh - 120px);max-height:1100px}
+  .resource-detail.has-inline-preview .related-resources{height:auto;max-height:none}
 }
 
 /* Keep solution actions available beside inline document previews. */
