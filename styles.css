@@ -1439,6 +1439,8 @@ body.modal-open{overflow:hidden}
   .solution-stage.has-solution-video .solution-video-player{order:3;width:100%;box-sizing:border-box}
   .solution-stage.has-solution-video .solution-pdf-panel{order:4}
   .solution-stage.has-solution-video .solution-video-panel>.recommended-learning{order:5;width:100%;box-sizing:border-box}
+  .recommended-learning .recommendation-carousel__track{display:grid;grid-template-columns:1fr;gap:.75rem;width:100%;overflow:visible;padding:.15rem 0 .25rem}
+  .recommended-learning .recommendation-carousel__track .resource-card{width:100%;min-width:0;flex:none}
 }
 .session-loading-status{font-size:.85rem;color:#dce8ff;font-weight:600}
 .session-loading-ad{
