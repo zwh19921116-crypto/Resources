@@ -65,13 +65,54 @@ if (videoSelector) {
 
 const tuitionPromo = document.querySelector('[data-tuition-promo]');
 if (tuitionPromo) {
+  const slideContent = [
+    {
+      className: 'is-intro',
+      title: 'Build confidence beyond the worksheet.',
+      text: 'Turn practice into progress with structured, face-to-face support from experienced tutors.',
+      bullets: ['Personalised guidance for every learner', 'Clear foundations, stronger problem-solving']
+    },
+    {
+      className: 'is-primary',
+      title: 'Primary school',
+      text: 'Build strong foundations with support that makes learning feel clear, achievable and rewarding.',
+      bullets: ['Confidence with core skills', 'Encouragement at every step']
+    },
+    {
+      className: 'is-secondary',
+      title: 'Secondary school',
+      text: 'Stay on track through changing subjects, increasing demands and the next big academic goals.',
+      bullets: ['Targeted subject support', 'Better routines and study habits']
+    },
+    {
+      className: 'is-selective',
+      title: 'Selective school',
+      text: 'Prepare with purpose for selective entry tests and the skills needed to perform under pressure.',
+      bullets: ['Focused test preparation', 'Strategy, speed and confidence']
+    },
+    {
+      className: 'is-vce',
+      title: 'VCE preparation',
+      text: 'Make every study session count with structured support for assessments, exams and the final result.',
+      bullets: ['Subject-specific guidance', 'Exam preparation that builds momentum']
+    }
+  ];
+  const track = tuitionPromo.querySelector('.solution-tuition-promo__track');
+  const dotsContainer = tuitionPromo.querySelector('.solution-tuition-promo__dots');
+  if (track && dotsContainer) {
+    track.innerHTML = slideContent.map((slide, index) => `<div class="solution-tuition-promo__slide ${slide.className}${index === 0 ? ' is-active' : ''}" data-tuition-slide${index === 0 ? '' : ' hidden'}><h2${index === 0 ? ' id="solution-tuition-title"' : ''}>${slide.title}</h2><p>${slide.text}</p><ul>${slide.bullets.map((bullet) => `<li>${bullet}</li>`).join('')}</ul></div>`).join('');
+    dotsContainer.innerHTML = slideContent.map((slide, index) => `<button type="button"${index === 0 ? ' class="is-active"' : ''} data-tuition-dot="${index}" role="tab" aria-selected="${index === 0 ? 'true' : 'false'}" aria-label="Show ${slide.title} message"></button>`).join('');
+  }
   const slides = [...tuitionPromo.querySelectorAll('[data-tuition-slide]')];
   const dots = [...tuitionPromo.querySelectorAll('[data-tuition-dot]')];
+  const themeClasses = slideContent.map((slide) => slide.className);
   let currentSlide = 0;
   let paused = false;
 
   const showTuitionSlide = (index) => {
     currentSlide = (index + slides.length) % slides.length;
+    tuitionPromo.classList.remove(...themeClasses);
+    tuitionPromo.classList.add(themeClasses[currentSlide]);
     slides.forEach((slide, slideIndex) => {
       const active = slideIndex === currentSlide;
       slide.hidden = !active;
@@ -87,6 +128,7 @@ if (tuitionPromo) {
   dots.forEach((dot) => dot.addEventListener('click', () => {
     showTuitionSlide(Number(dot.dataset.tuitionDot) || 0);
   }));
+  showTuitionSlide(0);
   tuitionPromo.addEventListener('mouseenter', () => { paused = true; });
   tuitionPromo.addEventListener('mouseleave', () => { paused = false; });
   tuitionPromo.addEventListener('focusin', () => { paused = true; });
