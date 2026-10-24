@@ -53,7 +53,7 @@ async function mountPdfReader(reader) {
 
   const showFallback = () => {
     reader.classList.add('is-fallback');
-    fallback.hidden = false;
+    if (fallback) fallback.hidden = false;
     status.textContent = '';
   };
 
