@@ -1281,6 +1281,7 @@ body.modal-open{overflow:hidden}
 .solutions-detail .resource-detail-copy .solution-back-link{min-height:42px;margin-top:1rem;padding:.7rem 1rem;border:1px solid #173b7d;border-radius:7px;background:#173b7d;color:#fff;font-size:.8rem;font-weight:800;text-align:center}
 .solutions-detail .resource-detail-copy .solution-back-link:hover{border-color:#0f2d64;background:#0f2d64;color:#fff;text-decoration:none}
 .solution-stage{display:grid;grid-template-columns:minmax(0,1fr) 304px;align-items:start;gap:1rem}
+.solution-stage:not(.has-solution-video){grid-template-columns:minmax(0,1fr)}
 .solution-stage.has-solution-video{grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr)}
 .solution-stage.has-solution-video{grid-template-rows:max-content max-content max-content;align-content:start}
 .solution-stage.has-solution-video .resource-detail-copy{grid-column:1 / -1;grid-row:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,1fr);column-gap:1.5rem;align-items:center}
