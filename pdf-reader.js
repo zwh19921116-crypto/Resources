@@ -143,12 +143,10 @@ async function mountPdfReader(reader) {
 
   try {
     const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('PDF load timed out')), 8000));
-    documentProxy = await Promise.race([pdfjsLib.getDocument({
-      url,
-      disableRange: true,
-      disableStream: true,
-      disableAutoFetch: true
-    }).promise, timeout]);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`PDF request failed: ${response.status}`);
+    const data = await response.arrayBuffer();
+    documentProxy = await Promise.race([pdfjsLib.getDocument({ data }).promise, timeout]);
     await render();
   } catch (error) {
     showFallback();
