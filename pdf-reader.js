@@ -12,11 +12,26 @@ async function mountPdfReader(reader) {
   const next = reader.querySelector('[data-pdf-next]');
   const zoomOut = reader.querySelector('[data-pdf-zoom-out]');
   const zoomIn = reader.querySelector('[data-pdf-zoom-in]');
+  const fullscreen = reader.querySelector('[data-pdf-fullscreen]');
   const fallback = reader.querySelector('.pdf-reader-fallback');
   let documentProxy;
   let pageNumber = 1;
   let zoom = 1;
   let rendering = false;
+
+  const updateFullscreenLabel = () => {
+    if (fullscreen) fullscreen.textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
+  };
+
+  fullscreen?.addEventListener('click', async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await reader.requestFullscreen();
+    } catch (error) {
+      fullscreen.setAttribute('aria-label', 'Fullscreen unavailable');
+    }
+  });
+  document.addEventListener('fullscreenchange', updateFullscreenLabel);
 
   const showFallback = () => {
     reader.classList.add('is-fallback');
@@ -54,9 +69,13 @@ async function mountPdfReader(reader) {
     frame.src = frameUrl.href;
     frame.title = reader.querySelector('.pdf-reader-name')?.textContent || 'PDF document';
     frame.loading = 'eager';
+    frame.className = 'pdf-reader-frame';
     frame.setAttribute('allow', 'fullscreen');
-    frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff';
-    reader.replaceChildren(frame);
+    frame.style.cssText = 'position:absolute;top:48px;right:0;bottom:0;left:0;width:100%;height:calc(100% - 48px);border:0;background:#fff';
+    reader.querySelector('.pdf-reader-status')?.setAttribute('hidden', '');
+    reader.querySelector('.pdf-reader-canvas')?.setAttribute('hidden', '');
+    reader.querySelector('.pdf-reader-fallback')?.setAttribute('hidden', '');
+    reader.append(frame);
     return;
   }
 
