@@ -62,3 +62,39 @@ if (videoSelector) {
     });
   }));
 }
+
+const tuitionPromo = document.querySelector('[data-tuition-promo]');
+if (tuitionPromo) {
+  const slides = [...tuitionPromo.querySelectorAll('[data-tuition-slide]')];
+  const dots = [...tuitionPromo.querySelectorAll('[data-tuition-dot]')];
+  let currentSlide = 0;
+  let paused = false;
+
+  const showTuitionSlide = (index) => {
+    currentSlide = (index + slides.length) % slides.length;
+    slides.forEach((slide, slideIndex) => {
+      const active = slideIndex === currentSlide;
+      slide.hidden = !active;
+      slide.classList.toggle('is-active', active);
+    });
+    dots.forEach((dot, dotIndex) => {
+      const active = dotIndex === currentSlide;
+      dot.classList.toggle('is-active', active);
+      dot.setAttribute('aria-selected', String(active));
+    });
+  };
+
+  dots.forEach((dot) => dot.addEventListener('click', () => {
+    showTuitionSlide(Number(dot.dataset.tuitionDot) || 0);
+  }));
+  tuitionPromo.addEventListener('mouseenter', () => { paused = true; });
+  tuitionPromo.addEventListener('mouseleave', () => { paused = false; });
+  tuitionPromo.addEventListener('focusin', () => { paused = true; });
+  tuitionPromo.addEventListener('focusout', () => { paused = false; });
+
+  if (slides.length > 1 && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    window.setInterval(() => {
+      if (!paused && !document.hidden) showTuitionSlide(currentSlide + 1);
+    }, 4000);
+  }
+}
