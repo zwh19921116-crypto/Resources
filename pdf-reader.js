@@ -94,6 +94,19 @@ async function mountPdfReader(reader) {
     reader.querySelector('.pdf-reader-canvas')?.setAttribute('hidden', '');
     reader.querySelector('.pdf-reader-fallback')?.setAttribute('hidden', '');
     reader.append(frame);
+    let iframeZoom = 100;
+    const updateIframeZoom = () => {
+      frameUrl.hash = `page=1&view=Fit&zoom=${iframeZoom}`;
+      frame.src = frameUrl.href;
+    };
+    zoomOut?.addEventListener('click', () => {
+      iframeZoom = Math.max(70, iframeZoom - 15);
+      updateIframeZoom();
+    });
+    zoomIn?.addEventListener('click', () => {
+      iframeZoom = Math.min(200, iframeZoom + 15);
+      updateIframeZoom();
+    });
     return;
   }
 
