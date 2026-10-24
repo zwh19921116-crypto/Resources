@@ -57,7 +57,9 @@ async function mountPdfReader(reader) {
     status.textContent = '';
   };
 
-  if (new URL(url, location.href).origin !== location.origin) {
+  const documentUrl = new URL(url, location.href);
+  const canRenderExternalPdf = documentUrl.origin === 'https://files.edgeducate.com.au';
+  if (documentUrl.origin !== location.origin && !canRenderExternalPdf) {
     document.querySelector('.resource-faq')?.setAttribute('hidden', '');
     reader.closest('.resource-detail')?.querySelector('.crumbs > span:last-child')?.setAttribute('hidden', '');
     const details = reader.closest('.resource-detail-layout')?.querySelector('.resource-detail-copy');
@@ -82,7 +84,7 @@ async function mountPdfReader(reader) {
       }
     }
     const frame = document.createElement('iframe');
-    const frameUrl = new URL(url, location.href);
+    const frameUrl = documentUrl;
     frameUrl.hash = 'page=1&view=Fit&zoom=page-fit';
     frame.src = frameUrl.href;
     frame.title = reader.querySelector('.pdf-reader-name')?.textContent || 'PDF document';
