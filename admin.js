@@ -5744,6 +5744,29 @@ function resourceCategorySectionMarkup(rootPrefix) {
   return `<section class="section" id="categories"><svg class="sprite" aria-hidden="true" focusable="false"><symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol></svg><div class="container"><div class="section-head"><div><h2 class="section-title">Explore our resource categories</h2></div><a class="btn btn-outline" href="${rootPrefix}all-resources.html">View all resources <svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></div><div class="category-grid">${cards}</div></div></section>`;
 }
 
+function solutionVideoUrls(resource) {
+  const values = Array.isArray(resource.solutionsVideos) && resource.solutionsVideos.length
+    ? resource.solutionsVideos
+    : [resource.solutionsVideo];
+  return values.map((value) => String(value || '').trim()).filter(Boolean);
+}
+
+function solutionVideoTitles(resource) {
+  return Array.isArray(resource.solutionsVideoTitles)
+    ? resource.solutionsVideoTitles.map((value) => String(value || '').trim())
+    : [];
+}
+
+function solutionVideoEmbedUrl(url) {
+  const match = String(url || '').match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/);
+  return match ? `https://www.youtube.com/embed/${match[1]}?rel=0` : '';
+}
+
+function solutionVideoThumbnail(url) {
+  const match = String(url || '').match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([\w-]{11})/);
+  return match ? `https://i.ytimg.com/vi/${match[1]}/maxresdefault.jpg` : '';
+}
+
 function resourceSiteHeaderMarkup(prefix) {
   const menu = `<a href="https://edgeducate.com.au/pricing">Pricing</a><details class="nav-dropdown"><summary>Our Classes</summary><div class="nav-dropdown-menu"><a href="#">Primary</a><a href="#">Secondary</a><a href="https://edgeducate.com.au/vce-preparation-program">VCE</a><a href="#">Selective School</a></div></details><details class="nav-dropdown"><summary><a href="https://edgeducate.com.au/vce-preparation-program">VCE Preparation</a></summary><div class="nav-dropdown-menu"><a href="https://edgeducate.com.au/vce-biology">VCE Biology</a><a href="https://edgeducate.com.au/vce-chemistry">VCE Chemistry</a><a href="https://edgeducate.com.au/vce-physics">VCE Physics</a><a href="https://edgeducate.com.au/vce-general-mathematics">VCE General Mathematics</a><a href="https://edgeducate.com.au/vce-mathematical-methods">VCE Mathematical Methods</a></div></details><a href="${prefix}resources.html">Resources</a><a class="club-nav-link" href="${prefix}club.html">Club</a><a href="https://edgeducate.com.au/contact-us">Contact Us</a>`;
   return `<a class="skip-link" href="#main">Skip to content</a><header class="site-header is-solid"><div class="container"><div class="navbar"><a class="brand" href="${rootPrefix}index.html"><span class="brand-fallback"><span class="brand-name"><strong>Edge</strong>ducate</span><span class="brand-tag">Leading Edge in Education</span></span></a><nav class="primary-nav"><a href="${rootPrefix}index.html#categories"><a href="${rootPrefix}resources.html" class="is-active">Resources</a></nav><a class="btn btn-cta" href="${rootPrefix}resources.html">Browse library</a></div></div></header><main><article class="resource-detail solutions-detail">  <div class="container"><nav class="crumbs"><a href="https://edgeducate.com.au/">Edgeducate</a><span>/</span><a href="${rootPrefix}resources.html">Resources</a><span>/</span><a href="../index.html">${escapeHtml(resource.title)}</a><span>/</span><span>Solutions</span></nav><div class="resource-detail-layout"><div class="resource-detail-preview solution-preview">${previewMarkup}</div><div class="resource-detail-copy"><span class="badge badge-purple">Solutions</span><h1>${escapeHtml(resource.title)}</h1><p class="resource-detail-desc">Work through the solutions and review the explanation video where available.</p>${solutionUrl ? `<a class="btn btn-primary btn-block" href="${escapeAttr(solutionUrl)}" target="_blank" rel="noopener noreferrer">Open PDF</a>` : ''}${videoMarkup}<a class="resource-back btn btn-light btn-block" href="../index.html">Back to resource</a></div></div></div></article></main><footer class="site-footer"><div class="container footer-simple"><span class="brand-name light"><strong>Edge</strong>ducate</span><p>&copy; ${new Date().getFullYear()} Edgeducate</p></div></footer></body></html>`;
@@ -8285,6 +8308,15 @@ function questionPaperMarkup(resource, linkPrefix) {
 let sitemapRelatedPlan = null;
 const RELATED_PER_PAGE = 6;
 
+function relatedResourcesFor(resource) {
+  const explicitIds = Array.isArray(resource.relatedIds) ? resource.relatedIds : [];
+  const explicitlyLinked = items.filter((item) => item.id !== resource.id
+    && (explicitIds.includes(item.id) || (Array.isArray(item.relatedIds) && item.relatedIds.includes(resource.id))));
+  if (Array.isArray(resource.relatedIds)) return explicitlyLinked.slice(0, RELATED_PER_PAGE);
+  return items.filter((item) => item.id !== resource.id
+    && (item.subject === resource.subject || item.type === resource.type)).slice(0, 3);
+}
+
 // Deterministic, evenly-distributed internal-link graph for all published resources.
 // Topical matches first, round-robin gap-fill, then a coverage-repair pass so no page is
 // left with zero contextual inbound links. Recomputed on every publish.
@@ -8457,6 +8489,19 @@ const linkGeneratedPagesToMainSite = (markup) => {
   const linked = markup.replace(/(<a class="brand" href=")[^"]+(">)/, '$1https://edgeducate.com.au/$2');
   return /<link[^>]+rel="[^"]*icon/i.test(linked) ? linked : linked.replace('</head>', `${FAVICON_TAG}</head>`);
 };
+
+function applyResourceSiteChrome(markup, rootPrefix) {
+  let result = markup;
+  const stylesheet = `${rootPrefix}styles.css?v=20261024brand`;
+  const menuScript = `${rootPrefix}site-menu.js`;
+  if (!/<link[^>]+href="[^"]*styles\.css(?:\?[^"]*)?"/i.test(result)) {
+    result = result.replace('</head>', `<link rel="stylesheet" href="${stylesheet}"></head>`);
+  }
+  if (!/<script[^>]+src="[^"]*site-menu\.js(?:\?[^"]*)?"/i.test(result)) {
+    result = result.replace('</body>', `<script src="${menuScript}"></script></body>`);
+  }
+  return result;
+}
 
 async function writeStaticPages() {
   if (!projectHandle) return false;

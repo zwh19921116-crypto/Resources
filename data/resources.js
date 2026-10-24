@@ -29,9 +29,9 @@ window.EDG_RESOURCES = [
     relatedIds: [],
     url: 'https://files.edgeducate.com.au/mathematics/primary-school/addition/Arithmetic_-_Addition_(Level_9)_worksheet.pdf',
     solutions: 'https://files.edgeducate.com.au/mathematics/primary-school/addition/Arithmetic_-_Addition_(Level_9)_solutions.pdf',
-    solutionsVideo: '',
-    solutionsVideos: [],
-    solutionsVideoTitles: [],
+    solutionsVideo: 'https://www.youtube.com/watch?v=7J1OkxuyLD0',
+    solutionsVideos: ['https://www.youtube.com/watch?v=7J1OkxuyLD0'],
+    solutionsVideoTitles: ['Adding and Subtracting'],
     added: '2026-10-23',
     status: 'published'
   },
