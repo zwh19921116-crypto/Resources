@@ -1419,6 +1419,7 @@ body.pdf-reader-fullscreen-open{overflow:hidden}
 @keyframes session-spin{to{transform:rotate(360deg)}}
 @media (max-width:900px){
   .resource-detail.has-inline-preview::before{display:block;content:attr(data-resource-title);color:#0f2348;font-size:clamp(1.55rem,6vw,2rem);font-weight:800;line-height:1.18;margin:0 0 1rem}
+  .resource-detail.has-inline-preview .crumbs{display:none}
   .resource-detail.has-inline-preview .resource-detail-layout{display:flex!important;flex-direction:column;gap:1rem;min-height:0;position:static}
   .resource-detail.has-inline-preview .resource-detail-copy{display:flex!important;order:1;width:100%;box-sizing:border-box;padding:0;background:transparent;border:0;box-shadow:none}
   .resource-detail.has-inline-preview .resource-detail-copy>*{display:none!important}
