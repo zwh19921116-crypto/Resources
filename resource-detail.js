@@ -122,7 +122,7 @@ function renderResourceDetail() {
 
   const related = relatedResourcesFor(resource);
   const relatedTitle = detailElement('related-title');
-  if (relatedTitle) relatedTitle.textContent = `More ${resource.subject || ''} resources`.trim();
+  if (relatedTitle) relatedTitle.textContent = `More ${resource.subject || ''} Resources`.trim();
   detailElement('related-grid').innerHTML = related.map(buildRelatedCard).join('');
 
   const schema = document.createElement('script');
