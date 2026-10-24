@@ -1436,6 +1436,7 @@ body.pdf-reader-fullscreen-open{overflow:hidden}
 .solutions-page .solution-detail-copy .resource-back,.solutions-page .resource-detail-copy .resource-back{display:inline-flex!important;width:auto!important;min-height:0!important;margin-top:1rem;padding:.45rem .7rem!important;border:1px solid #cbd7eb!important;border-radius:6px;background:#fff!important;color:#1f478f!important;font-size:.74rem!important;box-shadow:none!important}
 .solutions-page .resource-detail-copy .resource-back:hover{background:#f1f5ff!important;text-decoration:none}
 @media (max-width:900px){
+  .solution-tuition-promo{display:none!important}
   .solution-stage,.solution-stage.is-video-open{grid-template-columns:1fr}
   .solution-stage.has-solution-video .resource-detail-copy{grid-column:1;grid-row:1}
   .solution-stage.has-solution-video .solution-pdf-panel{grid-column:1;grid-row:2}
