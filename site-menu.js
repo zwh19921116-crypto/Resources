@@ -198,7 +198,9 @@
       const label = row.querySelector('dt')?.textContent.trim();
       if (label === 'Solutions' || label === 'Solutions video') row.remove();
     });
-    copy.insertBefore(meta, copy.querySelector('.btn') || null);
+    const firstButton = copy.querySelector('.btn');
+    if (firstButton?.parentElement === copy) copy.insertBefore(meta, firstButton);
+    else copy.appendChild(meta);
   };
   void hydrateSolutionsDetails();
 
