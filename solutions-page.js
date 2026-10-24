@@ -6,6 +6,18 @@ const currentVideoLabel = videoPanel?.querySelector('[data-solution-video-curren
 const resourceBack = stage?.querySelector('.resource-back');
 const pdfButton = stage?.querySelector('.resource-detail-copy .btn-primary');
 const libraryCrumb = stage?.parentElement.querySelector('.crumbs a');
+const solutionPdf = stage?.querySelector('.solution-pdf-panel iframe');
+
+const syncSolutionPdfZoom = () => {
+  if (!solutionPdf) return;
+  const mobile = window.matchMedia('(max-width: 900px)').matches;
+  const zoom = mobile ? 'page-fit' : '130';
+  const nextSrc = solutionPdf.src.replace(/([#&]zoom=)[^&]*/, `$1${zoom}`);
+  if (nextSrc !== solutionPdf.src) solutionPdf.src = nextSrc;
+};
+
+syncSolutionPdfZoom();
+window.matchMedia('(max-width: 900px)').addEventListener('change', syncSolutionPdfZoom);
 
 if (libraryCrumb) {
   libraryCrumb.href = '../../../all-resources.html';
